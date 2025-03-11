@@ -1,0 +1,36 @@
+import React from 'react';
+import {useNavigate, useParams} from "react-router-dom";
+import BoxCard from "../../Components/BoxCard";
+import {useData} from "../../Context/DataContext";
+import CustomLoading from "../../Components/CustomLoading";
+import {useHistory} from "../../Context/HistoryContext";
+
+const HomePage = () => {
+    const {localname} = useParams()
+    const {loading, categoriesMap, ingredientsMap, productsMap} = useData()
+    const {navigateWithHistory} = useHistory()
+
+    return (
+        <>
+            {loading ? <CustomLoading isFullPage={true}/> :
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+                    {/* Box principali della dashboard */}
+                    <BoxCard title={"Layout"} value={"Personalizza"} icon={"📋"}
+                             onClick={() => navigateWithHistory("/" + localname + "/Dashboard/Layout")}/>
+                    <BoxCard title={"Ordini attivi"} value={"10"} icon={"🛒"}
+                             onClick={() => navigateWithHistory("/" + localname + "/Dashboard/Orders")}/>
+                    <BoxCard title={"Tavoli"} value={"3 Tavoli Occupati"} icon={"🛋️"}
+                             onClick={() => navigateWithHistory("/" + localname + "/Dashboard/Tables")}/>
+                    <BoxCard title={"Menu Prodotti"} value={productsMap.size + " Prodotti"} icon={"🍔"}
+                             onClick={() => navigateWithHistory("/" + localname + "/Dashboard/Menu")}/>
+                    <BoxCard title={"Ingredienti"} value={ingredientsMap.size + " Ingredienti"} icon={"🛋️"}
+                             onClick={() => navigateWithHistory("/" + localname + "/Dashboard/Ingredients")}/>
+                    <BoxCard title={"Categorie"} value={categoriesMap.size + " Categorie"} icon={"🛋️"}
+                             onClick={() => navigateWithHistory("/" + localname + "/Dashboard/Categories")}/>
+                </div>
+            }
+        </>
+    );
+};
+
+export default HomePage;

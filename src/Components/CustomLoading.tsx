@@ -10,7 +10,8 @@ interface CustomLoadingProps {
 const CustomLoading: React.FC<CustomLoadingProps> = ({
                                                          isFullPage = false,
                                                          isTransparent = false,
-                                                         message = 'Cooking something delicious...',
+                                                         //message = 'Cooking something delicious...',
+                                                        message = "Preparando qualcosa di delizioso..."
                                                      }) => {
     // Determina le classi per lo sfondo
     const containerClasses = `

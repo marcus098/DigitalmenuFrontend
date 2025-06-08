@@ -1,19 +1,35 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {useLoginContext} from "../Context/LoginContext";
+import {useNotification} from "../Context/NotificationContext";
+import NotificationDisplay from "../Components/NotificationDisplay";
+import {Loader} from "lucide-react";
+import CustomLoading from "../Components/CustomLoading";
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const { _login } = useLoginContext()
+    const { _login, errorType, loading, transparentLoading } = useLoginContext()
+    const { addNotification, notifications } = useNotification()
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        _login(email, password);
+        await _login(email, password);
     };
+
+    useEffect(() => {
+        if(errorType === 'connection'){
+            addNotification({message: 'Errore connessione', type: 'error'})
+        } else if(errorType === 'credenziali') {
+            addNotification({message: 'Credenziali errate', type: 'error'})
+        }
+    }, [errorType]);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-400 via-red-300 to-yellow-400">
+            {notifications && <NotificationDisplay />}
+            {transparentLoading && <CustomLoading isTransparent={true} message={"Login..."} />}
+            {loading ? <CustomLoading isTransparent={false} message={"Loading..."} isFullPage={true} /> :
             <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl relative animate-fade-in">
                 <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gradient-to-br from-orange-500 to-red-600 p-5 rounded-full shadow-lg animate-pulse">
                     <svg
@@ -71,7 +87,7 @@ const LoginPage: React.FC = () => {
                 <p className="text-sm text-center text-gray-600 mt-6">
                     New here? <a href="/signup" className="text-orange-500 font-medium hover:underline">Create an account</a>
                 </p>
-            </div>
+            </div>}
         </div>
     );
 };

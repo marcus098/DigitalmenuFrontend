@@ -32,7 +32,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             <div className="flex items-center space-x-4">
                 <div className="w-14 h-14">
                     <img
-                        src={categoryImage}
+                        src={categoryImage ? process.env.REACT_APP_BUCKET_URL + categoryImage : ""}
                         alt={category.name}
                         className="w-full h-full object-cover rounded-md border border-gray-300"
                     />

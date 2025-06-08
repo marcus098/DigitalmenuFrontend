@@ -30,7 +30,6 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew/*, categoryDto*/ }) =
         if(isNew && !loading){
             setMyLoading(false)
         }
-        console.log("test")
     }, []);
 
     useEffect(() => {
@@ -76,25 +75,40 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew/*, categoryDto*/ }) =
 
     const saveAndClose = async () => {
         setMyLoading(true)
-        const addCategoryValue: AddCategory = { name: name, image: image, products: products, available: available, description: description };
-        await addCategory(addCategoryValue, file || undefined);
-        handleNavigation("/" + localname + "/Dashboard/Categories")
+        const addCategoryValue: AddCategory = {
+            name: name,
+            image: image,
+            products: products,
+            available: available,
+            description: description
+        };
+        const data = await addCategory(addCategoryValue, file || undefined);
+        if (data) {
+            // todo notifica
+            handleNavigation("/" + localname + "/Dashboard/Categories")
+        }
         setMyLoading(false)
     }
 
     const saveAndContinue = async () => {
         setMyLoading(true)
         const addCategoryValue: AddCategory = { name: name, image: image, products: products, available: available, description: description };
-        await addCategory(addCategoryValue, file || undefined);
-        resetAll()
+        const status = await addCategory(addCategoryValue, file || undefined);
+        if(status) {
+            //todo notifica
+            resetAll()
+        }
         setMyLoading(false)
     }
 
     const update = async () => {
         setMyLoading(true)
         const updateCategoryValue: UpdateCategory = { id: id, name: name, image: image, products: products, available: available, description: description };
-        await updateCategory(updateCategoryValue, file || undefined);
-        handleNavigation("/" + localname + "/Dashboard/Categories")
+        const status = await updateCategory(updateCategoryValue, file || undefined);
+        if(status) {
+            // todo notifica
+            handleNavigation("/" + localname + "/Dashboard/Categories")
+        }
         setMyLoading(false)
     };
 
@@ -118,7 +132,7 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew/*, categoryDto*/ }) =
 
     return (
         <div className="p-6">
-            {(myLoading || loading) && <CustomLoading isFullPage={true}/>}
+            {(myLoading || loading) && <CustomLoading isFullPage={true} isTransparent={true} message={"Salvataggio..."}/>}
 
             <div className="mb-6" style={{marginLeft: "-1.7rem", marginTop: "-2rem"}}>
                 <button
@@ -140,7 +154,7 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew/*, categoryDto*/ }) =
                     className="relative w-40 h-40 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden cursor-pointer border border-dashed border-orange-400"
                 >
                     <img
-                        src={image}
+                        src={image ? process.env.REACT_APP_BUCKET_URL + image : ""}
                         onError={(e) => (e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/1280px-Placeholder_view_vector.svg.png")}
                         className="w-full h-full object-cover"
                     />

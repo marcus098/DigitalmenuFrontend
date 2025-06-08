@@ -27,17 +27,21 @@ import ClientCategoriesPage from "./Client/Pages/ClientCategoriesPage";
 import ClientProductsPage from "./Client/Pages/ProductsPage";
 import ClientProductPage from "./Client/Pages/ClientProductPage";
 import {HistoryProvider} from "./Context/HistoryContext";
+import CartPage from "./Client/Pages/CartPage";
 
-const waiterRoutes = () => {
-  <DataProvider dashboard={false}>
-    <NotificationProvider>
-      <Routes>
-        <Route path={"/Waiters/Categories"} element={<ClientCategoriesPage/>}/>
-        <Route path={"/Waiters/Products/:idCategory"} element={<ClientProductsPage/>}/>
-      </Routes>
-    </NotificationProvider>
-  </DataProvider>
-}
+const WaiterRoutes = () => (
+  <LoginProvider>
+    <DataProvider dashboard={false} waiters={true}>
+      <NotificationProvider>
+        <Routes>
+          <Route path={"/Categories"} element={<ClientCategoriesPage/>}/>
+          <Route path={"/Products/:idCategory"} element={<ClientProductsPage/>}/>
+          <Route path={"/cart"} element={<CartPage waiter={true}/>}/>
+        </Routes>
+      </NotificationProvider>
+    </DataProvider>
+  </LoginProvider>
+)
 
 const ClientRoutes = () => (
     <DataProvider dashboard={false}>
@@ -47,6 +51,7 @@ const ClientRoutes = () => (
           <Route path={"Products/:idCategory"} element={<ClientProductsPage/>}/>
           <Route path={"Product/:idProduct"} element={<ClientProductPage/>}/>
           <Route path={"Allergens"} element={<ClientCategoriesPage/>}/>
+          <Route path={"/cart"} element={<CartPage waiter={false}/>}/>
         </Routes>
       </NotificationProvider>
     </DataProvider>
@@ -73,8 +78,8 @@ const DashboardRoutes = () => (
                 <Route path={"Categories"} element={<CategoriesPage/>}/>
                 <Route path={"Waiters"} element={<WaitersPage/>}/>
                 <Route path={"Layout"}/>
-                <Route path={"Tables"} element={<TablesPage/>}/>
-                <Route path={"TablesTest"} element={<TablesPageTest/>}/>
+                {/*<Route path={"Tables"} element={<TablesPage/>}/>*/}
+                <Route path={"Tables"} element={<TablesPageTest/>}/>
                 <Route path={"Orders"} element={<OrderPage/>}/>
                 <Route path={"AddTable"}/>
               </Route>
@@ -89,15 +94,18 @@ function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <UtilitiesProvider>
-          <Routes>
-            <Route path={"/login"} element={<LoginProvider><LoginPage/></LoginProvider>} />
-            <Route path={"/signup"} element={<SignupPage/>} />
-            {/*<Route path={"/confirmAccount/:id/:code"} element={<Conf/>} />*/}
-            <Route path={"/:localname/Dashboard/*"} element={<DashboardRoutes/>} />
-            <Route path={"/:localname/*"} element={<ClientRoutes/>} />
-          </Routes>
-        </UtilitiesProvider>
+        <NotificationProvider>
+          <UtilitiesProvider>
+            <Routes>
+              <Route path={"/login"} element={<LoginProvider><LoginPage/></LoginProvider>} />
+              <Route path={"/signup"} element={<SignupPage/>} />
+              {/*<Route path={"/confirmAccount/:id/:code"} element={<Conf/>} />*/}
+              <Route path={"/:localname/Dashboard/*"} element={<DashboardRoutes/>} />
+              <Route path={"/Waiters/:localname/*"} element={<WaiterRoutes />} />
+              <Route path={"/:localname/*"} element={<ClientRoutes/>} />
+            </Routes>
+          </UtilitiesProvider>
+        </NotificationProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

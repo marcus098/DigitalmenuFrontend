@@ -7,6 +7,7 @@ import {allergens} from "../../Utilities/Utilities";
 import {useData} from "../../Context/DataContext";
 import CustomLoading from "../../Components/CustomLoading";
 import {useNavigate, useParams} from "react-router-dom";
+import CartIcon from "../../Components/Client/CartIcon";
 
 
 const ClientCategoriesPage: React.FC = () => {
@@ -15,12 +16,12 @@ const ClientCategoriesPage: React.FC = () => {
     const navigate = useNavigate()
     const {localname} = useParams()
 
-    const [selectedAllergens, setSelectedAllergens] = useState<number[]>([]);
 
-    const {loading, categoriesMap} = useData()
+    const {loading, categoriesMap, waiters, setSelectedAllergens} = useData()
 
     const handleCategorySelect = (categoryId: number) => {
-        navigate("/" + localname + "/products/" + categoryId.toString())
+        const waitersUrl = waiters ? "Waiters/" : ""
+        navigate("/" + waitersUrl + localname + "/products/" + categoryId.toString())
     };
 
     const handleAllergenChange = (selected: number[]) => {
@@ -32,6 +33,7 @@ const ClientCategoriesPage: React.FC = () => {
         <>{loading ? <CustomLoading/> :
             <div className="flex flex-col min-h-screen bg-gray-50">
                 <ClientHeader localname={restaurantName} logo={logo} />
+                <CartIcon />
                 <main className="flex-grow">
                     <div className="p-4">
                         <AllergensSelector allergens={allergens} onAllergenChange={handleAllergenChange} />

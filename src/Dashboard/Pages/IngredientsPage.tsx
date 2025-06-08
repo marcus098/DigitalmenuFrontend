@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useData } from "../../Context/DataContext";
 import { useParams } from "react-router-dom";
 import IngredientCard from "../../Components/IngredientCard";
-import { NameType } from "../../types";
 import { useHistory } from "../../Context/HistoryContext";
 import CustomLoading from "../../Components/CustomLoading";
 import DeletePopup from "../../Components/DeletePopup";
@@ -15,6 +14,8 @@ const IngredientsPage: React.FC = () => {
     const { loading, ingredientsMap, deleteEntity, changeAvailableAddable } = useData();
     const { localname } = useParams();
     const { navigateWithHistory } = useHistory();
+
+    console.log(ingredientsMap)
 
     useEffect(() => {
         if (!loading) setMyLoading(false);
@@ -69,9 +70,9 @@ const IngredientsPage: React.FC = () => {
 
                 {/* Elenco Ingredienti */}
                 <div>
-                    <h2 className="text-xl font-semibold mb-4 text-gray-700">Ingredienti Disponibili</h2>
+                    {/*<h2 className="text-xl font-semibold mb-4 text-gray-700">Ingredienti Disponibili</h2>*/}
                     <div className="space-y-3">
-                        {Array.from(ingredientsMap.values()).map((ingredient) => (
+                        {Array.from(ingredientsMap.values()).sort((a,b) => a.name.localeCompare(b.name)).map((ingredient) => (
                             <IngredientCard
                                 key={ingredient.id}
                                 ingredient={ingredient}
@@ -80,6 +81,7 @@ const IngredientsPage: React.FC = () => {
                             />
                         ))}
                     </div>
+                    <div className="text-l text-gray mt-4">*Prodotti surgelati</div>
                 </div>
             </div>
         </>

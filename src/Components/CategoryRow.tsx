@@ -38,7 +38,7 @@ const CategoryRow: React.FC<CategoryRowProps> = ({ category, setEdit }) => {
             {/* Colonna sinistra: immagine */}
             <div className="w-20 h-20 mr-4">
                 <img
-                    src={categoryImage}
+                    src={categoryImage ? process.env.REACT_APP_BUCKET_URL + categoryImage : ""}
                     alt={category.name}
                     className="w-full h-full object-cover rounded-md"
                 />

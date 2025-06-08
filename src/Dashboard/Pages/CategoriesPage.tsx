@@ -7,7 +7,6 @@ import DeletePopup from "../../Components/DeletePopup";
 import { useHistory } from "../../Context/HistoryContext";
 
 const CategoriesPage: React.FC = () => {
-    const [edit, setEdit] = useState<any>(null);
     const [myLoading, setMyLoading] = useState<boolean>(false);
     const [openPopup, setOpenPopup] = useState<boolean>(false);
     const [nameToDelete, setNameToDelete] = useState<string>("");

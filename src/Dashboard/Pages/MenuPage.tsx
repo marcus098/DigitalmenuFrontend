@@ -7,6 +7,7 @@ import { useParams } from "react-router-dom";
 import DeletePopup from "../../Components/DeletePopup";
 import { useHistory } from "../../Context/HistoryContext";
 import CustomLoading from "../../Components/CustomLoading";
+import {useNotification} from "../../Context/NotificationContext";
 
 const MenuPage: React.FC = () => {
     const [selectedCategory, setSelectedCategory] = useState<number>(0);
@@ -17,7 +18,8 @@ const MenuPage: React.FC = () => {
 
     const { navigateWithHistory } = useHistory();
     const { localname } = useParams();
-    const {changeOrderCategories} = useData()
+    const { changeOrderCategories } = useData()
+    const { addNotification } = useNotification()
 
     useEffect(() => {
         if (!loading && selectedCategory === 0 && categoriesMap.size > 0) {
@@ -34,6 +36,9 @@ const MenuPage: React.FC = () => {
 
     const handleToggleAvailability = async (productId: number, value: boolean) => {
         const result = await changeAvailableAddable({ entity: "product" }, productId, value, true);
+        if(!result){
+            addNotification({message: "Errore", type: "error"})
+        }
     };
 
     const onDragEnd = async (result: DropResult) => {
@@ -50,12 +55,13 @@ const MenuPage: React.FC = () => {
             for(const cat of categoriesArrayTmp){
                 categoriesArray.push(cat)
             }
-
             // Estrarre l'elemento dalla posizione di partenza
-            const [moved] = categoriesArray.splice(source.index, 1);
+            const [moved] = categoriesArray.splice(source.index-1, 1);
+            if(!moved)
+                return
 
             // Inserirlo nella nuova posizione
-            categoriesArray.splice(destination.index, 0, moved);
+            categoriesArray.splice(destination.index-1, 0, moved);
 
             // Aggiornare il progressivenumber in base alla nuova posizione
             const updatedCategories = categoriesArray.map((category, index) => ({
@@ -72,7 +78,7 @@ const MenuPage: React.FC = () => {
             // Aggiornare lo stato con il nuovo ordine (se necessario)
             //setCategoriesMap(new Map(reorderedCategories.map(cat => [cat.id, cat])));
         } else if (type === "product") {
-            console.log(result)
+            console.log(result) // todo ordinamento per prodotti
         }
     };
 
@@ -146,7 +152,7 @@ const MenuPage: React.FC = () => {
                     <div className="flex-1">
                         <div className="flex justify-end mb-4">
                             <button
-                                onClick={() => navigateWithHistory("/" + localname + "/Dashboard/AddProduct")}
+                                onClick={() => navigateWithHistory("/" + localname + "/Dashboard/AddProduct#" + selectedCategory.toString())}
                                 className="bg-amber-500 text-white px-4 py-2 rounded-lg shadow hover:bg-amber-600 transition"
                             >
                                 Aggiungi Prodotto
@@ -161,15 +167,16 @@ const MenuPage: React.FC = () => {
                                             <Draggable key={product.longValue} draggableId={product.longValue.toString()} index={product.intValue}>
                                                 {(provided) => {
                                                     const element = productsMap.get(product.longValue) as ProductDto;
-                                                    return (
-                                                        <ProductCard
+                                                    return (<>
+                                                        {element ? <ProductCard
                                                             key={element.id}
                                                             product={element}
                                                             selectedCategory={selectedCategory}
                                                             provided={provided}
                                                             handleToggleAvailability={handleToggleAvailability}
                                                             deleteProduct={openPopup}
-                                                        />
+                                                        /> : <></>}
+                                                        </>
                                                     );
                                                 }}
                                             </Draggable>

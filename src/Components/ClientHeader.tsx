@@ -1,4 +1,5 @@
-import React from 'react';
+import React, {useContext} from 'react';
+import {ThemeContext} from "../Context/ThemeContext";
 
 interface HeaderProps {
     localname: string;
@@ -6,9 +7,11 @@ interface HeaderProps {
 }
 
 const ClientHeader: React.FC<HeaderProps> = ({ localname, logo }) => {
+    const theme = useContext(ThemeContext)
+
     return (
-        <header className="bg-blue-50 py-8 shadow-md text-center">
-            <h1 className="text-3xl font-bold text-blue-700">{localname}</h1>
+        <header className="py-8 shadow-md text-center" style={{backgroundColor: theme?.theme.colors.color1 + ""}}>
+            <h1 className="text-3xl font-bold" style={{color: theme?.theme.colors.text1 + ""}}>{localname}</h1>
             <img
                 src={"/tmp/strafameLogo.png"}
                 alt="Restaurant Logo"

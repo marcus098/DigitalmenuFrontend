@@ -55,7 +55,7 @@ const ClientProductPage: React.FC = () => {
                 {/* Immagine del prodotto */}
                 <div className="flex flex-col md:flex-row gap-6">
                     <img
-                        src={dish.image}
+                        src={dish.image ? process.env.REACT_APP_BUCKET_URL + dish.image : ""}
                         alt={dish.name}
                         className="w-full md:w-1/2 h-72 object-cover rounded-lg shadow-md"
                     />

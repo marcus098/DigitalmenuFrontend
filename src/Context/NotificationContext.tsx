@@ -19,6 +19,7 @@ export const NotificationProvider: React.FC<React.PropsWithChildren<{}>> = ({ ch
 
     const addNotification = (notification: Notification) => {
         setNotifications((prev) => [...prev, notification]);
+        console.log(notification)
     };
 
     const removeNotification = (index: number) => {

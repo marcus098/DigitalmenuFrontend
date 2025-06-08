@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
+import {useLoginContext} from "../../Context/LoginContext";
+import {User} from "../../types";
+import {useNotification} from "../../Context/NotificationContext";
 
-interface UserProfile {
+export interface UserProfile {
     name: string;
     email: string;
     phone: string;
@@ -8,31 +11,43 @@ interface UserProfile {
 }
 
 const ProfilePage: React.FC = () => {
-    const [user, setUser] = useState<UserProfile>({
-        name: 'Mario Rossi',
-        email: 'mario.rossi@example.com',
-        phone: '+39 123 456 789',
-        address: 'Via Roma 123, Milano',
-    });
+    //const [user, setUser] = useState<UserProfile>({
+    //    name: 'Mario Rossi',
+    //    email: 'mario.rossi@example.com',
+    //    phone: '+39 123 456 789',
+    //    address: 'Via Roma 123, Milano',
+    //});
+    const {user, changePasswordFunc, updateProfileFunc } = useLoginContext()
 
     const [editing, setEditing] = useState(false);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-    const [newUserDetails, setNewUserDetails] = useState<UserProfile>(user);
+    const [newUserDetails, setNewUserDetails] = useState<UserProfile>({name: user?.name || "", email: user?.email || "", address: user?.address || "", phone: user?.phone || ""});
     const [currentPassword, setCurrentPassword] = useState<string>('')
     const [newPassword, setNewPassword] = useState<string>('')
     const [confirmPassword, setConfirmPassword] = useState<string>('')
+
+    const { addNotification } = useNotification()
+
+    useEffect(() => {
+        setNewUserDetails({name: user?.name || "", email: user?.email || "", address: user?.address || "", phone: user?.phone || ""})
+    }, [user]);
 
     const handleEdit = () => {
         setEditing(true);
     };
 
-    const handleSave = () => {
-        setUser(newUserDetails);
-        setEditing(false);
+    const handleSave = async () => {
+        const response = await updateProfileFunc(newUserDetails)
+        if(response){
+            addNotification({message: "Profilo modificato", type: "success"})
+            setEditing(false);
+        }else{
+            addNotification({message: "Errore", type: "error"})
+        }
     };
 
     const handleCancel = () => {
-        setNewUserDetails(user);
+        setNewUserDetails({name: user?.name || "", email: user?.email || "", address: user?.address || "", phone: user?.phone || ""});
         setEditing(false);
     };
 
@@ -40,10 +55,15 @@ const ProfilePage: React.FC = () => {
         setNewUserDetails({ ...newUserDetails, [field]: value });
     };
 
-    const handlePasswordChange = () => {
+    const handlePasswordChange = async () => {
         // Simula il cambio della password
-        alert('Password cambiata con successo!');
-        setShowChangePasswordModal(false);
+        const response = await changePasswordFunc(currentPassword, newPassword)
+        if(response){
+            addNotification({message: "Password modificata", type: "success"})
+            setShowChangePasswordModal(false);
+        }else{
+            addNotification({message: "Errore", type: "error"})
+        }
     };
 
     return (
@@ -62,7 +82,7 @@ const ProfilePage: React.FC = () => {
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     ) : (
-                        <p className="text-gray-600">{user.name}</p>
+                        <p className="text-gray-600">{user?.name || ""}</p>
                     )}
                 </div>
                 <div className="mb-4">
@@ -75,7 +95,7 @@ const ProfilePage: React.FC = () => {
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     ) : (
-                        <p className="text-gray-600">{user.email}</p>
+                        <p className="text-gray-600">{user?.email || ""}</p>
                     )}
                 </div>
                 <div className="mb-4">
@@ -88,7 +108,7 @@ const ProfilePage: React.FC = () => {
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     ) : (
-                        <p className="text-gray-600">{user.phone}</p>
+                        <p className="text-gray-600">{user?.phone || ""}</p>
                     )}
                 </div>
                 <div className="mb-4">
@@ -101,7 +121,7 @@ const ProfilePage: React.FC = () => {
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                     ) : (
-                        <p className="text-gray-600">{user.address}</p>
+                        <p className="text-gray-600">{user?.address || ""}</p>
                     )}
                 </div>
 

@@ -1,6 +1,9 @@
 import React from "react";
 import {useData} from "../Context/DataContext";
 import {IngredientDto, NameType} from "../types";
+import {FiLogOut} from "react-icons/fi";
+import {FaE, FaX} from "react-icons/fa6";
+import {FaEdit, FaExpand, FaOpencart, FaRemoveFormat, FaXing} from "react-icons/fa";
 
 interface AllergenIngredientTagRowProps {
     openModal: () => void
@@ -21,31 +24,32 @@ const AllergenIngredientTagRow: React.FC<AllergenIngredientTagRowProps> = ({open
                     onClick={() => openModal()}
                     className="ml-2 text-blue-500 hover:text-blue-700"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            d="M17.414 2.586a2 2 0 00-2.828 0l-10 10a2 2 0 00-.586 1.414V17a1 1 0 001 1h2.586a2 2 0 001.414-.586l10-10a2 2 0 000-2.828l-2.586-2.586zM14 3l3 3-10 10H4v-3L14 3z"/>
-                    </svg>
+                    <FaEdit className={"mb-2 text-orange-500"}/>
                 </button>
             </div>
             {elements.length > 0 ? (
                 <div className="flex flex-wrap mt-2">
-                    {elements.map((el) => (
+                    {elements
+                        .filter((num, index, self) => {
+                            const absVal = Math.abs(num);
+                            const hasNegative = self.includes(-absVal);
+                            if (num < 0) return self.indexOf(num) === index;
+                            return !hasNegative
+                        })
+                        .map((el) => (
                         <div
                             key={el}
-                            className={"flex items-center bg-"+color+"-100 text-"+color+"-700 rounded-md p-2 m-1"}
+                            className={"flex items-center bg-"+color+"-100 text-black-700 rounded-md p-2 m-1"}
                         >
-                            <span>{map.get(el)?.name || ""}</span>
-                            <button
+                            <span>{map.get(Math.abs(el))?.name || ""}</span>
+                            {/*<button
                                 onClick={() => handleAddOrRemove(name.toLowerCase(), el)}
-                                className={"ml-2 text-"+color+"-500 hover:text-"+color+"-700"}
+                                className={"ml-1 text-"+color+"-500 hover:text-"+color+"-700"}
                             >
-                                ✖
+                                <FaX size={12}/>
                             </button>
+                            //todo elimina
+                            */}
                         </div>
                     ))}
                 </div>

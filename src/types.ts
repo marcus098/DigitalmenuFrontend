@@ -1,5 +1,7 @@
 import React from "react";
-import {Id} from "react-beautiful-dnd";
+import {Comand} from "./ComandType";
+import {UserProfile} from "./Dashboard/Pages/ProfilePage";
+import {Orders} from "./Dashboard/Pages/OrderPage";
 
 export interface ApiResponse<T = any>{
     status: number
@@ -16,25 +18,35 @@ export interface NameType{
 
 export interface DataContextType{
     data?: ListToExport
+    waiters?: boolean
+    selectedAllergens: number[]
+    setSelectedAllergens: React.Dispatch<React.SetStateAction<number[]>>
     categoriesMap: Map<number, CategoryDto>
     imagesList: ImageDto[]
     productsMap: Map<number, ProductDto>
     ingredientsMap: Map<number, IngredientDto>
+    comands: Comand[]
+    changeComandStatus: (idComand: string, status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING') => void
     tablesMap: Map<number, TableDto>
     styles?: StyleDto
     loading: boolean
     tagsMap: Map<number, NameType>
     allergensMap: Map<number, NameType>
     changeAvailableAddable: (entity: Entity, id: number, value: boolean, isAvailable: boolean) => Promise<boolean>
-    addProduct: (addProduct: AddProduct, file?: File | null) => Promise<void>
-    addIngredient: (addIngredient: AddIngredient) => Promise<void>
-    addCategory: (addCategory: AddCategory, file?: File) => Promise<void>
-    updateProduct: (updateProduct: UpdateProduct, file?: File) => Promise<void>
-    updateCategory: (updateCategory: UpdateCategory, file?: File) => Promise<void>
-    updateIngredient: (updateIngredient: UpdateIngredient) => Promise<void>
-    deleteEntity: (id: number, entity: Entity) => Promise<void>
-    changeOrderCategories: (ordered: IdWithOrder[]) => Promise<void>
-
+    addProduct: (addProduct: AddProduct, file?: File | null) => Promise<boolean>
+    addIngredient: (addIngredient: AddIngredient) => Promise<boolean>
+    addCategory: (addCategory: AddCategory, file?: File) => Promise<boolean>
+    updateProduct: (updateProduct: UpdateProduct, file?: File) => Promise<boolean>
+    updateCategory: (updateCategory: UpdateCategory, file?: File) => Promise<boolean>
+    updateIngredient: (updateIngredient: UpdateIngredient) => Promise<boolean>
+    deleteEntity: (id: number, entity: Entity) => Promise<boolean>
+    changeOrderCategories: (ordered: IdWithOrder[]) => Promise<boolean>
+    mapRawOrderToOrder: (hasComands?: Comand[]) => Orders[]
+    forceDeleteTable: (id: number) => Promise<boolean>
+    deleteTable: (id: number) => Promise<string>
+    freeTableContext: (id: number) => Promise<string>
+    forceFreeTableContext: (id: number) => Promise<boolean>
+    setBusyTable: (id: number, seats: number) => Promise<boolean>
 }
 
 export interface Entity{
@@ -56,12 +68,13 @@ export interface IdWithOrder{
 }
 
 export interface ListToExport{
-    categoriesList?: CategoryDto[]
-    ingredientsList?: IngredientDto[]
-    productsList?: ProductDto[]
-    tablesList?: TableDto[]
+    categoriesList?:  Map<number, CategoryDto>
+    ingredientsList?: Map<number, IngredientDto>
+    productsList?: Map<number, ProductDto>
+    tablesList?:  Map<number, TableDto>
     imagesList?: ImageDto[]
     style?: StyleDto
+    comands?: Comand[]
 }
 
 
@@ -70,9 +83,11 @@ export interface LoginContextType{
     user: User | null
     _login: (email: string, password: string) => void
     logout: () => void
-    changePasswordFunc: (oldPassword: string, newPassword: string) => Promise<string>
+    changePasswordFunc: (oldPassword: string, newPassword: string) => Promise<boolean>
+    updateProfileFunc: (userProfile: UserProfile) => Promise<boolean>
     register: (formData: FormData) => Promise<"Success" | "Errore">
     transparentLoading: boolean
+    errorType: 'credenziali' | 'connection' | null
 }
 
 export interface UtilitiesContextType{
@@ -139,18 +154,33 @@ export interface ProductToOrder{
     note: string
 }
 
+export interface AddProductToOrder{
+    idProduct: number
+    productOption: string
+    quantity: number
+    ingredientsMinus: number[]
+    ingredientsPlus: number[]
+    note: string
+}
+
 export interface IngredientOrder {
     id: number
     name: string
 }
 
 export interface AddComandOrder {
-    products: ProductToOrder[]
+    products: AddProductToOrder[]
 }
 
 export interface AddComandWaiter {
     orders: AddComandOrder[]
-    idTable: number
+    idTable?: number
+    name?: string
+    address?: string
+    phone?: string
+    time?: string
+    comandWaiterType: "HOME" | "TABLE" | "TAKE_AWAY"
+    type?: string
 }
 
 export interface IngredientOrderPlus {
@@ -186,10 +216,11 @@ export interface TableDto{
     seats: number
     busy: boolean
     code?: string
-    x: number;
-    y: number;
-    w: number;
-    h: number;
+    x: number
+    y: number
+    w: number
+    h: number
+    location: string
 }
 
 export type NotificationType = 'info' | 'warning' | 'error' | 'success';
@@ -216,6 +247,8 @@ export interface User {
     localname: string
     idAgency: number
     email: string
+    phone?: string
+    address?: string
 }
 
 export interface LoginResponse {
@@ -259,6 +292,7 @@ export interface LongInteger {
 }
 
 export interface AddIngredient {
+    type?: string
     name: string
     available: boolean
     addable: boolean
@@ -269,9 +303,16 @@ export interface AddIngredient {
 
 export interface AddTable {
     name: string
+    type?: string
+    location?: string
+    x: number
+    y: number
+    w: number
+    h: number
 }
 
 export interface UpdateIngredient {
+    type?: string
     id: number
     name: string
     available: boolean
@@ -348,4 +389,14 @@ export interface Order {
     comandId: string
     userId: string
     products: ProductToOrder[]
+}
+
+export interface ProductCard {
+    id: number
+    optionName: string
+    ingredientsPlus: number[]
+    ingredientsMinus: number[]
+    quantity: number
+    price: number
+    note: string
 }

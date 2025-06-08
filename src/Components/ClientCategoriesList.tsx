@@ -1,6 +1,5 @@
 import React from 'react';
 import {CategoryDto} from "../types";
-import {useNavigate, useParams} from "react-router-dom";
 
 
 interface CategoriesListProps {
@@ -12,7 +11,7 @@ const ClientCategoriesList: React.FC<CategoriesListProps> = ({ categories, onSel
 
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 px-6 py-4">
-            {categories.map((category) => (
+            {categories.filter((c) => c.id > 0).map((category) => (
                 <div
                     key={category.id}
                     onClick={() => onSelectCategory(category.id)}
@@ -20,7 +19,7 @@ const ClientCategoriesList: React.FC<CategoriesListProps> = ({ categories, onSel
                 >
                     {category.image && (
                         <img
-                            src={category.image}
+                            src={category.image ? process.env.REACT_APP_BUCKET_URL + category.image : ""}
                             alt={category.name}
                             className="w-16 h-16 mb-2 object-cover rounded-md"
                         />

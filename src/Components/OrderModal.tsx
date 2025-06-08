@@ -1,8 +1,8 @@
 import React from "react";
-import {Order} from "../Dashboard/Pages/OrderPage";
+import {Orders} from "../Dashboard/Pages/OrderPage";
 
 interface OrderModalProps {
-    order: Order;
+    order: Orders;
     onClose: () => void;
 }
 

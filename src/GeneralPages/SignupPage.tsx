@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {registerAgency} from "../Utilities/api";
 
 const SignupPage: React.FC = () => {
     const [formData, setFormData] = useState({
@@ -8,6 +9,7 @@ const SignupPage: React.FC = () => {
         email: '',
         restaurantName: '',
         phone: '',
+        password: '',
         privacyAccepted: false,
     });
 
@@ -30,13 +32,24 @@ const SignupPage: React.FC = () => {
         }
     };
 
-    const handleFormSubmit = (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.privacyAccepted) {
             alert('Please accept the privacy policy to proceed.');
             return;
         }
-        console.log('Form Data Submitted:', formData);
+        const data: FormData = new FormData()
+        data.append("name", formData.firstName)
+        data.append("surname", formData.lastName)
+        data.append("localname", formData.restaurantName)
+        data.append("email", formData.email)
+        data.append("phone", formData.phone)
+        data.append("password", formData.password)
+        //if (file) {
+        //    data.append("file", file);
+        //}
+        const response = await registerAgency(data);
+        console.log('Form Data Submitted:', response);
     };
 
     return (
@@ -112,6 +125,21 @@ const SignupPage: React.FC = () => {
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
                             placeholder="Enter your email"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label htmlFor="password" className="block text-sm font-semibold text-gray-600">
+                            Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleInputChange}
+                            className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
+                            placeholder="Enter your password"
                             required
                         />
                     </div>

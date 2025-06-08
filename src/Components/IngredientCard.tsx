@@ -3,6 +3,7 @@ import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { IngredientDto } from "../types";
 import { useHistory } from "../Context/HistoryContext";
+import {useData} from "../Context/DataContext";
 
 interface IngredientCardProps {
     ingredient: IngredientDto;
@@ -17,6 +18,7 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
                                                        }) => {
     const { localname } = useParams();
     const { navigateWithHistory } = useHistory();
+    const { allergensMap } = useData()
 
     const handleDelete = () => {
         deleteIngredient(ingredient.id, ingredient.name);
@@ -33,9 +35,9 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
                 </div>
                 <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-800">
-                        {ingredient.name}
+                        {ingredient.name + (ingredient.frozen ? "*" : "")}
                     </h3>
-                    <p className="text-sm text-gray-600">Prezzo: €{ingredient.price}</p>
+                    <p className="text-sm text-gray-600">Prezzo: € {ingredient.price.toFixed(2)}</p>
                 </div>
             </div>
 
@@ -49,7 +51,7 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
                                 key={index}
                                 className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium"
                             >
-                                {allergen}
+                                {allergensMap.get(allergen)?.name || ""}
                             </span>
                         ))}
                     </div>

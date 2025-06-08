@@ -1,4 +1,5 @@
 import {clientInstance, instance} from "./api";
+import {ApiResponse, Response} from "../types";
 
 export interface RequestConfig {
     method: string;
@@ -29,7 +30,7 @@ interface ClientApiCallInterface {
 const apiUrl = process.env.REACT_APP_BACKEND_URL_BASE;
 const apiUrlWebflux = process.env.REACT_APP_BACKEND_WEBFLUX_URL_BASE
 
-export const apiCall = async <T>(apiCallInterface: ApiCallInterface): Promise<T | null> => {
+export const apiCall = async <T>(apiCallInterface: ApiCallInterface): Promise<ApiCallResult<T>> => {
     let localApiUrl = apiCallInterface.webflux ? apiUrlWebflux : apiUrl;
     if (!apiCallInterface.fixed) {
         const numbers = parseInt(process.env.REACT_APP_BACKEND_NUMBER || "", 10);
@@ -55,25 +56,54 @@ export const apiCall = async <T>(apiCallInterface: ApiCallInterface): Promise<T 
             };
         }
 
-        return await instance(config);
-    } catch (error) {
-        console.error("API call error:", error);
-        return null;
+        const response = await instance(config);
+
+        const apiResponse = response.data as T
+
+        return {
+            success: response.status < 400,
+            status: response.status,
+            message: response.statusText,
+            reloadToken: (apiResponse as any).reloadToken || null,
+            newToken: (apiResponse as any).newToken || null,
+            data: apiResponse,
+        };
+    } catch (error: any) {
+        const status = error.response?.status ?? -1;
+        const message = error.response?.data?.message || error.message || "Unknown error";
+
+        return {
+            success: false,
+            status,
+            message,
+            reloadToken: false,
+            data: null,
+        };
     }
 };
 
-export const clientApiCall = async<T> (apiCallInterface: ClientApiCallInterface): Promise<T | null> => {
+
+export type ApiCallResult<T> = {
+    success: boolean;
+    status: number;
+    message?: string;
+    reloadToken?: boolean;
+    newToken?: string;
+    data: T | null;
+};
+
+
+export const clientApiCall = async <T>(
+    apiCallInterface: ClientApiCallInterface
+): Promise<ApiCallResult<T>> => {
     let localApiUrl = apiCallInterface.webflux ? apiUrlWebflux : apiUrl;
+
     if (!apiCallInterface.fixed) {
         const numbers = parseInt(process.env.REACT_APP_BACKEND_NUMBER || "", 10);
-
         if (numbers > 0) {
-            const ports = process.env.REACT_APP_BACKEND_PORTS || "".split("|");
-
-            const selectedRandom = Math.floor(Math.random() * numbers); // Correzione del calcolo
-
+            const ports = (process.env.REACT_APP_BACKEND_PORTS || "").split("|");
+            const selectedRandom = Math.floor(Math.random() * numbers);
             localApiUrl = process.env.REACT_APP_BACKEND_URL_BASE + ports[selectedRandom];
-
         }
     }
 
@@ -81,13 +111,31 @@ export const clientApiCall = async<T> (apiCallInterface: ClientApiCallInterface)
         const config = {
             method: apiCallInterface.method,
             url: localApiUrl + apiCallInterface.url,
-            data: apiCallInterface.data
+            data: apiCallInterface.data,
         };
 
-        return await clientInstance(config);
-    } catch (error) {
-        // Gestione degli errori personalizzata, se necessario
-        console.error("API call error:", error);
-        return null;
+        const response = await clientInstance(config);
+        console.log(response)
+        const apiResponse = response.data as T;
+        console.log(apiResponse)
+        return {
+            success: response.status < 400,
+            status: response.status,
+            message: response.statusText,
+            reloadToken: (apiResponse as any).reloadToken || false,
+            newToken: (apiResponse as any).newToken || null,
+            data: apiResponse,
+        };
+    } catch (error: any) {
+        const status = error.response?.status ?? -1;
+        const message = error.response?.data?.message || error.message || "Unknown error";
+
+        return {
+            success: false,
+            status,
+            message,
+            reloadToken: false,
+            data: null,
+        };
     }
 };

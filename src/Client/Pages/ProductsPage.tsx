@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, {useContext, useState} from "react";
 import ClientProductCard from "../../Components/ClientProductCard";
 import ProductCustomizationDrawer from "../../Components/ProductCustomizationDrawer";
 import { useData } from "../../Context/DataContext";
@@ -8,15 +8,9 @@ import { ProductDto } from "../../types";
 import ClientHeader from "../../Components/ClientHeader";
 import ClientFooter from "../../Components/ClientFooter";
 import AllergensSelector from "../../Components/AllergensSelector";
-import {allergens} from "../../Utilities/Utilities";
-import ClientCategoriesList from "../../Components/ClientCategoriesList";
-
-export interface DrawerProps {
-    isOpen: boolean;
-    onClose: () => void;
-    dish: ProductDto | null;
-    onAddToCart: (customDish: CustomDish) => void;
-}
+import { allergens } from "../../Utilities/Utilities";
+import {ThemeContext} from "../../Context/ThemeContext";
+import CartIcon from "../../Components/Client/CartIcon";
 
 export interface CustomDish extends ProductDto {
     quantity: number;
@@ -26,9 +20,10 @@ const ClientProductsPage: React.FC = () => {
     const [selectedDish, setSelectedDish] = useState<ProductDto | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
     const [cart, setCart] = useState<CustomDish[]>([]);
-    const { loading, allergensMap,ingredientsMap, categoriesMap, productsMap } = useData();
+    const { loading, allergensMap, setSelectedAllergens, ingredientsMap, categoriesMap, productsMap } = useData();
     const { idCategory } = useParams();
-    const [selectedAllergens, setSelectedAllergens] = useState<number[]>([]);
+
+    const theme = useContext(ThemeContext)
 
     const openDrawer = (dish: ProductDto) => {
         setSelectedDish(dish);
@@ -44,43 +39,38 @@ const ClientProductsPage: React.FC = () => {
         alert(`${customDish.name} è stato aggiunto al carrello con quantità ${customDish.quantity}.`);
     };
 
-    const handleAllergenChange = (selected: number[]) => {
-
-        setSelectedAllergens(selected);
-        console.log('Selected allergens:', selected);
-    };
 
     return (
         <>
             {loading ? (
                 <CustomLoading />
             ) : (
-                <div className="flex flex-col min-h-screen bg-gray-50">
+                <div className="flex flex-col min-h-screen text-gray-900" style={{backgroundColor: theme?.theme.colors.color1 + ""}}>
+                    <CartIcon />
                     <ClientHeader
                         localname="Panineria creperia Strafame"
                         logo="/images/logo.png"
                     />
-                    <main className="flex-grow p-4">
-                        {/* Allergeni selezionati */}
-                        <div className="p-4">
-                            <AllergensSelector allergens={allergens} onAllergenChange={handleAllergenChange}/>
+                    <main className="flex-grow p-6">
+                        {/* Selettore allergeni */}
+                        <div>
+                            <AllergensSelector allergens={allergens} onAllergenChange={setSelectedAllergens} />
                         </div>
 
                         {/* Titolo della categoria */}
-                        <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
-                            {idCategory && categoriesMap.get(Number(idCategory))?.name || "I nostri piatti"}
+                        <h1 className="text-4xl font-extrabold text-center mb-8" style={{color: theme?.theme.colors.text1 + ""}}>
+                            {idCategory && (categoriesMap.get(Number(idCategory))?.name || "I nostri piatti")}
                         </h1>
 
                         {/* Griglia dei prodotti */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-                            {Array.from(productsMap.values()).map((dish) => (
+                            {Array.from(productsMap.values()).filter((p) => p.idCategory === Number(idCategory)).map((dish) => (
                                 <ClientProductCard
                                     key={dish.id}
-                                    imageSrc={dish.image || ""}
+                                    imageSrc={dish.image ? process.env.REACT_APP_BUCKET_URL + dish.image : ""}
                                     name={dish.name}
                                     ingredients={dish.ingredients.map(i => ingredientsMap.get(i)?.name).join(", ")}
-                                    price={dish.options.find(p => p.isDefault)?.price.toString() || "0"}
-                                    //price={`€ ${dish.price.toFixed(2)}`}
+                                    options={dish.options}
                                     onAddToCart={() => openDrawer(dish)}
                                 />
                             ))}
@@ -91,6 +81,11 @@ const ClientProductsPage: React.FC = () => {
                         onClose={closeDrawer}
                         dish={selectedDish}
                         onAddToCart={addToCart}
+                        waiter={window.location.href.toLowerCase().includes("/waiters/")}
+                        //imageSrc={""}
+                        //name={selectedDish?.name || ""}
+                        //ingredients={"test"}
+                        //price={selectedDish?.options.find(p => p.isDefault)?.price.toString()  || ""}
                     />
                     <ClientFooter
                         address="Via Roma, 123 - Milano"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 
 interface DeletePopupProps {
     itemName: string;
@@ -7,8 +7,37 @@ interface DeletePopupProps {
 }
 
 const DeletePopup: React.FC<DeletePopupProps> = ({ itemName, onConfirm, onCancel }) => {
+    const [message, setMessage] = useState<any>(<></>)
+
+    useEffect(() => {
+        checkMessage()
+    }, []);
+
+    useEffect(() => {
+        checkMessage()
+    }, [itemName]);
+
+    const checkMessage = () => {
+        let tmp = <></>
+        switch(itemName){
+            case "free_table":
+                tmp = <>Sono presenti delle comande non ancora completate<br/> Modificare lo stato in Completate?</>
+                break
+            case "free_categories":
+                tmp = <>Sono presenti dei prodotti nella categoria<br/> Procedendo verrano eliminati</>
+                break
+            case "free_ingredients":
+                tmp = <>L'ingrediente viene usato in alcuni prodotti<br/> Procedendo verrano rimossi anche dai prodotti</>
+                break
+            default:
+                tmp = <>Sei sicuro di voler eliminare {itemName}?</>
+                break
+        }
+        setMessage(tmp)
+    }
+
     return (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50" style={{zIndex: 1000}}>
             <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
                 <div className="flex flex-col items-center">
                     <div className="bg-yellow-100 p-4 rounded-full">
@@ -28,8 +57,8 @@ const DeletePopup: React.FC<DeletePopupProps> = ({ itemName, onConfirm, onCancel
                         </svg>
                     </div>
 
-                    <h2 className="text-lg font-semibold text-gray-800 mt-4">
-                        Sei sicuro di voler eliminare {itemName}?
+                    <h2 className="text-lg font-semibold text-gray-800 mt-4 text-center">
+                        {message}
                     </h2>
                     <div className="flex mt-6 space-x-4">
                         <button

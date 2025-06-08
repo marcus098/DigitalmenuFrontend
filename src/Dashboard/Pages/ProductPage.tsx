@@ -6,6 +6,8 @@ import AllergenIngredientTagRow from "../../Components/AllergenIngredientTagRow"
 import { FaArrowLeft, FaSave, FaPlus } from "react-icons/fa";
 import CustomLoading from "../../Components/CustomLoading";
 import {useHistory} from "../../Context/HistoryContext";
+import ManageItemsModal from "../../Components/Dashboard/ManageItemsModal";
+import {useNotification} from "../../Context/NotificationContext";
 
 //const availableAllergensId = [1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 //const availableTagsId = [1,2,3]
@@ -29,7 +31,7 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
     const [myLoading, setMyLoading] = useState<boolean>(true)
     const [image, setImage] = useState<string>("")
     const [file, setFile] = useState<File | null>(null)
-    const [positionProgressive, setPositionProgressive] = useState<number>(0)
+    const [positionProgressive, setPositionProgressive] = useState<number>(1)
     const [filter, setFilter] = useState<string>("");
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,7 +39,11 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
 
     const {loading, allergensMap, tagsMap, productsMap, ingredientsMap, categoriesMap, addProduct, updateProduct} = useData()
     const {idProduct, localname} = useParams()
-    const {navigateWithHistory} = useHistory()
+    const { navigateWithHistory } = useHistory()
+    const { addNotification } = useNotification()
+
+    const [priceMode, setPriceMode] = useState<"single" | "options">("single");
+    const [singlePrice, setSinglePrice] = useState<number>(0);
 
     useEffect(() => {
         if(!loading){
@@ -53,19 +59,41 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
                 if(product?.options && product.options.length > 0) {
                     if(product.options.length === 1 && product.options[0].name === "default"){
                         setOptions([])
+                        setPriceMode("single")
                         setSinglePrice(product.options[0].price)
                     }else {
+                        setPriceMode("options")
                         setOptions(product?.options || [])
                     }
                 }else{
+                    setPriceMode("single")
                     setOptions([])
                 }
-                setImage(product?.image || "")
-                setPositionProgressive(product?.positionProgressive || 0)
+                const img = product?.image || ""
+                setImage(img)
+                setPositionProgressive(product?.positionProgressive || 1)
             }
             setMyLoading(false)
         }
     }, [loading]);
+
+    const resetField = () => {
+        setName("")
+        setDescription("")
+        setIdCategory(-1)
+        setOptions([])
+        setAllergens([])
+        setIngredients([])
+        setTags([])
+        setAvailable(true)
+        setImage("")
+        setFile(null)
+        setPositionProgressive(1)
+        setId(-1)
+        setFilter("")
+        setPriceMode("single")
+        setSinglePrice(0)
+    }
 
     const openModal = (type: "allergeni" | "ingredienti" | "tags") => {
         setModalType(type);
@@ -78,86 +106,58 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
     };
 
     const saveAndContinue = async () => {
-        await isNew ? add() : update()
-        resetField()
+        const status = isNew ? await add() : await update()
+        if (status){
+            addNotification({message: "Prodotto modificato", type: "success"})
+            resetField()
+        }else{
+            addNotification({message: "Errore", type: "error"})
+        }
     }
 
     const saveAndClose = async () => {
-        await isNew ? add() : update()
-        resetField()
-        navigateWithHistory("/" + localname + "/Dashboard/Menu")
+        const status = isNew ? await add() : await update()
+        if (status) {
+            addNotification({message: "Prodotto modificato", type: "success"})
+            resetField()
+            navigateWithHistory("/" + localname + "/Dashboard/Menu")
+        }else{
+            addNotification({message: "Errore", type: "error"})
+        }
     }
 
-    const resetField = () => {
-        setImage("")
-        setName("")
-        setAllergens([])
-        setIngredients([])
-        setTags([])
-        setPositionProgressive(0)
-        setFile(null)
-        setAvailable(true)
-        setIdCategory(0)
-        setOptions([])
-        setDescription("")
-        setId(-1)
-    }
-
-    const handleSelectionChange = (type: "allergeni" | "ingredienti" | "tags", item: string) => {
-        console.log(type, item)
-        /*setProduct((prev) => {
-            if(prev) {
-                const currentList = prev[type];
-                const isAlreadySelected = currentList.includes(item);
-
-                const updatedList = isAlreadySelected
-                    ? currentList.filter((i) => i !== item) // Rimuovi
-                    : [...currentList, item]; // Aggiungi
-
-                return {...prev, [type]: updatedList};
-            }
-        });*/
-    };
-
-    const getAvailableOptions = (type: "allergeni" | "ingredienti" | "tags") => {
-        if (type === "allergeni") return Array.from(allergensMap.values()).sort((a,b) => a.name > b.name ? 1 : -1).map(e => e.id);
-        if (type === "ingredienti") return Array.from(ingredientsMap.values()).sort((a,b) => a.name > b.name ? 1 : -1).map(e => e.id);
-        if (type === "tags") return Array.from(tagsMap.values()).sort((a,b) => a.name > b.name ? 1 : -1).map(e => e.id);
-        return [];
-    };
-
-    const filteredOptions = (type: "allergeni" | "ingredienti" | "tags") =>
-        getAvailableOptions(type).filter(
-            (id) =>
-                !filter ||
-                (type === "allergeni" && allergensMap.get(id)?.name?.toLowerCase().includes(filter.toLowerCase())) ||
-                (type === "ingredienti" && ingredientsMap.get(id)?.name?.toLowerCase().includes(filter.toLowerCase())) ||
-                (type === "tags" && tagsMap.get(id)?.name?.toLowerCase().includes(filter.toLowerCase()))
-        );
 
     const add = async () => {
         setMyLoading(true)
-        const tmp: OptionInProduct[] = (priceMode === "single") ? [{name: "default", isDefault: true, price: singlePrice}] : [...options]
-        await addProduct({name: name, options: tmp, image: image, tags: tags, available: available, allergens: allergens, idCategory: idCategory, description: description, ingredients: ingredients}, file)
+        let tmp: OptionInProduct[] = [];
+        if(priceMode === "single")
+            tmp.push({name: "default", isDefault: true, price: singlePrice})
+        else
+            tmp = [...options]
+
+        const status = await addProduct({name: name, options: tmp, image: image.startsWith("data") ? "" : image, tags: tags, available: available, allergens: allergens, idCategory: idCategory, description: description, ingredients: ingredients}, file)
         setMyLoading(false)
+        return status
     }
 
     const update = async () => {
         setMyLoading(true) //todo non mandare indietro in caso di errori
         const tmp: OptionInProduct[] = (priceMode === "single") ? [{name: "default", isDefault: true, price: singlePrice}] : [...options]
-        await updateProduct({id: id, positionProgressive: positionProgressive, name: name, options: tmp, image: image, tags: tags, available: available, allergens: allergens, idCategory: idCategory, description: description, ingredients: ingredients}, file || undefined)
-        setMyLoading(false)
-    }
+        const status = await updateProduct({id: id, positionProgressive: positionProgressive, name: name, options: tmp, image: image.startsWith("data") ? "" : image, tags: tags, available: available, allergens: allergens, idCategory: idCategory, description: description, ingredients: ingredients}, file || undefined)
 
-    const handleChange = (item: number) => {
-        console.log(item)
+        setMyLoading(false)
+        return status
     }
 
     const changeDefaultOption = (index: number) => {
-        console.log(index)
-        for(const option of options){
-
+        if(index > options.length){
+            return
         }
+        const tmp = [...options]
+        for(let i = 0; i < tmp.length; i++){
+            tmp[i].isDefault = i === index
+        }
+        setOptions([...tmp])
     }
 
     const handleAddOrRemove = (type: "allergeni" | "ingredienti" | "tags", id: number) => {
@@ -210,7 +210,7 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
     }
 
     const handleToggleAvailable = () => {
-
+        setAvailable(!available)
     }
 
     const deleteOption = (index: number) => {
@@ -232,8 +232,88 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
         }
     }
 
-    const [priceMode, setPriceMode] = useState<"single" | "options">("single");
-    const [singlePrice, setSinglePrice] = useState<number>(0);
+    const addRemoveIngredient = (value: number[]) => {
+        const tmp = [...ingredients]
+        const removed: number[] = []
+
+        tmp
+            .filter(i => {
+                const ings = ingredientsMap.get(i);
+                return ings && ings.allergens.length > 0 && !value.includes(i)
+            })
+            .forEach(i => (ingredientsMap.get(i)?.allergens || []).forEach(el => removed.push(el)))
+
+        const added: number[] = []
+
+        value
+            .filter(i => {
+                const ings = ingredientsMap.get(i);
+                return ings && ings.allergens.length > 0 && !tmp.includes(i)
+            })
+            .forEach(i => (ingredientsMap.get(i)?.allergens || []).forEach(el => added.push(el)))
+
+        console.log(removed)
+        console.log(added)
+
+        const currentAllergens = removed.length > 0 ? [] : [...allergens]
+
+        console.log(allergens)
+
+        if(removed.length > 0) {
+            const removedCopy = [...removed].map(e => -e)
+
+            allergens.forEach(val => {
+                const index = removedCopy.indexOf(val);
+                if (index !== -1) {
+                    removedCopy.splice(index, 1);
+                } else {
+                    currentAllergens.push(val);
+                }
+            });
+
+        }
+
+        if (added.length > 0) {
+            added.forEach((ad) => {
+                currentAllergens.push(-ad)
+            })
+        }
+
+        if(removed.length > 0 || added.length > 0)
+            setAllergens([...currentAllergens])
+
+        console.log(currentAllergens)
+        setIngredients([...value])
+    }
+
+    let itemsMap: Map<number, { name: string }> | undefined;
+    let selectedItems: number[] = [];
+    let onChange: (newSelected: number[]) => void = () => {};
+
+    switch (modalType) {
+        case "allergeni":
+            itemsMap = allergensMap;
+            const result = allergens.filter((num, index, self) => {
+                const absVal = Math.abs(num);
+                const hasNegative = self.includes(-absVal);
+                if (num < 0) return self.indexOf(num) === index;
+                return !hasNegative
+            })
+            selectedItems = result;
+            onChange = setAllergens;
+            break;
+        case "ingredienti":
+            itemsMap = ingredientsMap;
+            selectedItems = ingredients;
+            onChange = addRemoveIngredient;
+            break;
+        case "tags":
+            itemsMap = tagsMap;
+            selectedItems = tags;
+            onChange = setTags;
+            break;
+    }
+
 
 // Componente Toggle
     const PriceModeToggle = () => (
@@ -263,6 +343,23 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
         <>
         {loading ? <CustomLoading isFullPage={true}/> :
         <div className="p-6">
+            {isModalOpen && <ManageItemsModal
+                //filter={filter}
+                //setFilter={setFilter}
+                //isOpen={isModalOpen}
+                onClose={closeModal}
+                selectedItems={modalType === "allergeni" ? allergens : modalType === "ingredienti" ? ingredients : tags}
+                onChange={
+                    modalType === "allergeni"
+                        ? setAllergens
+                        : modalType === "ingredienti"
+                            ? setIngredients
+                            : setTags
+                }
+                itemsMap={modalType === "allergeni" ? allergensMap : modalType === "ingredienti" ? ingredientsMap : tagsMap}
+                title={modalType || "allergeni"}
+            />
+            }
             {myLoading && <CustomLoading isTransparent={true}/>}
 
             <div className="mb-6" style={{ marginLeft: "-1.7rem", marginTop: "-2rem" }}>
@@ -285,7 +382,7 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
                     className="relative w-40 h-40 bg-orange-200 rounded-md flex items-center justify-center overflow-hidden cursor-pointer border border-dashed border-orange-400"
                 >
                     <img
-                        src={image}
+                        src={image.startsWith("data") ? image || "" : process.env.REACT_APP_BUCKET_URL + image}
                         onError={(e) => (e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/1280px-Placeholder_view_vector.svg.png")}
                         className="w-full h-full object-cover"
                     />
@@ -460,7 +557,6 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
                 </div>
             </div>
 
-
             {/* Pulsanti Finali */}
             <div className="mt-6 flex justify-end space-x-4">
                 <button
@@ -470,60 +566,32 @@ const ProductPage: React.FC<ProductPageProps> = ({isNew, productDto}) => {
                     <FaSave size={16} />
                     <span>Salva e Torna Indietro</span>
                 </button>
-                <button
-                    className="flex items-center space-x-2 bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600"
-                    onClick={() => saveAndContinue()}
-                >
-                    <FaPlus size={16} />
-                    <span>Salva e Aggiungi Altro</span>
-                </button>
+                {isNew &&
+                    <button
+                        className="flex items-center space-x-2 bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600"
+                        onClick={() => saveAndContinue()}
+                    >
+                        <FaPlus size={16} />
+                        <span>Salva e Aggiungi Altro</span>
+                    </button>
+                }
             </div>
 
             {/* Modale */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-md p-6 max-h-96 overflow-y-auto"
-                         style={{width: "80vw", maxWidth: "600px"}}>
-                        <h2 className="text-xl font-bold mb-4">
-                            Gestisci {modalType === "allergeni" ? "Allergeni" : modalType === "ingredienti" ? "Ingredienti" : "Tag"}
-                        </h2>
-                        <input
-                            type="text"
-                            placeholder="Filtra..."
-                            value={filter}
-                            onChange={(e) => setFilter(e.target.value)}
-                            className="w-full mb-4 p-2 border rounded-md"
-                        />
-                        <div className="flex flex-wrap">
-                            {modalType &&
-                                filteredOptions(modalType).map((id: number) => (
-                                    <button
-                                        key={id}
-                                        onClick={() => handleAddOrRemove(modalType, id)}
-                                        className={"m-1 px-3 py-1 rounded-md border ".concat(
-                                            (modalType === "allergeni" && allergens.includes(id)) ||
-                                            (modalType === "ingredienti" && ingredients.includes(id)) ||
-                                            (modalType === "tags" && tags.includes(id))
-                                                ? "bg-blue-500 text-white"
-                                                : "bg-gray-200")
-                                        }
-                                    >
-                                        {modalType === "allergeni"
-                                            ? allergensMap.get(id)?.name
-                                            : modalType === "ingredienti"
-                                                ? ingredientsMap.get(id)?.name
-                                                : tagsMap.get(id)?.name}
-                                    </button>
-                                ))}
-                        </div>
-                        <button
-                            onClick={closeModal}
-                            className="mt-4 bg-red-500 text-white px-4 py-2 rounded-md"
-                        >
-                            Chiudi
-                        </button>
-                    </div>
-                </div>
+            {isModalOpen && modalType && itemsMap && (
+                <ManageItemsModal
+                    title={
+                        modalType === "allergeni"
+                            ? "Gestisci Allergeni"
+                            : modalType === "ingredienti"
+                                ? "Gestisci Ingredienti"
+                                : "Gestisci Tag"
+                    }
+                    itemsMap={itemsMap}
+                    selectedItems={selectedItems}
+                    onChange={onChange}
+                    onClose={closeModal}
+                />
             )}
 
         </div>}

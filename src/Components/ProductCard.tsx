@@ -21,14 +21,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                                      deleteProduct
                                                  }) => {
     const defaultImage = "https://via.placeholder.com/100"; // Immagine predefinita
-    const productImage = product.image || defaultImage;
+    const productImage = product.image ? product.image : defaultImage;
     const { localname } = useParams();
     const { navigateWithHistory } = useHistory();
     const {ingredientsMap, allergensMap} = useData()
-
-    // Creiamo una stringa di allergeni separata da virgola, simile agli ingredienti
-    const allergens = product.allergens ? product.allergens.join(", ") : "";
-    const ingredients = product.ingredients ? product.ingredients.join(", ") : "";
 
     // Funzione per ottenere l'iniziale del nome del prodotto
     const getInitial = (name: string) => {
@@ -48,7 +44,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     {/* Se non c'è l'immagine, mostra l'iniziale del nome */}
                     {product.image ? (
                         <img
-                            src={productImage}
+                            src={process.env.REACT_APP_BUCKET_URL + productImage}
                             alt={product.name}
                             className="w-full h-full object-cover rounded-md"
                         />
@@ -64,6 +60,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         {product.ingredients && product.ingredients.length > 0 && <>
                             Ingredienti:{" "}
                             {product.ingredients
+                                .filter((value, index, self) => self.indexOf(value) === index)
                                 .map((i) => ingredientsMap.get(i)?.name)
                                 .join(", ")}
                             </>
@@ -73,12 +70,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         {product.allergens && product.allergens.length > 0 &&
                             <>Allergeni:{" "}
                             {product.allergens
-                                .map((i) => allergensMap.get(i)?.name)
+                                .filter((value, index, self) => self.indexOf(value) === index)
+                                .map((i) => {
+                                    const name = allergensMap.get(Math.abs(i))?.name
+                                    return name ? name.charAt(0).toUpperCase() + name.substring(1).toLowerCase() : ""
+                                })
+                                .filter((value, index, self) => value && value !== "" && self.indexOf(value) === index)
                                 .join(", ")}
                         </>}
                     </p>
                     <p className="text-sm text-gray-500">
-                        {product.options.find((o) => o.isDefault)?.price}
+                        € {product.options.find((o) => o.isDefault)?.price.toFixed(2)}
                     </p>
                 </div>
             </div>

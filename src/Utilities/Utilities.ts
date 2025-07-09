@@ -22,6 +22,7 @@ export const allergens = [
 
 export const setCookie = (name: string, value: any, days: number): void => {
     let expires = "";
+    console.log(value)
     if (days) {
         let date = new Date();
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -104,15 +105,20 @@ const generateCartKey = (productCart: ProductCard): string => {
 export const addProductToCart = (productCart: ProductCard, cartName?: string) => {
     const nameCart = "cart_" + (cartName ?? "tmp0");
     const cartMap = getCartMap(nameCart);
+    console.log(cartMap)
+    console.log(productCart)
 
     const key = generateCartKey(productCart);
 
     if (cartMap[key]) {
         cartMap[key].quantity += productCart.quantity;
     } else {
+        console.log("entro nell'else")
         cartMap[key] = { ...productCart };
+//        console.log(cartMap)
+//        console.log(JSON.stringify(cartMap))
     }
-
+    console.log(JSON.stringify(cartMap))
     setCookie(nameCart, JSON.stringify(cartMap), 1);
     return true;
 };
@@ -159,7 +165,7 @@ export const updateProductQuantity = (productCart: ProductCard, delta: number, c
             delete cartMap[key];
         }
 
-        setCookie(nameCart, JSON.stringify(cartMap), 1);
+            setCookie(nameCart, JSON.stringify(cartMap), 1);
         return true;
     }
 
@@ -186,6 +192,20 @@ export const convertCartToAddComandWaiterOrder = (products: ProductCard[]): AddC
     })
 
     return {orders: [{products: productsToOrder}], comandWaiterType: "HOME"}
+}
+
+export function saveCart(productCard: ProductCard[], name: string | undefined){
+    try {
+        const nameCart = "cart_" + (name ?? "cart_tmp0");
+        if(productCard.length === 0){
+            deleteCookie(nameCart)
+        }else {
+            setCookie(nameCart, JSON.stringify(productCard), 1);
+        }
+        return true;
+    }catch (except){
+        return false
+    }
 }
 
 export function formatDateTime(isoString: string): string {

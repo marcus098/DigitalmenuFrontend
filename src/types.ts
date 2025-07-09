@@ -2,6 +2,8 @@ import React from "react";
 import {Comand} from "./ComandType";
 import {UserProfile} from "./Dashboard/Pages/ProfilePage";
 import {Orders} from "./Dashboard/Pages/OrderPage";
+import exp from "node:constants";
+import {Table} from "./Dashboard/Pages/TablesPageTest";
 
 export interface ApiResponse<T = any>{
     status: number
@@ -47,6 +49,33 @@ export interface DataContextType{
     freeTableContext: (id: number) => Promise<string>
     forceFreeTableContext: (id: number) => Promise<boolean>
     setBusyTable: (id: number, seats: number) => Promise<boolean>
+    updateStyle: (updateStyle: UpdateStyle, logoFile: File | null, heroFile: File | null) => Promise<boolean>
+    getWaiters: () => Promise<WaiterDto[] | null>
+    deleteWaiter: (id: number) => Promise<boolean>
+    confirmWaiter: (id: number) => Promise<boolean>
+    getWaiterInvitationUrl: () => Promise<string | null>
+    addTableFunc: (addTable: AddTable) => Promise<boolean>
+    updateTablesFunc: (updateTables: UpdateTables) => Promise<boolean>
+    updateSingleTableFunc: (table: TableDto) => Promise<boolean>
+}
+
+export interface UpdateStyle {
+    backgroundGradient: string
+    cardBackground: string
+    primary: string
+    textBody: string
+    textOnPrimary: string
+    textTitle: string
+    address: string
+    phone: string
+    facebookUrl: string
+    instagramUrl: string
+    heroImageUrl: string
+    logoUrl: string
+    restaurantName: string
+    cardStyle: string
+    showImages: boolean
+    font: string
 }
 
 export interface Entity{
@@ -73,7 +102,7 @@ export interface ListToExport{
     productsList?: Map<number, ProductDto>
     tablesList?:  Map<number, TableDto>
     imagesList?: ImageDto[]
-    style?: StyleDto
+    styleDto?: StyleDto
     comands?: Comand[]
 }
 
@@ -88,6 +117,7 @@ export interface LoginContextType{
     register: (formData: FormData) => Promise<"Success" | "Errore">
     transparentLoading: boolean
     errorType: 'credenziali' | 'connection' | null
+    checkVariable: (value: number) => boolean
 }
 
 export interface UtilitiesContextType{
@@ -190,20 +220,24 @@ export interface IngredientOrderPlus {
 }
 
 export interface StyleDto{
-    facebook: string
-    socialX: string
-    instagram: string
-    color1: string
-    color2: string
-    color3: string
-    color4: string
-    color5: string
-    color6: string
-    categoryStyle: string
-    productStyle: string
-    address: string
-    publicPhone: string
-    font: string
+    backgroundGradient: string[],
+    cardBackground: string,
+    primary: string,
+    textBody: string,
+    textOnPrimary: string,
+    textTitle: string,
+    address: string,
+    phone: string,
+    facebookUrl: string,
+    instagramUrl: string,
+    heroImageUrl: string,
+    logoUrl: string,
+    restaurantName: string,
+    cardStyle: "soft" | "rounded" | "sharp",
+    showImages: boolean,
+    font: string,
+    sessionUpdating?: string,
+    changeType?: string
 }
 
 export interface ImageDto{
@@ -249,6 +283,7 @@ export interface User {
     email: string
     phone?: string
     address?: string
+    controlsVariable: number
 }
 
 export interface LoginResponse {
@@ -261,6 +296,7 @@ export interface LoginResponse {
     email?: string
     isNew: boolean
     idAgency: number
+    controlsVariable: number
 }
 
 export interface ScreenType {
@@ -382,6 +418,16 @@ export interface CommandFromWaiterDto extends CommandDto {
     idWaiter: number
 }
 
+export interface WaiterDto {
+    id: number
+    name: string
+    surname: string
+    email: string
+    phone: string
+    sessionUpdating?: string
+    changeType?: string
+}
+
 export interface Order {
     id: string
     createdAt: string
@@ -400,3 +446,80 @@ export interface ProductCard {
     price: number
     note: string
 }
+
+
+export type CardType = 'stamps' | 'points';
+
+export interface LoyaltyCard {
+    id: string;
+    qrCodeValue: string;
+    type: CardType;
+    createdAt: string;
+
+    stampsProgress?: number;
+    stampsTotal?: number;
+
+    points?: number;
+}
+
+export interface CardDto{
+    id: number
+    code: string
+    typePoints: boolean
+    actualValue: number
+    scope: number
+    priceForPoint: number
+    qrCodeUrl: string
+    createdAt: string
+}
+
+export interface AddCard {
+    typePoints: boolean
+    scope: number
+    priceForPoint: number
+}
+
+export interface FileDto {
+    id: number
+    parentFolder: number
+    fileName: string
+    fileType: string
+    createdAt: string
+    fileSize: string
+}
+
+export interface FolderDto {
+    id: number
+    name: string
+    url: string
+}
+
+export interface UpdateTables{
+    id: number
+    name: string
+    tables: UpdateTableRow[]
+}
+
+export interface UpdateTableRow{
+    x: number
+    y: number
+    w: number
+    h: number
+    id: number
+}
+
+export interface SignupWaiter {
+    idAgency: number
+    firstName: string
+    lastName: string
+    email: string
+    password: string
+    phone?: string
+    code: string
+}
+
+export const IS_ADMIN = 2;
+export const IS_WAITER = 3;
+export const IS_TRIAL= 5;
+export const IS_EMAIL_CONFIRMED = 7;
+export const IS_WAITER_CONFIRMED = 11;

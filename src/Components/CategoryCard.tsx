@@ -1,8 +1,11 @@
+// src/Components/CategoryCard.tsx
 import React from "react";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import { CategoryDto } from "../types";
+import {CategoryDto, IS_ADMIN} from "../types";
 import { useHistory } from "../Context/HistoryContext";
+import PillToggle from "./Dashboard/PillToggle";
+import {useLoginContext} from "../Context/LoginContext";
 
 interface CategoryCardProps {
     category: CategoryDto;
@@ -16,70 +19,56 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                                                        deleteCategory,
                                                    }) => {
     const { localname } = useParams();
-    const defaultImage = "/noImage.jpg";
-    const categoryImage = category.image || defaultImage;
     const { navigateWithHistory } = useHistory();
-
-    const handleDelete = () => {
-        deleteCategory(category.id, category.name);
-    };
+    const defaultImage = "/noImage.jpg"; // Fallback se non c'è immagine
+    const categoryImage = category.image ? process.env.REACT_APP_BUCKET_URL + category.image : defaultImage;
+    const { checkVariable } = useLoginContext()
 
     return (
-        <div className={`p-5 rounded-xl shadow-md flex flex-col space-y-3 transition-all ${
-            category.available ? "bg-white" : "bg-rose-100"
+        <div className={`rounded-xl shadow-lg flex flex-col transition-all duration-300 ${
+            category.available ? "bg-white" : "bg-gray-50 border-l-4 border-rose-400"
         }`}>
-            {/* Immagine e dettagli */}
-            <div className="flex items-center space-x-4">
-                <div className="w-14 h-14">
-                    <img
-                        src={categoryImage ? process.env.REACT_APP_BUCKET_URL + categoryImage : ""}
-                        alt={category.name}
-                        className="w-full h-full object-cover rounded-md border border-gray-300"
-                    />
-                </div>
+            {/* Sezione 1: Immagine e Informazioni */}
+            <div className="p-4 flex items-center space-x-4">
+                <img
+                    src={categoryImage}
+                    alt={category.name}
+                    className="w-16 h-16 flex-shrink-0 object-cover rounded-lg border border-gray-200"
+                />
                 <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                        {category.name}
-                    </h3>
+                    <h3 className="text-lg font-bold text-gray-800">{category.name}</h3>
                     {category.description && (
-                        <p className="text-sm text-gray-600">{category.description}</p>
+                        <p className="text-sm text-gray-600 truncate">{category.description}</p>
                     )}
                 </div>
             </div>
 
-            {/* Toggle Disponibilità e Pulsanti */}
-            <div className="flex justify-between items-center">
-                <button
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                        category.available
-                            ? "bg-amber-500 text-white hover:bg-amber-600"
-                            : "bg-rose-500 text-white hover:bg-rose-600"
-                    }`}
-                    onClick={() => handleAvailable(category.id, !category.available)}
-                >
-                    {category.available ? "Disponibile" : "Non disponibile"}
-                </button>
-
-                {/* Pulsanti Azione */}
-                <div className="flex items-center space-x-3">
+            {/* Sezione 2: Azioni e Disponibilità (con divisore) */}
+            <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+                {/* Pill Toggle per la disponibilità */}
+                <PillToggle
+                    label="Disponibile"
+                    enabled={category.available}
+                    onChange={(value) => handleAvailable(category.id, value)}
+                />
+                {/* Pulsanti azione grandi e facili da premere */}
+                <div className="flex items-center justify-end space-x-2 pt-2">
                     <button
-                        className="text-orange-500 hover:text-orange-700 p-2 rounded-full"
+                        className="p-3 rounded-full text-gray-500 hover:bg-gray-100 hover:text-primary transition"
                         title="Modifica"
-                        onClick={() =>
-                            navigateWithHistory(
-                                `/${localname}/Dashboard/Category/${category.id}`
-                            )
-                        }
+                        onClick={() => navigateWithHistory(`/${localname}/Dashboard/Category/${category.id}`)}
                     >
-                        <FaEdit size={16} />
+                        <FaEdit size={18} />
                     </button>
-                    <button
-                        className="text-red-500 hover:text-red-700 p-2 rounded-full"
-                        title="Elimina"
-                        onClick={handleDelete}
-                    >
-                        <FaTrashAlt size={16} />
-                    </button>
+                    {checkVariable(IS_ADMIN) &&
+                        <button
+                            className="p-3 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition"
+                            title="Elimina"
+                            onClick={() => deleteCategory(category.id, category.name)}
+                        >
+                            <FaTrashAlt size={18} />
+                        </button>
+                    }
                 </div>
             </div>
         </div>

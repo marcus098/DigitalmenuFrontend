@@ -1,15 +1,325 @@
-import React, {useEffect, useState} from "react";
-import GridLayout, { Layout } from "react-grid-layout";
+// src/pages/TablesPageTest.tsx
+
+import React, {useState, useEffect} from "react";
+import {Responsive, WidthProvider, Layouts, Layout} from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { FaInfoCircle, FaTrashAlt } from "react-icons/fa";
 import {useData} from "../../Context/DataContext";
-import {getComandsByTableApi} from "../../Utilities/api";
-import {Orders} from "./OrderPage";
+import TableItem from "../../Components/Dashboard/TableItem";
+import AddTableModal from "../../Components/Dashboard/AddTableModal";
+import EditTableModal from "../../Components/Dashboard/EditTableModal";
 import DeletePopup from "../../Components/DeletePopup";
+import {PlusIcon, CheckIcon} from "@heroicons/react/24/solid";
 import {useNotification} from "../../Context/NotificationContext";
+import {AddTable, UpdateTableRow, UpdateTables} from "../../types";
+import {all} from "axios";
+import CustomLoading from "../../Components/CustomLoading";
+import FreeBusyTableModal from "../../Components/Dashboard/FreeBusyTableModal";
 
-interface Table {
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
+
+const TablesPageTest: React.FC = () => {
+    // STATI COMPLETI
+    const { loading, tablesMap, mapRawOrderToOrder, setBusyTable, freeTableContext, forceFreeTableContext, addTableFunc, updateTablesFunc, updateSingleTableFunc, deleteTable, forceDeleteTable } = useData();
+    const { addNotification } = useNotification();
+    const [rooms, setRooms] = useState<Room[]>([]);
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+    const [layouts, setLayouts] = useState<Layouts>({});
+    const [isModified, setIsModified] = useState(false);
+    const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
+    const [isForceDeletePopupOpen, setIsForceDeletePopupOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [isBusyModalOpen, setIsBusyModalOpen] = useState<boolean>(false)
+
+    const [showBusyMessage, setShowBusyMessage] = useState(false);
+    const [tableOrders, setTableOrders] = useState<Record<OrderStatus, Item[]>>({ PENDING: [], PROGRESS: [], COMPLETED: [], CONFIRMED: [] });
+    const [orderTotal, setOrderTotal] = useState<Record<OrderStatus, number>>({ PENDING: 0, PROGRESS: 0, COMPLETED: 0, CONFIRMED: 0 });
+    const [loadingOrders, setLoadingOrders] = useState<boolean>(false);
+    const [layoutCurrent, setLayoutCurrent] = useState<Layout[]>([])
+
+    const saveTableLayout = (l: any) => {
+        console.log(l)
+    }
+
+    // LOGICA DI CARICAMENTO DATI
+    useEffect(() => {
+        if (!tablesMap) return;
+        const roomMap = new Map<string, Table[]>();
+        tablesMap.forEach((tableDto) => {
+            const location = tableDto.location || "Senza Sala";
+            const table: Table = {
+                id: tableDto.id.toString(), name: tableDto.name, status: tableDto.busy ? "Occupato" : "Libero",
+                x: tableDto.x, y: tableDto.y, w: tableDto.w, h: tableDto.h,
+                code: tableDto.code, location: tableDto.location, seats: tableDto.seats, busy: tableDto.busy
+            };
+            if (!roomMap.has(location)) roomMap.set(location, []);
+            roomMap.get(location)?.push(table);
+        });
+        const generatedRooms: Room[] = Array.from(roomMap.entries()).map(([name, tables], index) => ({ id: index, name, tables }));
+        setRooms(generatedRooms);
+
+        const hash = window.location.hash.replace('#', '');
+        const initialRoom = generatedRooms.find(r => r.name === hash) || generatedRooms[0];
+        if (initialRoom) setSelectedRoom(initialRoom);
+    }, [tablesMap]);
+
+    // LOGICA PER I LAYOUT (STABILE)
+    useEffect(() => {
+        if (!selectedRoom) { setLayouts({}); return; }
+        const currentLayout = selectedRoom.tables.map(t => ({ i: t.id.toString(), x: t.x, y: t.y, w: t.w, h: t.h }));
+        const newLayouts: Layouts = { lg: currentLayout, md: currentLayout, sm: currentLayout, xs: currentLayout, xxs: currentLayout };
+        setLayouts(newLayouts);
+        setIsModified(false);
+    }, [selectedRoom]);
+
+    const handleLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
+        setLayouts(allLayouts);
+        setLayoutCurrent([...currentLayout])
+        if (!isModified) setIsModified(true);
+    };
+
+    // LOGICA DI FETCH DEGLI ORDINI
+    useEffect(() => {
+        if (selectedTable && selectedTable.status === "Occupato"){
+            fetchTableOrders(selectedTable.id);
+        }
+    }, [selectedTable]);
+
+    const fetchTableOrders = async (tableId: string) => { /* ... la tua logica di fetch qui ... */ };
+
+
+    const handleSaveLayout = async () => {
+        if(selectedRoom?.tables) {
+            const tables:  UpdateTableRow[] = []
+            for(const t of layoutCurrent){
+                tables.push({
+                    id: Number(t.i),
+                    x: t.x,
+                    y: t.y,
+                    w: t.w,
+                    h: t.h
+                })
+            }
+            const updated: UpdateTables = {
+                id: selectedRoom.id,
+                name: selectedRoom.name,
+                tables: tables
+            }
+
+            const response = await updateTablesFunc(updated)
+            if(response) {
+                addNotification({message: "Salvato!", type: "success"})
+                setIsModified(false)
+            }else{
+                addNotification({message: "Errore", type: "error"})
+            }
+        }
+    };
+
+    const handleRoomChange = (room: Room) => { setSelectedRoom(room); window.location.hash = room.name; };
+    const handleInfoClick = (table: Table) => { setSelectedTable(table); setIsDetailModalOpen(true); };
+    const handleEditClick = (table: Table) => { setSelectedTable(table); setIsEditModalOpen(true); };
+    const handleRemoveClick = (table: Table) => { setSelectedTable(table); setIsDeletePopupOpen(true); };
+
+    const handleConfirmDelete = async () => {
+        if(!selectedTable) return
+
+        const response = await deleteTable(Number(selectedTable.id))
+        switch(response){
+            case "SUCCESS":
+                addNotification({message: "Tavolo eliminato!", type: "success"})
+                setIsDeletePopupOpen(false)
+                break;
+            case "ERROR":
+                addNotification({message: "Errore!", type: "error"})
+                break;
+            case "TABLE_NOT_FOUND":
+                setIsDeletePopupOpen(false)
+                addNotification({message: "Tavolo non trovato!", type: "error"})
+                break;
+            case "NOT_EMPTY":
+                setIsDeletePopupOpen(false)
+                setIsForceDeletePopupOpen(true)
+                break;
+            case "NOT_AUTHORIZED":
+                addNotification({message: "Non autorizzato!", type: "error"})
+                setIsDeletePopupOpen(false)
+                break;
+        }
+    };
+
+    const handleForceConfirmDelete = async () => {
+        if(!selectedTable) return
+        const response = await forceDeleteTable(Number(selectedTable.id))
+        if(response){
+            addNotification({message: "Tavolo eliminato!", type: "success"})
+            setIsForceDeletePopupOpen(false)
+        }else{
+            addNotification({message: "Errore!", type: "error"})
+        }
+    }
+
+    const forceFreeTable = async (id: number) => {
+        const response = await forceFreeTableContext(id)
+        if(response)
+            addNotification({message: "Tavolo liberato!", type: "success"})
+        else
+            addNotification({message: "Errore", type: "error"})
+    }
+
+    const freeTable = async (id: number) => {
+        const response = await freeTableContext(id)
+        switch(response){
+            case "SUCCESS":
+                addNotification({message: "Tavolo liberato!", type: "success"})
+                break;
+            case "ERROR":
+                addNotification({message: "Errore", type: "error"})
+                break;
+            case "TABLE_NOT_FOUND":
+                addNotification({message: "Tavolo non trovato", type: "error"})
+                break;
+            case "NOT_EMPTY":
+                addNotification({message: "Tavolo occupato", type: "error"})
+                setShowBusyMessage(true)
+                return;
+            case "NOT_AUTHORIZED":
+                addNotification({message: "Non autorizzato", type: "error"})
+                break
+        }
+        setShowBusyMessage(false)
+    };
+
+    const setBusy = async (id: number, seats?: number) => {
+        if(!seats) return
+        const response = await setBusyTable(id, seats)
+        if(response)
+            addNotification({message: "Tavolo occupato!", type: "success"})
+        else
+            addNotification({message: "Errore", type: "error"})
+    };
+
+    const onAdd = async(name: string, location: string) => {
+        const addTable: AddTable = {
+            name: name,
+            location: location,
+            type: "",
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0
+        }
+        const response = await addTableFunc(addTable)
+        if(response){
+            addNotification({message: "Tavolo aggiunto!", type: "success"})
+            setIsAddModalOpen(false)
+        }else{
+            addNotification({message: "Errore!", type: "error"})
+        }
+    }
+
+    const handleEdit = async (tableId: string, name: string, seats: number) => {
+        if(selectedTable && Number(selectedTable.id) === Number(tableId)){
+            const response = await updateSingleTableFunc({
+                id: Number(selectedTable.id),
+                name: name,
+                x: selectedTable.x,
+                y: selectedTable.y,
+                w: selectedTable.w,
+                h: selectedTable.h,
+                seats: seats,
+                busy: selectedTable.busy,
+                location: selectedTable.location
+            })
+            if(response){
+                addNotification({message: "Tavolo modificato!", type: "success"})
+                setIsEditModalOpen(false)
+            }else{
+                addNotification({message: "Errore", type: "error"})
+            }
+        }
+    }
+
+    return (
+        <div className="flex flex-col h-screen bg-slate-50">
+            {/* HEADER */}
+            <header className="p-4 bg-white border-b border-gray-200">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <h1 className="text-3xl font-bold text-gray-800">Gestione Sala</h1>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                        {rooms.map(room => (
+                            <button key={room.id} onClick={() => handleRoomChange(room)}
+                                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors flex-shrink-0 ${selectedRoom?.id === room.id ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                                {room.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </header>
+
+            {/* AREA PRINCIPALE */}
+            <main className="flex-1 relative p-4 overflow-y-auto">
+                {selectedRoom ? (
+                    <ResponsiveGridLayout
+                        layouts={layouts}
+                        onLayoutChange={handleLayoutChange}
+                        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                        cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }}
+                        rowHeight={30}
+                        draggableCancel=".non-draggable" // Regola chiave
+                    >
+                        {selectedRoom.tables.map(table => (
+                            <TableItem
+                                key={table.id.toString()}
+                                table={table}
+                                isSelected={selectedTable?.id === table.id}
+                                onInfo={handleInfoClick}
+                                onEdit={handleEditClick}
+                                onRemove={() => handleRemoveClick(table)}
+                                onFree={(table: Table)        => {setSelectedTable(table); freeTable(Number(table.id))}}
+                                onOccupy={(table: Table)      => {setSelectedTable(table); setIsBusyModalOpen(true)}}
+                            />
+                        ))}
+                    </ResponsiveGridLayout>
+                ) : (
+                    <div className="flex items-center justify-center h-full"><p className="text-gray-500">Seleziona una sala</p></div>
+                )}
+            </main>
+
+            {/* BOTTONI FLOTTANTI */}
+            <div className="absolute bottom-6 right-6 flex flex-col gap-4 z-40">
+                {isModified && <button onClick={handleSaveLayout} className="btn-primary p-4 rounded-full shadow-lg"><CheckIcon className="w-7 h-7"/></button>}
+                <button onClick={() => setIsAddModalOpen(true)} className="bg-primary text-white p-4 rounded-full shadow-lg"><PlusIcon className="w-7 h-7" /></button>
+            </div>
+
+            {/* MODALI E POPUP */}
+            {isAddModalOpen && <AddTableModal rooms={rooms} onClose={() => setIsAddModalOpen(false)} onAdd={onAdd} />}
+            {isEditModalOpen && selectedTable && <EditTableModal table={selectedTable} onClose={() => setIsEditModalOpen(false)} onSave={handleEdit} onDelete={() => setIsDeletePopupOpen(true)} />}
+            {isDeletePopupOpen && selectedTable && <DeletePopup itemName={selectedTable.name} onConfirm={handleConfirmDelete} onCancel={() => setIsDeletePopupOpen(false)}/>}
+            {isForceDeletePopupOpen && selectedTable && <DeletePopup itemName={"free_table"} onConfirm={handleForceConfirmDelete} onCancel={() => setIsForceDeletePopupOpen(false)}/>}
+            {isBusyModalOpen && selectedTable && <FreeBusyTableModal table={selectedTable} onClose={() => {setIsBusyModalOpen(false); setSelectedTable(null)}} onSave={setBusy} />}
+            {showBusyMessage && selectedTable && <FreeBusyTableModal table={selectedTable} onClose={() => {setShowBusyMessage(false); setSelectedTable(null)}} onSave={forceFreeTable} />}
+            {loading && <CustomLoading isFullPage={true} isTransparent={true} />}
+
+            {/* Qui puoi mettere il modale dei dettagli del tavolo (quello con gli ordini) */}
+            {isDetailModalOpen && selectedTable && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setIsDetailModalOpen(false)}>
+                    <div className="bg-white p-6 rounded-lg" onClick={e => e.stopPropagation()}>
+                        Dettagli per {selectedTable.name}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default TablesPageTest;
+
+export interface Table {
     id: string;
     x: number;
     y: number;
@@ -21,6 +331,7 @@ interface Table {
     total?: number;
     code?: string;
     location: string
+    busy: boolean
 }
 
 interface Room {
@@ -40,649 +351,3 @@ interface Item {
 }
 
 type OrderStatus = "PROGRESS" | "PENDING" | "COMPLETED" | "CONFIRMED";
-
-
-const TablesPageTest: React.FC = () => {
-    const { tablesMap, mapRawOrderToOrder, setBusyTable, freeTableContext, forceFreeTableContext } = useData();
-    const { addNotification } = useNotification()
-    const [rooms, setRooms] = useState<Room[]>([]);
-    const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
-    const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-    const [isModified, setIsModified] = useState(false);
-    const [checkHasComands, setCheckHasComands] = useState<boolean>(false)
-    const [tableOrders, setTableOrders] = useState<Record<OrderStatus, Item[]>>({
-        PENDING: [],
-        PROGRESS: [],
-        COMPLETED: [],
-        CONFIRMED: []
-    });
-    const [orderTotal, setOrderTotal] = useState<Record<OrderStatus, number>>({
-        PENDING: 0,
-        PROGRESS: 0,
-        COMPLETED: 0,
-        CONFIRMED: 0
-    });
-    const [loadingOrders, setLoadingOrders] = useState(false);
-    const [newTableData, setNewTableData] = useState<{
-        name: string;
-        location: string;
-        isNewLocation: boolean;
-        customLocation: string;
-        visible: boolean;
-    }>({
-        name: '',
-        location: '',
-        isNewLocation: false,
-        customLocation: '',
-        visible: false,
-    });
-
-
-    useEffect(() => {
-        if (!tablesMap) return;
-
-        const roomMap = new Map<string, Table[]>();
-
-        tablesMap.forEach((tableDto) => {
-            const location = tableDto.location || "Senza Sala";
-            const table: Table = {
-                id: tableDto.id.toString(),
-                name: tableDto.name,
-                status: tableDto.busy ? "Occupato" : "Libero",
-                x: tableDto.x,
-                y: tableDto.y,
-                w: tableDto.w,
-                h: tableDto.h,
-                code: tableDto.code,
-                location: tableDto.location,
-                seats: tableDto.seats
-            };
-
-            if (!roomMap.has(location)) {
-                roomMap.set(location, []);
-            }
-
-            roomMap.get(location)?.push(table);
-        });
-
-        const generatedRooms: Room[] = Array.from(roomMap.entries()).map(([location, tables], index) => ({
-            id: index + 1,
-            name: location,
-            tables,
-        }));
-
-        setRooms(generatedRooms);
-
-        if (generatedRooms.length > 0 && !selectedRoom) {
-            setSelectedRoom(generatedRooms[0].id);
-            window.location.hash = generatedRooms[0].id + '';
-        }
-    }, [tablesMap]);
-
-    useEffect(() => {
-        if (selectedTable && selectedTable.status !== "Libero"){
-            fetchTableOrders(selectedTable.id)
-        }
-    }, [selectedTable]);
-
-    useEffect(() => {
-        const hash = decodeURIComponent(window.location.hash);
-        const location = hash.replace('#', '');
-        setSelectedRoom(Number(location) || null)
-    }, []);
-
-    const freeTable = async () => {
-        if(selectedTable && selectedTable.id.startsWith("temp")){
-            addNotification({message: "Errore. Aggiornare la pagina", type: "error"})
-        }
-        if(selectedTable && selectedTable?.id) {
-            const response = await freeTableContext(Number(selectedTable.id))
-            if (response === "SUCCESS") {
-                resetAll()
-            } else if (response === "NOT_EMPTY") {
-                setCheckHasComands(true)
-            }
-        }
-    }
-
-    const forceFreeTable = async() => {
-        if(selectedTable && selectedTable.id.startsWith("temp")){
-            addNotification({message: "Errore. Aggiornare la pagina", type: "error"})
-        }
-        if(selectedTable && selectedTable?.id) {
-            const response = await forceFreeTableContext(Number(selectedTable.id))
-
-            if (response)
-                resetAll()
-        }
-    }
-
-    const setBusy = async() => {
-        if(selectedTable && selectedTable.id.startsWith("temp")){
-            addNotification({message: "Errore. Aggiornare la pagina", type: "error"})
-        }
-        if(selectedTable && selectedTable?.id && selectedTable.seats) {
-            const response = await setBusyTable(Number(selectedTable.id), selectedTable.seats)
-            if(response){
-                addNotification({message: "Tavolo occupato", type: "success"})
-                resetAll(true)
-            }
-        }
-    }
-
-    const fetchTableOrders = async (tableId: string) => {
-        try {
-            setLoadingOrders(true);
-            const res = await getComandsByTableApi(Number(tableId));
-
-            if(res.status === 200){
-                const tmp = ([...mapRawOrderToOrder(res.data || [])]);
-
-                const grouped: {PROGRESS: any, PENDING: any, COMPLETED: any, CONFIRMED: any} = {
-                    PROGRESS: {},
-                    PENDING: {},
-                    COMPLETED: {},
-                    CONFIRMED: {}
-                };
-
-                for (const comand of tmp) {
-                    const status = comand.status;
-                    if (status === 'DELETED' || status === 'AWAIT' || status === 'WAITING')
-                        continue
-
-                    for (const item of comand.items) {
-                        const key = JSON.stringify({
-                            productName: item.productName,
-                            categoryName: item.categoryName,
-                            option: item.option,
-                            additionalIngredients: [...item.additionalIngredients].sort(),
-                            removedIngredients: [...item.removedIngredients].sort(),
-                        });
-
-                        if (!grouped[status][key]) {
-                            grouped[status][key] = {
-                                productName: item.productName,
-                                categoryName: item.categoryName,
-                                option: item.option,
-                                additionalIngredients: [...item.additionalIngredients],
-                                removedIngredients: [...item.removedIngredients],
-                                total: 0,
-                                quantity: 0
-                            };
-                        }
-
-                        grouped[status][key].total += item.total;
-                        grouped[status][key].quantity += item.quantity;
-                    }
-                }
-
-                const result = {
-                    PROGRESS: Object.values(grouped.PROGRESS) as Item[],
-                    PENDING: Object.values(grouped.PENDING) as Item[],
-                    COMPLETED: Object.values(grouped.COMPLETED) as Item[],
-                    CONFIRMED: Object.values(grouped.CONFIRMED) as Item[]
-                };
-
-                const totalAll: Record<OrderStatus, number> = {
-                    PENDING: result.PENDING.reduce((sum, item) => sum + (item.total * item.quantity), 0),
-                    PROGRESS: result.PROGRESS.reduce((sum, item) => sum + (item.total * item.quantity), 0),
-                    COMPLETED: result.COMPLETED.reduce((sum, item) => sum + (item.total * item.quantity), 0),
-                    CONFIRMED: result.CONFIRMED.reduce((sum, item) => sum + (item.total * item.quantity), 0)
-                }
-
-                setTableOrders(result)
-                setOrderTotal(totalAll);
-            }else{
-                // todo mandare chiamata al backend principale in quanto gli ordini sono importanti
-                // todo spostare la logica in DataContext
-            }
-
-        } catch (error) {
-            console.error("Errore caricamento comande", error);
-        } finally {
-            setLoadingOrders(false);
-        }
-    };
-
-    const resetAll = (keepModal?: boolean) => {
-        setOrderTotal({
-            PENDING: 0,
-            PROGRESS: 0,
-            COMPLETED: 0,
-            CONFIRMED: 0
-        })
-        setTableOrders({
-            PENDING: [],
-            PROGRESS: [],
-            COMPLETED: [],
-            CONFIRMED: []
-        })
-        if(!keepModal)
-            setSelectedTable(null)
-        setCheckHasComands(false)
-    }
-
-
-    const handleRoomChange = (roomId: number) => {
-        setSelectedRoom(roomId)
-        window.location.hash = roomId + '';
-    }
-
-    const handleLayoutChange = (layout: Layout[]) => {
-        setRooms((prevRooms) =>
-            prevRooms.map((room) =>
-                room.id === selectedRoom
-                    ? {
-                        ...room,
-                        tables: layout.map((item) => {
-                            const table = room.tables.find((t) => t.id === item.i);
-                            return table ? { ...table, x: item.x, y: item.y, w: item.w, h: item.h } : null;
-                        }).filter((table): table is Table => table !== null),
-                    }
-                    : room
-            )
-        );
-        setIsModified(true);
-    };
-
-    const convertName = (status: "PROGRESS" | "PENDING" | "COMPLETED" | "CONFIRMED") => {
-        switch (status){
-            case "COMPLETED":
-                return "Completate"
-            case "CONFIRMED":
-                return "Confermate"
-            case "PENDING":
-                return "In attesa"
-            case "PROGRESS":
-                return "In corso"
-        }
-    }
-
-    const handleAddTable = () => {
-        setNewTableData({
-            name: '',
-            location: '',
-            isNewLocation: false,
-            customLocation: '',
-            visible: true,
-        });
-    };
-
-
-    const handleRemoveTable = (tableId: string) => {
-        setRooms((prevRooms) =>
-            prevRooms.map((room) =>
-                room.id === selectedRoom ? { ...room, tables: room.tables.filter((table) => table.id !== tableId) } : room
-            )
-        );
-        setSelectedTable(null);
-        setIsModified(true);
-    };
-
-    return (
-        <>
-            {checkHasComands && <DeletePopup itemName={"free_table"} onConfirm={forceFreeTable} onCancel={() => setCheckHasComands(false)} />}
-        <div className="p-4">
-
-            {newTableData.visible && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96 space-y-4">
-                        <h3 className="text-md font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                            <FaInfoCircle className="text-blue-400"/> Dettaglio Comande
-                        </h3>
-
-                        <input
-                            type="text"
-                            className="w-full border rounded px-2 py-1"
-                            placeholder="Nome Tavolo"
-                            value={newTableData.name}
-                            onChange={(e) => setNewTableData(prev => ({...prev, name: e.target.value}))}
-                        />
-
-                        <div>
-                            <label className="block font-semibold mb-1">Seleziona Location</label>
-                            <select
-                                className="w-full border rounded px-2 py-1"
-                                disabled={newTableData.isNewLocation}
-                                value={newTableData.location}
-                                onChange={(e) => setNewTableData(prev => ({...prev, location: e.target.value}))}
-                            >
-                                <option value="">-- Seleziona --</option>
-                                {[...Array.from(rooms.map(r => r.name))].map((loc) => (
-                                    <option key={loc} value={loc}>{loc}</option>
-                                ))}
-                            </select>
-                            <div className="flex items-center mt-2">
-                                <input
-                                    type="checkbox"
-                                    checked={newTableData.isNewLocation}
-                                    onChange={(e) =>
-                                        setNewTableData((prev) => ({
-                                            ...prev,
-                                            isNewLocation: e.target.checked,
-                                            location: '',
-                                            customLocation: '',
-                                        }))
-                                    }
-                                />
-                                <span className="ml-2">Inserisci nuova location</span>
-                            </div>
-
-                            {newTableData.isNewLocation && (
-                                <input
-                                    type="text"
-                                    placeholder="Nuova Location"
-                                    className="w-full mt-2 border rounded px-2 py-1"
-                                    value={newTableData.customLocation}
-                                    onChange={(e) => setNewTableData(prev => ({
-                                        ...prev,
-                                        customLocation: e.target.value
-                                    }))}
-                                />
-                            )}
-                        </div>
-
-                        <div className="flex justify-end space-x-2">
-                            <button
-                                className="px-4 py-2 rounded bg-gray-300 text-gray-800"
-                                onClick={() => setNewTableData(prev => ({...prev, visible: false}))}
-                            >
-                                Annulla
-                            </button>
-                            <button
-                                className="px-4 py-2 rounded bg-green-500 text-white"
-                                onClick={() => {
-                                    const finalLocation = newTableData.isNewLocation
-                                        ? newTableData.customLocation
-                                        : newTableData.location;
-
-                                    if (!finalLocation || !newTableData.name) return;
-
-                                    // Inserisci un nuovo tavolo tratteggiato (default posizione y max)
-                                    const roomIndex = rooms.findIndex(r => r.name === finalLocation);
-                                    const table: Table = {
-                                        id: `temp-${Date.now()}`,
-                                        name: newTableData.name,
-                                        location: finalLocation,
-                                        x: 0,
-                                        y: 0,
-                                        w: 2,
-                                        h: 2,
-                                        status: "Libero",
-                                    };
-
-                                    setRooms((prevRooms) => {
-                                        if (roomIndex !== -1) {
-                                            const updatedRooms = [...prevRooms];
-                                            updatedRooms[roomIndex].tables.push(table);
-                                            return updatedRooms;
-                                        } else {
-                                            return [
-                                                ...prevRooms,
-                                                {
-                                                    id: prevRooms.length + 1,
-                                                    name: finalLocation,
-                                                    tables: [table],
-                                                },
-                                            ];
-                                        }
-                                    });
-
-                                    handleRoomChange(
-                                        roomIndex !== -1 ? rooms[roomIndex].id : rooms.length + 1
-                                    );
-
-                                    setNewTableData({
-                                        name: '',
-                                        location: '',
-                                        isNewLocation: false,
-                                        customLocation: '',
-                                        visible: false,
-                                    });
-
-                                    setIsModified(true);
-                                }}
-                            >
-                                Inserisci
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <h1 className="text-2xl font-bold mb-6">Gestione Tavoli - Test</h1>
-
-            {/* Selettore Stanze */}
-            <div className="flex space-x-4 mb-4">
-                {rooms.map((room) => (
-                    <button
-                        key={room.id}
-                        onClick={() => handleRoomChange(room.id)}
-                        className={`px-4 py-2 rounded-lg ${
-                            room.id === selectedRoom ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"
-                        }`}
-                    >
-                        {room.name}
-                    </button>
-                ))}
-            </div>
-
-            {/* Pulsante Aggiungi Tavolo fuori dal riquadro */}
-            <button onClick={handleAddTable} className="bg-amber-500 text-white px-4 py-2 rounded-lg shadow hover:bg-amber-600 transition">
-                Aggiungi Tavolo
-            </button>
-
-            {/* Mappa Tavoli */}
-            <div className="border rounded-lg bg-gray-100 p-4">
-                <GridLayout
-                    className="layout"
-                    layout={
-                        rooms.find((room) => room.id === selectedRoom)?.tables.map((table) => ({
-                            i: table.id,
-                            x: table.x,
-                            y: table.y,
-                            w: table.w,
-                            h: table.h,
-                        })) || []
-                    }
-                    cols={12}
-                    rowHeight={50}
-                    width={1000}
-                    onLayoutChange={handleLayoutChange}
-                    isResizable
-                    isDraggable
-                >
-                    {rooms.find((room) => room.id === selectedRoom)?.tables.map((table) => (
-                        <div
-                            key={table.id}
-                            className={`rounded-lg shadow-md flex items-center justify-between p-2 cursor-move ${
-                                table.status === "Libero" ? "bg-green-200" : "bg-red-200"
-                            }`}
-                            data-grid={{ x: table.x, y: table.y, w: table.w, h: table.h }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                            <span>{table.name}</span>
-                            <div className="flex space-x-2">
-                                <button
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedTable(table);
-                                    }}
-                                    className="text-blue-500 hover:text-blue-700 p-2 rounded-full"
-                                    title="Dettagli Tavolo"
-                                >
-                                    <FaInfoCircle size={16} />
-                                </button>
-
-                                <button
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemoveTable(table.id);
-                                    }}
-                                    className="text-red-500 hover:text-red-700 p-2 rounded-full"
-                                    title="Elimina Tavolo"
-                                >
-                                    <FaTrashAlt size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </GridLayout>
-            </div>
-
-            {/* Pulsante Salva Modifiche */}
-            {isModified && (
-                <button
-                    onClick={() => {
-                        console.log("Modifiche Salvate", rooms);
-                        setIsModified(false);
-                    }}
-                    className="bg-amber-500 text-white px-4 py-2 rounded-lg shadow hover:bg-amber-600 transition"
-                >
-                    Salva Modifiche
-                </button>
-            )}
-
-            {/* Modale Tavolo */}
-            {selectedTable && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-                        <h2 className="text-xl font-bold mb-4">{selectedTable.name}</h2>
-
-                        {selectedTable.status === "Libero" ? (
-                            <>
-                                <label className="block font-semibold mb-1">Numero posti</label>
-                                <input
-                                    type="number"
-                                    min={1}
-                                    className="w-full border rounded px-2 py-1 mb-4"
-                                    value={selectedTable.seats || ''}
-                                    onChange={(e) => {
-                                        const val = parseInt(e.target.value);
-                                        setSelectedTable((prev) =>
-                                            prev ? { ...prev, seats: isNaN(val) ? undefined : val } : null
-                                        );
-                                    }}
-                                />
-                                <button
-                                    className="bg-green-500 text-white px-4 py-2 rounded-lg w-full"
-                                    onClick={() => {
-                                        if (!selectedTable.seats || selectedTable.seats < 1) addNotification({message:"Inserisci un numero di posti valido", type:"warning"})
-                                        else{
-                                            //setSelectedTable((prev) =>
-                                            //    prev ? { ...prev, status: "Occupato" } : null
-                                            //);
-                                            setBusy()
-                                        }
-                                    }}
-                                >
-                                    Occupa
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <p className="mb-2">
-                                    Codice Cliente: <span className="font-semibold">{selectedTable.code}</span>
-                                </p>
-                                <div className="mb-4">
-                                    <p className="text-sm text-gray-600 mb-2">
-                                        Persone al tavolo: <span className="font-semibold">{selectedTable.seats}</span>
-                                    </p>
-
-                                    {loadingOrders ? (
-                                        <p className="text-gray-500 italic">Caricamento comande...</p>
-                                    ) : (
-                                        <>
-                                            <div className="bg-gray-100 rounded-md p-3 space-y-4 max-h-96 overflow-y-auto border border-gray-300">
-                                                <h3 className="text-md font-semibold text-gray-700 mb-2">Dettaglio Comande</h3>
-
-                                                {(["PROGRESS", "PENDING", "COMPLETED"] as OrderStatus[]).map((status) => (
-                                                    <div key={status}>
-                                                        <h4 className="text-sm font-semibold text-blue-600 uppercase mb-1">{convertName(status)} {' - € '} {orderTotal[status].toFixed(2)}</h4>
-
-                                                        {tableOrders[status] && tableOrders[status].length > 0 ? (
-                                                            tableOrders[status].map((item, idx) => (
-                                                                <div
-                                                                    key={`${status}-${idx}`}
-                                                                    className="border border-gray-300 rounded px-2 py-1 mb-2 bg-white shadow-sm"
-                                                                >
-                                                                    <div
-                                                                        className="flex justify-between text-sm font-medium text-gray-800">
-                                                                        <div>
-                                                                            {item.productName} x {item.quantity}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div
-                                                                        className="flex justify-between text-sm font-medium text-gray-800">
-                                                                        <div>
-                                                                            Tot: € {(item.total * item.quantity).toFixed(2)}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {item.option !== 'default' &&
-                                                                        <div className="text-xs text-gray-600 mt-1">
-                                                                            Opzione: <span
-                                                                            className="font-semibold">{item.option}</span>
-                                                                        </div>}
-
-                                                                    {item.additionalIngredients.length > 0 && (
-                                                                        <div className="text-xs text-green-600">
-                                                                            + {item.additionalIngredients.join(", ")}
-                                                                        </div>
-                                                                    )}
-
-                                                                    {item.removedIngredients.length > 0 && (
-                                                                        <div className="text-xs text-red-600">
-                                                                            - {item.removedIngredients.join(", ")}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            ))
-                                                        ) : (
-                                                            <p className="text-xs text-gray-500 ml-1 mb-2">Nessuna
-                                                                comanda {convertName(status).toLowerCase()}.</p>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="mt-3 text-right text-lg font-bold text-gray-800">
-                                                Totale: €{(orderTotal.PENDING + orderTotal.PROGRESS + orderTotal.CONFIRMED + orderTotal.COMPLETED).toFixed(2)}
-                                            </div>
-                                        </>
-
-                                    )}
-                                </div>
-                                <button
-                                    className="bg-red-500 text-white px-4 py-2 rounded-lg w-full"
-                                    onClick={() => {
-                                        //setSelectedTable((prev) =>
-                                        //    prev ? { ...prev, status: "Libero", seats: undefined } : null
-                                        //);
-                                        freeTable()
-                                    }}
-                                >
-                                    Libera Tavolo
-                                </button>
-                            </>
-                        )}
-
-                        <button
-                            onClick={() => setSelectedTable(null)}
-                            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg mt-4 w-full"
-                        >
-                            Chiudi
-                        </button>
-                    </div>
-                </div>
-            )}
-
-        </div>
-        </>
-    );
-};
-
-export default TablesPageTest

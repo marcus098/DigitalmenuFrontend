@@ -1,9 +1,13 @@
+// src/Components/IngredientCard.tsx
 import React from "react";
 import { FaEdit, FaTrashAlt } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import { IngredientDto } from "../types";
+import {IngredientDto, IS_ADMIN} from "../types";
 import { useHistory } from "../Context/HistoryContext";
-import {useData} from "../Context/DataContext";
+import { useData } from "../Context/DataContext";
+import ToggleSwitch from "./ToggleSwitch";
+import PillToggle from "./Dashboard/PillToggle";
+import {useLoginContext} from "../Context/LoginContext"; // Importiamo il nuovo componente
 
 interface IngredientCardProps {
     ingredient: IngredientDto;
@@ -18,86 +22,73 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
                                                        }) => {
     const { localname } = useParams();
     const { navigateWithHistory } = useHistory();
-    const { allergensMap } = useData()
-
-    const handleDelete = () => {
-        deleteIngredient(ingredient.id, ingredient.name);
-    };
+    const { allergensMap } = useData();
+    const { checkVariable } = useLoginContext()
 
     return (
-        <div className={`p-5 rounded-xl shadow-md flex flex-col space-y-3 transition-all ${
-            ingredient.available ? "bg-white" : "bg-rose-100"
+        <div className={`rounded-xl shadow-lg flex flex-col transition-all duration-300 ${
+            ingredient.available ? "bg-white" : "bg-gray-50 border-l-4 border-rose-400"
         }`}>
-            {/* Dettagli dell'ingrediente */}
-            <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 flex items-center justify-center bg-gray-200 rounded-md border border-gray-300">
-                    <span className="text-lg font-semibold text-gray-800">{ingredient.name[0]}</span>
+            {/* Sezione 1: Informazioni Principali */}
+            <div className="p-4 flex items-center space-x-4">
+                {/* Usiamo il colore primario per l'avatar per coerenza di brand */}
+                <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-primary/20 rounded-lg">
+                    <span className="text-xl font-bold text-primary">{ingredient.name[0]}</span>
                 </div>
                 <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                        {ingredient.name + (ingredient.frozen ? "*" : "")}
+                    <h3 className="text-lg font-bold text-gray-800">
+                        {ingredient.name}
+                        {ingredient.frozen && <span className="text-blue-500 ml-1">*</span>}
                     </h3>
-                    <p className="text-sm text-gray-600">Prezzo: € {ingredient.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">Prezzo: €{ingredient.price.toFixed(2)}</p>
+                </div>
+                {/* Azioni Principali (Modifica/Elimina) */}
+                <div className="flex items-center space-x-1">
+                    <button
+                        className="p-3 rounded-full text-gray-500 hover:bg-gray-100 hover:text-primary transition"
+                        title="Modifica"
+                        onClick={() => navigateWithHistory(`/${localname}/Dashboard/Ingredient/${ingredient.id}`)}
+                    >
+                        <FaEdit size={18} />
+                    </button>
+                    {checkVariable(IS_ADMIN) && <button
+                        className="p-3 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition"
+                        title="Elimina"
+                        onClick={() => deleteIngredient(ingredient.id, ingredient.name)}
+                    >
+                        <FaTrashAlt size={18} />
+                    </button>}
                 </div>
             </div>
 
-            {/* Visualizzazione degli allergeni */}
-            {ingredient.allergens && ingredient.allergens.length > 0 && (
-                <div className="mt-2">
-                    <h4 className="text-sm font-medium text-gray-700">Allergeni:</h4>
-                    <div className="flex flex-wrap space-x-2">
-                        {ingredient.allergens.map((allergen, index) => (
-                            <span
-                                key={index}
-                                className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium"
-                            >
-                                {allergensMap.get(allergen)?.name || ""}
-                            </span>
-                        ))}
+            {/* Sezione 2: Allergeni e Toggle (con divisore) */}
+            <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-4">
+                {ingredient.allergens && ingredient.allergens.length > 0 && (
+                    <div>
+                        <h4 className="text-xs font-semibold text-gray-500 mb-2">ALLERGENI</h4>
+                        <div className="flex flex-wrap gap-2">
+                            {ingredient.allergens.map((allergenId) => (
+                                <span key={allergenId}
+                                      className="px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
+                                    {allergensMap.get(allergenId)?.name || "N/D"}
+                                </span>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Toggle Disponibilità e Addibilità */}
-            <div className="flex justify-between items-center">
-                <div className="space-x-2">
-                    <button
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                            ingredient.available ? "bg-amber-500 text-white hover:bg-amber-600" : "bg-rose-500 text-white hover:bg-rose-600"
-                        }`}
-                        onClick={() => handleAvailableAddable(ingredient.id, !ingredient.available, true)}
-                    >
-                        {ingredient.available ? "Disponibile" : "Non disponibile"}
-                    </button>
-
-                    <button
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                            ingredient.addable ? "bg-amber-500 text-white hover:bg-amber-600" : "bg-rose-500 text-white hover:bg-rose-600"
-                        }`}
-                        onClick={() => handleAvailableAddable(ingredient.id, !ingredient.addable, false)}
-                    >
-                        {ingredient.addable ? "Aggiungibile" : "Non aggiungibile"}
-                    </button>
-                </div>
-
-                {/* Pulsanti Azione */}
-                <div className="flex items-center space-x-3">
-                    <button
-                        className="text-orange-500 hover:text-orange-700 p-2 rounded-full"
-                        title="Modifica"
-                        onClick={() =>
-                            navigateWithHistory("/" + localname + "/Dashboard/Ingredient/" + ingredient.id.toString())
-                        }
-                    >
-                        <FaEdit size={16} />
-                    </button>
-                    <button
-                        className="text-red-500 hover:text-red-700 p-2 rounded-full"
-                        title="Elimina"
-                        onClick={handleDelete}
-                    >
-                        <FaTrashAlt size={16} />
-                    </button>
+                {/* Nuovi PillToggle */}
+                <div className="space-y-3">
+                    <PillToggle
+                        label="Disponibile"
+                        enabled={ingredient.available}
+                        onChange={(value) => handleAvailableAddable(ingredient.id, value, true)}
+                    />
+                    <PillToggle
+                        label="Aggiungibile"
+                        enabled={ingredient.addable}
+                        onChange={(value) => handleAvailableAddable(ingredient.id, value, false)}
+                    />
                 </div>
             </div>
         </div>

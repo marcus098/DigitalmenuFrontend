@@ -1,6 +1,6 @@
 import React, {useEffect, useState, createContext, useContext, useMemo} from 'react';
 import {
-    AddCategory, AddIngredient, AddProduct,
+    AddCategory, AddIngredient, AddProduct, AddTable,
     CategoryDto,
     DataContextType, Entity, IdWithOrder,
     ImageDto,
@@ -8,23 +8,23 @@ import {
     ListToExport,
     ProductDto,
     StyleDto,
-    TableDto, UpdateCategory, UpdateIngredient, UpdateProduct
+    TableDto, UpdateCategory, UpdateIngredient, UpdateProduct, UpdateStyle, UpdateTables, WaiterDto
 } from "../types";
 import {
     addCategoryApi,
     addIngredientApi,
-    addProductApi,
+    addProductApi, addTableApi,
     changeComandStatusApi,
-    changeOrderCategoriesApi,
+    changeOrderCategoriesApi, confirmWaiterApi,
     deleteCategoryApi,
     deleteIngredientApi,
     deleteProductApi,
-    deleteTableApi,
+    deleteTableApi, deleteWaiterApi,
     forceDeleteTableApi,
     forceFreeTableApi,
     freeTableApi,
     getAll,
-    getToken,
+    getToken, getWaitersApi, getWaitersInviteUrlApi,
     setAddableIngredientApi,
     setAvailableCategoryApi,
     setAvailableIngredientApi,
@@ -33,14 +33,13 @@ import {
     UPDATE_ENDPOINT_DASHBOARD,
     updateCategoryApi,
     updateIngredientApi,
-    updateProductApi
+    updateProductApi, updateSingleTableApi, updateStyleApi, updateTablesApi
 } from "../Utilities/api";
 import {useParams} from "react-router-dom";
 import {allergens} from "../Utilities/Utilities";
 import {Comand} from "../ComandType";
 import {useNotification} from "./NotificationContext";
 import {OrderItem, Orders} from "../Dashboard/Pages/OrderPage";
-import {tab} from "@testing-library/user-event/dist/tab";
 
 const allergensMap = new Map([
     [1, { id: 1, name: "glutine" }],
@@ -107,8 +106,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             setTablesMap(new Map(tmp.tablesList))
         }
 
-        if(tmp.style){
-            setStyles(tmp.style)
+        if(tmp.styleDto){
+            setStyles(tmp.styleDto)
         }
 
         if (dashboard && tmp.comands){
@@ -121,9 +120,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     const loadData = async () => {
         try {
             setLoading(true);
-
+            console.log(dashboard)
             let response = await getAll(dashboard, dashboard ? '' : localname);
-
+            console.log(response)
             if (response && response.data) {
                 setStates(response.data)
             }
@@ -181,7 +180,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             stopSSE(); // Chiudi eventuali connessioni esistenti
         }
 
-        let url = process.env.REACT_APP_BACKEND_WEBFLUX_URL_BASE + (dashboard ? UPDATE_ENDPOINT_DASHBOARD : UPDATE_ENDPOINT(localname || ""));
+        let url = process.env.REACT_APP_BACKEND_WEBFLUX_URL_BASE + (dashboard ? UPDATE_ENDPOINT_DASHBOARD : UPDATE_ENDPOINT(localname || "", true));
 
         // Aggiungi il token come parametro di query solo per l'endpoint dashboard
         const token = getToken()
@@ -365,6 +364,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
 
         if(response?.status === 200 && response.data){
             let tmp = new Map(categoriesMap)
+            console.log(response)
             tmp.set(response.data.data.id, response.data.data)
             setCategoriesMap(tmp)
             return true
@@ -440,20 +440,50 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         updateCategory.products.forEach(p => {
             formData.append("products", p.longValue.toString() + "|" + p.intValue);
         });
-        let response = await updateCategoryApi(formData)
+        const response = await updateCategoryApi(formData)
 
         if(response?.status === 200 && response.data){
             let tmp = new Map(categoriesMap)
             const old = tmp.get(updateCategory.id)
-            tmp.set(updateCategory.id, {name: updateCategory.name, description: updateCategory.description, progressiveNumber: old?.progressiveNumber || 0, id: updateCategory.id, products: updateCategory.products, available: updateCategory.available, image: response.data.data })
+            tmp.set(updateCategory.id, {name: updateCategory.name, description: updateCategory.description, progressiveNumber: old?.progressiveNumber || 0, id: updateCategory.id, products: updateCategory.products, available: updateCategory.available, image: response.data.data.image })
             setCategoriesMap(tmp)
             return true
         }
         return false
     }
 
+    const updateStyle = async (updateStyle: UpdateStyle, logoFile: File | null, heroFile: File | null) => {
+        const formData: FormData = new FormData()
+        if(logoFile)
+            formData.append("logoFile", logoFile)
+        if(heroFile)
+            formData.append("heroFile", heroFile)
+        formData.append("backgroundGradient", updateStyle.backgroundGradient)
+        formData.append("cardBackground", updateStyle.cardBackground)
+        formData.append("primary", updateStyle.primary)
+        formData.append("textBody", updateStyle.textBody)
+        formData.append("textOnPrimary", updateStyle.textOnPrimary)
+        formData.append("textTitle", updateStyle.textTitle)
+        formData.append("address", updateStyle.address)
+        formData.append("phone", updateStyle.phone)
+        formData.append("facebookUrl", updateStyle.facebookUrl)
+        formData.append("instagramUrl", updateStyle.instagramUrl)
+        formData.append("heroImageUrl", updateStyle.heroImageUrl)
+        formData.append("logoUrl", updateStyle.logoUrl)
+        formData.append("restaurantName", updateStyle.restaurantName)
+        formData.append("cardStyle", updateStyle.cardStyle)
+        formData.append("showImages", updateStyle.showImages.toString())
+        formData.append("font", updateStyle.font)
+        const response = await updateStyleApi(formData)
+        if(response?.status === 200 && response.data){
+            setStyles(response.data.data)
+            return true
+        }
+        return false
+    }
+
     const updateIngredient = async (updateIngredient: UpdateIngredient) => {
-        let response = await updateIngredientApi(updateIngredient)
+        const response = await updateIngredientApi(updateIngredient)
         if(response?.status === 200 && response.data){
             let tmp = new Map(ingredientsMap)
             tmp.set(response.data.data.id, {name: updateIngredient.name, id: updateIngredient.id, addable: updateIngredient.addable, allergens: updateIngredient.allergens, available: updateIngredient.available, frozen: updateIngredient.frozen, price: updateIngredient.price})
@@ -492,12 +522,54 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                 break
             case "ingredient":
                 response = await deleteIngredientApi(id)
+                const allergensToDelete = ingredientsMap.get(id)?.allergens || []
                 if(response?.status === 200 && response.data){
                     let tmp = new Map(ingredientsMap)
                     tmp.delete(id)
                     setIngredientsMap(tmp)
-                    return true
                 }
+                if(response?.data?.data && response.data.data.length > 0) {
+                    let tmpProducts = new Map(productsMap)
+                    try {
+                        for(const idProd of response.data.data){
+                            const prod = tmpProducts.get(Number(idProd))
+                            let ingredientsOld = prod?.ingredients || []
+                            let allergensOld = prod?.allergens || []
+                            let ingredientsNew: number[] = []
+                            for(const ingId of ingredientsOld){
+                                if(Number(ingId) !== id){
+                                    ingredientsNew.push(Number(ingId))
+                                }
+                            }
+                            if(prod)
+                                prod.ingredients = ingredientsNew;
+
+                            if(allergensToDelete.length > 0) {
+                                const allergensNew: number[] = []
+                                const tmpAllList: number[] = []
+                                for (const allId of allergensOld) {
+                                    const tmpId = Number(allId)
+                                    if (tmpId < 0 && allergensToDelete.includes(0 - tmpId)) {
+                                        if(!tmpAllList.includes(tmpId)) {
+                                            tmpAllList.push(tmpId)
+                                        }
+                                    }else{
+                                        allergensNew.push(tmpId)
+                                    }
+                                }
+                                if(prod)
+                                    prod.allergens = allergensNew
+                            }
+
+                            if(prod)
+                                tmpProducts.set(prod.id, prod)
+                            setProductsMap(tmpProducts)
+                        }
+                    }catch (error){
+                        window.location.reload()
+                    }
+                }
+                return true
                 break
             case "table":
 
@@ -621,6 +693,98 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return false
     }
 
+    const getWaiters = async (): Promise<WaiterDto[] | null> => {
+        setLoading(true)
+        try {
+            const response = await getWaitersApi()
+
+            if (response && response.status === 200 && response.data?.data) {
+                setLoading(false)
+                return response.data.data || []
+            }
+            setLoading(false)
+            return []
+        }catch(error){
+            setLoading(false)
+            return null
+        }
+    }
+
+    const deleteWaiter = async (id: number): Promise<boolean> => {
+        setLoading(true)
+        try {
+            const response = await deleteWaiterApi(id)
+            setLoading(false)
+            return response && response.status === 200
+        }catch(error){
+            setLoading(false)
+            return false
+        }
+    }
+
+    const confirmWaiter = async (id: number): Promise<boolean> => {
+        setLoading(true)
+        try{
+            const response = await confirmWaiterApi(id)
+            setLoading(false)
+            return response && response.status === 200
+        }catch (error){
+            setLoading(false)
+            return false
+        }
+    }
+
+    const getWaiterInvitationUrl = async () => {
+        setLoading(true)
+        try{
+            const response = await getWaitersInviteUrlApi()
+            if(response && response.status === 200 && response.data?.data){
+                setLoading(false)
+                return response.data.data
+            }
+            setLoading(false)
+            return null
+        } catch(error){
+            setLoading(false)
+            return null
+        }
+    }
+
+    const addTableFunc = async (addTable: AddTable) => {
+        const response = await addTableApi(addTable);
+        if((response.status === 200 || response.status === 201) && response.data?.data){
+            const tmp = new Map(tablesMap)
+            const table = response.data.data
+            tmp.set(table.id, table)
+            setTablesMap(new Map(tmp))
+            return true
+        }
+        return false
+    }
+
+    const updateTablesFunc = async (updateTables: UpdateTables) => {
+        const response = await updateTablesApi(updateTables)
+        if(response.status === 200 && response.data?.data){
+            const tmp = new Map(tablesMap)
+            for(const table of response.data.data) {
+                tmp.set(table.id, table)
+            }
+            setTablesMap(new Map(tmp))
+            return true
+        }
+        return false
+    }
+
+    const updateSingleTableFunc = async(table: TableDto) => {
+        const response = await updateSingleTableApi(table)
+        if(response.status === 200 && response.data?.data){
+            const tmp = new Map(tablesMap)
+            tmp.set(response.data.data.id, response.data.data)
+            setTablesMap(new Map(tmp))
+            return true
+        }
+        return false
+    }
 
     // Cleanup quando il provider viene smontato
     //useEffect(() => {
@@ -642,6 +806,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         waiters,
         comands,
         selectedAllergens,
+        deleteWaiter,
+        confirmWaiter,
         freeTableContext,
         forceFreeTableContext,
         deleteTable,
@@ -658,7 +824,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         updateIngredient,
         deleteEntity,
         changeOrderCategories,
-        mapRawOrderToOrder
+        mapRawOrderToOrder,
+        updateStyle,
+        getWaiters,
+        getWaiterInvitationUrl,
+        addTableFunc,
+        updateTablesFunc,
+        updateSingleTableFunc
     }), [
         categoriesMap,
         imagesList,

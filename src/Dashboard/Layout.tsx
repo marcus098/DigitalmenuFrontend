@@ -35,8 +35,8 @@ const Layout: React.FC = () => {
                         <Outlet />
                     </div>
 
-                    {/* Footer per dispositivi mobili */}
-                    {screen.screen !== "DESKTOP" && <Footer />}
+                    {/* Footer per dispositivi mobili
+                    {screen.screen !== "DESKTOP" && <Footer />}*/}
 
                     {/* Notifiche */}
                     <NotificationDisplay />

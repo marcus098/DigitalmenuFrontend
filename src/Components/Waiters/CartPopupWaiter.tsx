@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import {sendWaiterComandApi} from "../../Utilities/api";
 import {AddComandOrder, AddComandWaiter, ProductCard} from "../../types";
-import {convertCartToAddComandWaiterOrder, getCartMap} from "../../Utilities/Utilities";
+import {convertCartToAddComandWaiterOrder, getCartMap, saveCart} from "../../Utilities/Utilities";
+import {useNotification} from "../../Context/NotificationContext";
+import {useParams} from "react-router-dom";
 
 interface CartPopupWaiter {
     cart: ProductCard[]
@@ -21,6 +23,8 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     const [phone, setPhone] = useState<string>("");
     const [address, setAddress] = useState<string>("");
     const [time, setTime] = useState<string>("");
+    const { addNotification } = useNotification()
+    const { localname } = useParams()
 
     const resetForm = () => {
         setSelected(0);
@@ -33,31 +37,44 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     };
 
     const handleConfirm = async () => {
+        // todo ripulire metodo eliminando duplicazioni
         let order: AddComandWaiter = convertCartToAddComandWaiterOrder(cart)
-        if (selected === 1) {
-            if(tableNumber <= 0){
-                // todo notifica di errore
+        if (selected === 1) { // todo recuperare hash del tavolo se presente
+            if(tableNumber <= 0){// todo mostrare la select dei tavoli invece di inserirlo a mano
+                addNotification({message: "Il tavolo è vuoto", type: "error"})
             } else{
                 order.comandWaiterType = "TABLE"
                 order.idTable = tableNumber
                 const response = await sendWaiterComandApi(order)
-                console.log(response)
+                if(response.success){
+                    saveCart([], "waiter")
+                    addNotification({message: "Ordine aggiunto!", type: "success"})
+                    window.location.href = (process.env.REACT_APP_URL || "") + "/" + localname + "/Dashboard/Home"
+                    resetForm();
+                }else{
+                    addNotification({message: "Errore", type: "error"})
+                }
             }
-            console.log("Ordine da tavolo:", tableNumber);
         } else if (selected === 2) {
             if (customerName.trim() === "" || phone.trim() === "" || time.trim() === ""){
-                // todo errore
+                addNotification({message: "Inserire tutti i capi", type: "error"})
             }
-            // todo chiamata a backend
             order.comandWaiterType = "TAKE_AWAY"
             order.name = customerName
             order.phone = phone
             order.time = time
             const response = await sendWaiterComandApi(order)
-            console.log(response)
+            if(response.success){
+                saveCart([], "waiter")
+                addNotification({message: "Ordine aggiunto!", type: "success"})
+                window.location.href = (process.env.REACT_APP_URL || "") + "/" + localname + "/Dashboard/Home"
+                resetForm();
+            }else{
+                addNotification({message: "Errore", type: "error"})
+            }
         } else if (selected === 3) {
             if (customerName.trim() === "" || phone.trim() === "" || address.trim() === "" || time.trim() === "") {
-                // todo errore
+                addNotification({message: "Inserire tutti i capi", type: "error"})
             }
             order.comandWaiterType = "HOME"
             order.name = customerName
@@ -65,10 +82,16 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             order.address = address
             order.time = time
             const response = await sendWaiterComandApi(order)
+            if(response.success){
+                saveCart([], "waiter")
+                addNotification({message: "Ordine aggiunto!", type: "success"})
+                window.location.href = (process.env.REACT_APP_URL || "") + "/" + localname + "/Dashboard/Home"
+                resetForm();
+            }else{
+                addNotification({message: "Errore", type: "error"})
+            }
             console.log(response)
         }
-        resetForm();
-        // todo portare alla dashboard e resettare carrello
     };
 
     return (

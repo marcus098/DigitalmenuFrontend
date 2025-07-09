@@ -1,76 +1,98 @@
-import React, { useEffect, useState } from "react";
+// src/pages/CategoriesPage.tsx
+import React, { useState, useMemo } from "react";
 import { useData } from "../../Context/DataContext";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import CategoryCard from "../../Components/CategoryCard";
 import CustomLoading from "../../Components/CustomLoading";
 import DeletePopup from "../../Components/DeletePopup";
 import { useHistory } from "../../Context/HistoryContext";
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 const CategoriesPage: React.FC = () => {
-    const [myLoading, setMyLoading] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [openPopup, setOpenPopup] = useState<boolean>(false);
-    const [nameToDelete, setNameToDelete] = useState<string>("");
-    const [idToDelete, setIdToDelete] = useState<number>(-1);
+    const [itemToDelete, setItemToDelete] = useState<{ id: number; name: string } | null>(null);
+    const [searchTerm, setSearchTerm] = useState<string>("");
+
+    // Nota: 'changeAvailableAddable' funziona anche qui, passiamo solo 'isAvailable=true'
     const { loading, categoriesMap, deleteEntity, changeAvailableAddable } = useData();
     const { localname } = useParams();
     const { navigateWithHistory } = useHistory();
 
-    useEffect(() => {
-        if (!loading) setMyLoading(false);
-    }, [loading]);
-
     const handleDelete = (id: number, name: string) => {
-        setNameToDelete(name);
-        setIdToDelete(id);
+        setItemToDelete({ id, name });
         setOpenPopup(true);
     };
 
-    const handleConfirm = async () => {
-        setMyLoading(true);
-        await deleteEntity(idToDelete, { entity: "category" });
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsSubmitting(true);
+        await deleteEntity(itemToDelete.id, { entity: "category" });
         closePopup();
-        setMyLoading(false);
+        setIsSubmitting(false);
     };
 
     const handleAvailable = async (id: number, value: boolean) => {
-        setMyLoading(true);
+        setIsSubmitting(true);
         await changeAvailableAddable({ entity: "category" }, id, value, true);
-        setMyLoading(false);
+        setIsSubmitting(false);
     };
 
     const closePopup = () => {
         setOpenPopup(false);
-        setIdToDelete(-1);
-        setNameToDelete("");
+        setItemToDelete(null);
     };
+
+    // Filtra e ordina le categorie
+    const filteredCategories = useMemo(() => {
+        return Array.from(categoriesMap.values())
+            .filter(category =>
+                category.name.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .sort((a, b) => a.name.localeCompare(b.name)); // Aggiungiamo l'ordinamento
+    }, [categoriesMap, searchTerm]);
 
     if (loading) return <CustomLoading isFullPage={true} />;
 
     return (
         <>
-            {openPopup && (
-                <DeletePopup itemName={nameToDelete} onConfirm={handleConfirm} onCancel={closePopup} />
+            {openPopup && itemToDelete && (
+                <DeletePopup itemName={itemToDelete.name} onConfirm={handleConfirmDelete} onCancel={closePopup} />
             )}
-            {myLoading && <CustomLoading isTransparent={true} />}
+            {isSubmitting && <CustomLoading isTransparent={true} />}
 
-            <div className="p-6">
-                <h1 className="text-2xl font-bold mb-6 text-gray-800">Gestione Categorie</h1>
-
-                {/* Pulsante Aggiungi */}
-                <div className="flex justify-end mb-6">
+            <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
+                {/* Header con Titolo e Pulsante Aggiungi */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+                    <h1 className="text-3xl font-bold text-gray-800">Gestione Categorie</h1>
                     <button
                         onClick={() => navigateWithHistory(`/${localname}/Dashboard/AddCategory`)}
-                        className="bg-amber-500 text-white px-4 py-2 rounded-lg shadow hover:bg-amber-600 transition"
+                        className="bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-primary-dark transition-colors font-semibold flex items-center justify-center"
                     >
                         Aggiungi Categoria
                     </button>
                 </div>
 
-                {/* Elenco Categorie */}
-                <div>
-                    <h2 className="text-xl font-semibold mb-4 text-gray-700">Categorie Disponibili</h2>
-                    <div className="space-y-3">
-                        {Array.from(categoriesMap.values()).map((category) => (
+                {/* Barra di Ricerca */}
+                <div className="mb-6">
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                        </span>
+                        <input
+                            type="text"
+                            placeholder="Cerca una categoria..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                        />
+                    </div>
+                </div>
+
+                {/* Griglia Categorie */}
+                {filteredCategories.length > 0 ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+                        {filteredCategories.map((category) => (
                             <CategoryCard
                                 key={category.id}
                                 category={category}
@@ -79,7 +101,11 @@ const CategoriesPage: React.FC = () => {
                             />
                         ))}
                     </div>
-                </div>
+                ) : (
+                    <div className="text-center py-12">
+                        <p className="text-gray-500">Nessuna categoria trovata.</p>
+                    </div>
+                )}
             </div>
         </>
     );

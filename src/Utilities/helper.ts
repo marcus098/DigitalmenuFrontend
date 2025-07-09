@@ -1,5 +1,4 @@
 import {clientInstance, instance} from "./api";
-import {ApiResponse, Response} from "../types";
 
 export interface RequestConfig {
     method: string;
@@ -113,7 +112,7 @@ export const clientApiCall = async <T>(
             url: localApiUrl + apiCallInterface.url,
             data: apiCallInterface.data,
         };
-
+        console.log(config)
         const response = await clientInstance(config);
         console.log(response)
         const apiResponse = response.data as T;

@@ -16,6 +16,7 @@ export const HistoryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const navigate = useNavigate();
 
     const navigateWithHistory = (path: string) => {
+        console.log(path)
         setPreviousPath(currentPath);
         setCurrentPath(path);
         navigate(path);

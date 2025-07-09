@@ -1,30 +1,32 @@
 import React from 'react';
 import {CategoryDto} from "../types";
 
-
 interface CategoriesListProps {
     categories: CategoryDto[];
     onSelectCategory: (categoryId: number) => void;
 }
 
 const ClientCategoriesList: React.FC<CategoriesListProps> = ({ categories, onSelectCategory }) => {
-
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 px-6 py-4">
-            {categories.filter((c) => c.id > 0).map((category) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 p-4 md:p-6">
+            {categories.filter(c => c.id > 0 && c.available).map((category) => (
                 <div
                     key={category.id}
                     onClick={() => onSelectCategory(category.id)}
-                    className="cursor-pointer p-4 bg-white rounded-lg shadow-md hover:shadow-lg hover:scale-105 transition transform duration-200 flex flex-col items-center"
+                    className="relative aspect-square rounded-xl shadow-lg overflow-hidden cursor-pointer group transition-transform duration-300 ease-in-out hover:scale-105"
                 >
-                    {category.image && (
-                        <img
-                            src={category.image ? process.env.REACT_APP_BUCKET_URL + category.image : ""}
-                            alt={category.name}
-                            className="w-16 h-16 mb-2 object-cover rounded-md"
-                        />
-                    )}
-                    <h2 className="text-sm font-semibold text-gray-700 text-center">{category.name}</h2>
+                    {/* Immagine di Sfondo */}
+                    <img
+                        src={category.image ? process.env.REACT_APP_BUCKET_URL + category.image : "/placeholder.png"}
+                        alt={category.name}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                    {/* Gradiente per leggibilità testo */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                    {/* Testo in sovrapposizione */}
+                    <h2 className="absolute bottom-4 left-4 text-white text-xl font-bold">
+                        {category.name}
+                    </h2>
                 </div>
             ))}
         </div>

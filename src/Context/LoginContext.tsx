@@ -1,4 +1,4 @@
-import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
+ import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
 import {deleteCookie, getCookie, setCookie} from "../Utilities/Utilities";
 import {changePassword, check, getToken, login, updateProfileApi} from "../Utilities/api";
 import axios from "axios";
@@ -41,7 +41,8 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                         name: response.data.name,
                         idAgency: response.data.idAgency,
                         email: response.data.email || "",
-                        localname: response.data.localname
+                        localname: response.data.localname,
+                        controlsVariable: response.data.controlsVariable
                     }
                     setUser(userTmp)
                     setAuthorized(true)
@@ -62,6 +63,9 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     _deleteAuthorized("Accesso negato")
                 }
                 if(response.status === 403){
+                    _deleteAuthorized("Accesso negato")
+                }
+                if(response.status === -1){
                     _deleteAuthorized("Accesso negato")
                 }
                 setLoading(false)
@@ -98,36 +102,50 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setTransparentLoading(true)
         try {
             const response = await login(email, password);
-
-            if(response){
-                if(response.status === 200 && response.data){
+            console.log(response)
+            if(response && response.data){
+                if(response.data.status === 200){
                     setErrorType(null)
                     if(!authorized)
                         setAuthorized(true);
                     setCookie("token", response.data?.accessToken, response.data.time || 1)
-                    setUser({name: response.data.name, email: response.data.email || "", localname: response.data.localname, idAgency: response.data.idAgency})
+                    setUser({
+                        name: response.data.name,
+                        email: response.data.email || "",
+                        localname: response.data.localname, idAgency: response.data.idAgency,
+                        controlsVariable: response.data.controlsVariable
+                    })
                     setLoading(false)
                     //console.log(getCookie("token"))
                     navigate("/" + response.data.localname + "/Dashboard/Home")
                     return
 
-                }else if(response.status === 401){
+                }else if(response.data.status === 401){
                     console.log(response)
                     setErrorType("credenziali")
-                    deleteCookie("Errore credenziali")
+                    deleteCookie("token")
 
-                }else if(response.status === 402){
+                }/*else if(response.data.status === 402){
 
-                    deleteCookie("Errore credenziali")
+                    deleteCookie("token")
 
-                }else if(response.status === 403){
+                }else if(response.data.status === 403){
 
-                    deleteCookie("Errore credenziali")
+                    deleteCookie("token")
+
+                }*/
+                else if(response.data.status === 406){
+                    navigate("/confirmByAdmin")
+                    deleteCookie("token")
+
+                }else if(response.data.status === 408 && response.data){
+                    const code = response.data.localname
+                    const id = response.data.name
+                    navigate("/emailNotConfirmed/" + id + "/" + code);
+                    deleteCookie("token")
 
                 }else{
-                    console.log(response)
-                    deleteCookie("Errore credenziali")
-
+                    deleteCookie("token")
                 }
             }else{
                 setErrorType('connection')
@@ -157,15 +175,16 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         let status: boolean = false
         try{
             const tmp: any = await updateProfileApi(updateProfile);
-            if(tmp.status === 200){
+            if(tmp.status === 200 && user){
                 status = true
                 setUser({
                     name: updateProfile.name,
                     email: updateProfile.email,
                     address: updateProfile.address,
                     phone: updateProfile.phone,
-                    localname: user?.localname || "",
-                    idAgency: user?.idAgency || -1
+                    localname: user.localname || "",
+                    idAgency: user.idAgency || -1,
+                    controlsVariable: user.controlsVariable
                 })
             }
         }catch (error){
@@ -174,11 +193,17 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return status;
     }
 
+    const checkVariable = (value: number) => {
+        if(!user)
+            return false
+        return user.controlsVariable % value === 0
+    }
+
     const logout = () => {
         deleteCookie("token")
         setAuthorized(false)
         setUser(null)
-        window.location.href = "/login"
+        window.location.href = (process.env.REACT_APP_URL || "") + "/login"
     };
 
     const register = async (formData: FormData) => {
@@ -199,7 +224,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     return (
-        <LoginContext.Provider value={{ _login, logout, changePasswordFunc, updateProfileFunc, register, transparentLoading, loading, user, errorType }}>
+        <LoginContext.Provider value={{ _login, logout, changePasswordFunc, updateProfileFunc, register, checkVariable, transparentLoading, loading, user, errorType }}>
             {children}
         </LoginContext.Provider>
     );

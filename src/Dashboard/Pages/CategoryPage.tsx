@@ -1,265 +1,204 @@
-import React, {useEffect, useState} from "react";
-import { CategoryDto, AddCategory, UpdateCategory, LongInteger } from "../../types";
+import React, { useEffect, useState } from "react";
 import { useData } from "../../Context/DataContext";
+import { useNavigate, useParams } from "react-router-dom";
+import { FaArrowLeft, FaSave, FaPlus } from "react-icons/fa";
+import { CameraIcon } from '@heroicons/react/24/solid';
+
+import { useHistory } from "../../Context/HistoryContext";
+import { AddCategory, UpdateCategory, LongInteger } from "../../types";
+
 import CustomLoading from "../../Components/CustomLoading";
-import {useNavigate, useParams} from "react-router-dom";
-import {FaArrowLeft, FaPlus, FaSave} from "react-icons/fa";
-import {useHistory} from "../../Context/HistoryContext";
+import PillToggle from "../../Components/Dashboard/PillToggle";
+import {useNotification} from "../../Context/NotificationContext"; // Riutilizziamo il nostro PillToggle!
 
 interface CategoryPageProps {
     isNew: boolean;
-    //categoryDto?: CategoryDto;
 }
 
-const CategoryPage: React.FC<CategoryPageProps> = ({ isNew/*, categoryDto*/ }) => {
+const CategoryPage: React.FC<CategoryPageProps> = ({ isNew }) => {
+    // La logica di stato rimane la stessa
     const [name, setName] = useState<string>("");
     const [description, setDescription] = useState<string>("");
     const [id, setId] = useState<number>(-1);
     const [products, setProducts] = useState<LongInteger[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [image, setImage] = useState<string>("");
     const [available, setAvailable] = useState<boolean>(true);
-    const [myLoading, setMyLoading] = useState<boolean>(true)
+    const [myLoading, setMyLoading] = useState<boolean>(true);
+    const [file, setFile] = useState<File | null>(null);
+
     const { loading, addCategory, updateCategory, productsMap, categoriesMap } = useData();
-    const [file, setFile] = useState<File | null>(null)
     const { previousPath, navigateWithHistory } = useHistory();
+    const { idCategory, localname } = useParams();
+    const {addNotification} = useNotification()
+    const navigate = useNavigate()
 
-    const {idCategory, localname} = useParams()
-
+    // La logica degli useEffect rimane la stessa
     useEffect(() => {
-        if(isNew && !loading){
-            setMyLoading(false)
-        }
-    }, []);
-
-    useEffect(() => {
-        if(!loading){
-            if(!isNew && categoriesMap && categoriesMap.has(Number(idCategory))){
-                const tmp = categoriesMap.get(Number(idCategory))
-                setId(tmp?.id || -1)
-                setName(tmp?.name || "")
-                setDescription(tmp?.description || "")
-                setImage(tmp?.image || "")
-                setAvailable(tmp?.available || true)
-                setProducts(tmp?.products || [])
+        if (!loading) {
+            if (!isNew && idCategory && categoriesMap.has(Number(idCategory))) {
+                const tmp = categoriesMap.get(Number(idCategory))!;
+                setId(tmp.id);
+                setName(tmp.name);
+                setDescription(tmp.description || "");
+                setImage(tmp.image || "");
+                setAvailable(tmp.available);
+                setProducts(tmp.products || []);
             }
-            setMyLoading(false)
+            setMyLoading(false);
         }
-    }, [loading]);
+    }, [loading, isNew, idCategory, categoriesMap]);
 
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-    };
-
+    // Funzioni di supporto (invariate)
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const filetmp = event.target.files?.[0];
-        if (filetmp) {
+        const fileTmp = event.target.files?.[0];
+        if (fileTmp) {
             const reader = new FileReader();
-            reader.onload = () => {
-                setImage(reader.result as string);
-                setFile(filetmp)
-            };
-            reader.readAsDataURL(filetmp);
+            reader.onload = () => { setImage(reader.result as string); setFile(fileTmp); };
+            reader.readAsDataURL(fileTmp);
         }
     };
+    const resetAll = () => { setName(""); setDescription(""); setId(-1); setFile(null); setImage(""); setProducts([]); setAvailable(true); };
 
-    const handleBoxClick = () => {
-        document.getElementById("imageUploadInput")?.click();
-    };
+    const handleSubmit = async (andContinue: boolean = false) => {
+        setMyLoading(true);
+        console.log("test")
+        let success = false;
+        let result;
 
-    const handleToggleAvailable = () => {
-        setAvailable((prev) => !prev);
-    };
+        if (isNew) {
+            const addCategoryValue: AddCategory = { name, description, image, products, available };
+            result = await addCategory(addCategoryValue, file || undefined);
+            console.log(result)
 
-
-    const saveAndClose = async () => {
-        setMyLoading(true)
-        const addCategoryValue: AddCategory = {
-            name: name,
-            image: image,
-            products: products,
-            available: available,
-            description: description
-        };
-        const data = await addCategory(addCategoryValue, file || undefined);
-        if (data) {
-            // todo notifica
-            handleNavigation("/" + localname + "/Dashboard/Categories")
+        } else {
+            const updateCategoryValue: UpdateCategory = { id, name, description, image, products, available };
+            result = await updateCategory(updateCategoryValue, file || undefined);
+            console.log(result)
         }
-        setMyLoading(false)
-    }
+        if (result) success = true;
 
-    const saveAndContinue = async () => {
-        setMyLoading(true)
-        const addCategoryValue: AddCategory = { name: name, image: image, products: products, available: available, description: description };
-        const status = await addCategory(addCategoryValue, file || undefined);
-        if(status) {
-            //todo notifica
-            resetAll()
+        setMyLoading(false);
+        if (success) {
+            addNotification({ message: `Categoria ${isNew ? 'creata' : 'aggiornata'}!`, type: "success" });
+            if (andContinue) {
+                resetAll();
+            } else {
+                handleNavigation(`/${localname}/Dashboard/Categories`);
+            }
+        } else {
+            addNotification({ message: "Errore durante il salvataggio.", type: "error" });
         }
-        setMyLoading(false)
-    }
-
-    const update = async () => {
-        setMyLoading(true)
-        const updateCategoryValue: UpdateCategory = { id: id, name: name, image: image, products: products, available: available, description: description };
-        const status = await updateCategory(updateCategoryValue, file || undefined);
-        if(status) {
-            // todo notifica
-            handleNavigation("/" + localname + "/Dashboard/Categories")
-        }
-        setMyLoading(false)
     };
-
-    const resetAll = () => {
-        setName("")
-        setDescription("")
-        setId(-1)
-        setFile(null)
-        setImage("")
-        setProducts([])
-        setAvailable(true)
-    }
 
     const handleNavigation = (path: string) => {
-        if (previousPath && previousPath.includes(window.location.origin + "/" + localname + "/Dashboard")) {
-            window.history.back();
-        } else {
-            navigateWithHistory(path);
-        }
+        //try {
+        //    const hash = window.location.hash.replace('#', '');
+//
+        //    if (hash){
+        //        navigate(path + "/" + hash)
+        //    }
+        //} catch (e){
+        //    navigate(path)
+        //}
+        navigate(path)
     };
 
     return (
-        <div className="p-6">
-            {(myLoading || loading) && <CustomLoading isFullPage={true} isTransparent={true} message={"Salvataggio..."}/>}
+        <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
+            {(myLoading || loading) && <CustomLoading isFullPage={true} isTransparent={true} message={"Salvataggio..."} />}
 
-            <div className="mb-6" style={{marginLeft: "-1.7rem", marginTop: "-2rem"}}>
-                <button
-                    className="flex items-center space-x-2 text-orange-500 hover:text-orange-700"
-                    onClick={() => handleNavigation("/" + localname + "/Dashboard/Categories")}
-                >
-                    <FaArrowLeft size={20}/>
-                    <span className="font-medium">Torna indietro</span>
-                </button>
-            </div>
-
-            <h1 className="text-2xl font-bold mb-4">{(isNew ? "Aggiungi " : "Modifica ") + "Categoria"}</h1>
-
-            {/* Immagine */}
-            <div className="mb-6">
-                <label className="block font-medium mb-2">Immagine</label>
-                <div
-                    onClick={handleBoxClick}
-                    className="relative w-40 h-40 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden cursor-pointer border border-dashed border-orange-400"
-                >
-                    <img
-                        src={image ? process.env.REACT_APP_BUCKET_URL + image : ""}
-                        onError={(e) => (e.currentTarget.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Placeholder_view_vector.svg/1280px-Placeholder_view_vector.svg.png")}
-                        className="w-full h-full object-cover"
-                    />
-                    <div
-                        className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity">
-                        <span className="text-white text-sm font-medium">Clicca per caricare</span>
-                    </div>
-                </div>
-                <input
-                    id="imageUploadInput"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                />
-                <button
-                    className="mt-4 bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600"
-                    onClick={handleBoxClick}
-                >
-                    Carica immagine
-                </button>
-            </div>
-
-            {/* Nome */}
-            <div className="mb-6">
-                <label className="block font-medium mb-2">Nome</label>
-                <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full p-2 border rounded-md"
-                />
-            </div>
-
-            {/* Descrizione */}
-            <div className="mb-6">
-                <label className="block font-medium mb-2">Descrizione</label>
-                <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full p-2 border rounded-md"
-                />
-            </div>
-
-            {/* Disponibilità */}
-            <div className="mb-6">
-                <label className="block font-medium mb-2">Disponibile</label>
-                <div className="flex items-center">
-                    <span
-                        className="mr-4">{available ? "La categoria è attualmente disponibile" : "La categoria non è disponibile"}</span>
-                    <div
-                        className={`relative w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition-all ${available ? "bg-green-500" : "bg-gray-300"}`}
-                        onClick={handleToggleAvailable}
-                    >
-                        <div
-                            className={`absolute w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${available ? "translate-x-6" : "translate-x-0"}`}
-                        ></div>
-                    </div>
-                </div>
-            </div>
-
-            {!isNew &&
-                <button
-                    className="mt-4 bg-red-500 text-white px-4 py-2 rounded-md"
-                    onClick={() => update()}
-                >
-                    Salva Categoria
-                </button>
-            }
-
-            {/* Pulsanti Finali se nuovo */}
-            {isNew &&
-                <div className="mt-6 flex justify-end space-x-4">
-                    <button
-                        className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600"
-                        onClick={() => saveAndClose()}
-                    >
-                        <FaSave size={16} />
-                        <span>Salva e Torna Indietro</span>
+            {/* --- Action Bar Superiore --- */}
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <div>
+                    <button onClick={() => handleNavigation(`/${localname}/Dashboard/Categories`)}
+                            className="flex items-center gap-2 text-gray-500 hover:text-primary font-semibold transition-colors">
+                        <FaArrowLeft/>
+                        <span>Torna a Categorie</span>
                     </button>
-                    <button
-                        className="flex items-center space-x-2 bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600"
-                        onClick={() => saveAndContinue()}
-                    >
-                        <FaPlus size={16} />
-                        <span>Salva e Aggiungi Altra</span>
-                    </button>
+                    <h1 className="text-3xl font-bold text-gray-800 mt-1">
+                        {isNew ? "Nuova Categoria" : `Modifica: ${name}`}
+                    </h1>
                 </div>
-            }
-
-            {/* Modale */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-md p-6 w-96 max-h-96 overflow-y-auto">
-                        <h2 className="text-xl font-bold mb-4">Gestisci Prodotti</h2>
-                        <div className="flex flex-wrap"></div>
-                        <button
-                            onClick={closeModal}
-                            className="mt-4 bg-red-500 text-white px-4 py-2 rounded-md"
-                        >
-                            Chiudi
+                {/* Pulsanti di salvataggio */}
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    {isNew ? (
+                        <>
+                            {/* Aggiunto 'flex items-center' e 'md:w-auto' */}
+                            <button onClick={() => handleSubmit(false)}
+                                    className="btn-primary w-full md:w-auto flex items-center justify-center">
+                                <FaSave className="mr-2"/>
+                                <span>Salva e Chiudi</span>
+                            </button>
+                            {/* Aggiunto 'flex items-center' e 'md:w-auto' */}
+                            <button onClick={() => handleSubmit(true)}
+                                    className="btn-secondary w-full md:w-auto flex items-center justify-center">
+                                <FaPlus className="mr-2"/>
+                                <span>Salva e Continua</span>
+                            </button>
+                        </>
+                    ) : (
+                        // Aggiunto 'flex items-center' e 'md:w-auto'
+                        <button onClick={() => handleSubmit(false)}
+                                className="btn-primary w-full md:w-auto flex items-center justify-center">
+                            <FaSave className="mr-2"/>
+                            <span>Salva Modifiche</span>
                         </button>
+                    )}
+                </div>
+            </div>
+
+            {/* --- Layout a Griglia --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                {/* Colonna Sinistra: Dati Principali */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
+                    <div className="space-y-6">
+                        <div>
+                            <label htmlFor="category-name" className="block text-sm font-medium text-gray-700 mb-1">Nome
+                                Categoria</label>
+                            <input type="text" id="category-name" value={name} onChange={(e) => setName(e.target.value)}
+                                   className="input-style" placeholder="Es. Pizze Rosse, Birre Artigianali..."/>
+                        </div>
+                        <div>
+                            <label htmlFor="category-description"
+                                   className="block text-sm font-medium text-gray-700 mb-1">Descrizione
+                                (opzionale)</label>
+                            <textarea id="category-description" value={description}
+                                      onChange={(e) => setDescription(e.target.value)}
+                                      rows={4} className="input-style" placeholder="Una breve descrizione della categoria..."/>
+                        </div>
                     </div>
                 </div>
-            )}
+
+                {/* Colonna Destra: Metadati e Impostazioni */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Immagine</h3>
+                        <input id="imageUploadInput" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                        <div onClick={() => document.getElementById("imageUploadInput")?.click()}
+                             className="w-full aspect-video bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer border-2 border-dashed border-gray-300 hover:border-primary transition-colors group">
+                            {image ? (
+                                <img src={file ? image : process.env.REACT_APP_BUCKET_URL + image} alt="Anteprima categoria" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="text-center text-gray-500">
+                                    <CameraIcon className="w-12 h-12 mx-auto text-gray-400 group-hover:text-primary transition-colors" />
+                                    <p className="mt-2 text-sm font-semibold">Carica Immagine</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Stato</h3>
+                        <PillToggle
+                            label="Visibilità Categoria"
+                            enabled={available}
+                            onChange={setAvailable}
+                        />
+                        <p className="text-xs text-gray-500 mt-2">Se disabilitata, la categoria e i suoi prodotti non saranno visibili ai clienti.</p>
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 };

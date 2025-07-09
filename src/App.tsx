@@ -16,7 +16,6 @@ import HomePage from "./Dashboard/Pages/HomePage";
 import MenuPage from "./Dashboard/Pages/MenuPage";
 import ProductPage from "./Dashboard/Pages/ProductPage";
 import IngredientsPage from "./Dashboard/Pages/IngredientsPage";
-import TablesPage from "./Dashboard/Pages/TablesPage";
 import TablesPageTest from "./Dashboard/Pages/TablesPageTest";
 import OrderPage from "./Dashboard/Pages/OrderPage";
 import WaitersPage from "./Dashboard/Pages/WaitersPage";
@@ -28,6 +27,16 @@ import ClientProductsPage from "./Client/Pages/ProductsPage";
 import ClientProductPage from "./Client/Pages/ClientProductPage";
 import {HistoryProvider} from "./Context/HistoryContext";
 import CartPage from "./Client/Pages/CartPage";
+import DocumentsPage from "./Dashboard/Pages/DocumentsPage";
+import LoyaltyCardsPage from "./Dashboard/Pages/LoyaltyCardsPage";
+import CardStatusPage from "./All/CardStatusPage";
+import GroupOrderWaitingPage from "./Client/Pages/GroupOrderWaitingPage";
+import HistoryOrdersPage from "./Client/Pages/HistoryOrdersPage";
+import LayoutPage from "./Dashboard/Pages/LayoutPage";
+import WaiterSignupPage from "./Dashboard/Pages/WaiterSignupPage";
+import ConfirmEmailPage from "./Dashboard/Pages/ConfirmEmailPage";
+import WaiterAccountPendingAdminApproval from "./Dashboard/Pages/WaiterAccountPendingAdminApproval";
+import EmailNotConfirmedPage from "./Dashboard/Pages/EmailNotConfirmedPage";
 
 const WaiterRoutes = () => (
   <LoginProvider>
@@ -52,6 +61,8 @@ const ClientRoutes = () => (
           <Route path={"Product/:idProduct"} element={<ClientProductPage/>}/>
           <Route path={"Allergens"} element={<ClientCategoriesPage/>}/>
           <Route path={"/cart"} element={<CartPage waiter={false}/>}/>
+          <Route path="/checkout" element={<GroupOrderWaitingPage />} />
+          <Route path="/history" element={<HistoryOrdersPage />} />
         </Routes>
       </NotificationProvider>
     </DataProvider>
@@ -77,7 +88,9 @@ const DashboardRoutes = () => (
                 <Route path={"Ingredients"} element={<IngredientsPage/>}/>
                 <Route path={"Categories"} element={<CategoriesPage/>}/>
                 <Route path={"Waiters"} element={<WaitersPage/>}/>
-                <Route path={"Layout"}/>
+                <Route path={"Documents"} element={<DocumentsPage/>}/>
+                <Route path={"Cards"} element={<LoyaltyCardsPage/>}/>
+                <Route path={"Layout"} element={<LayoutPage/>}/>
                 {/*<Route path={"Tables"} element={<TablesPage/>}/>*/}
                 <Route path={"Tables"} element={<TablesPageTest/>}/>
                 <Route path={"Orders"} element={<OrderPage/>}/>
@@ -98,11 +111,16 @@ function App() {
           <UtilitiesProvider>
             <Routes>
               <Route path={"/login"} element={<LoginProvider><LoginPage/></LoginProvider>} />
+              <Route path={"/cardStatus"} element={<CardStatusPage/>} />
               <Route path={"/signup"} element={<SignupPage/>} />
               {/*<Route path={"/confirmAccount/:id/:code"} element={<Conf/>} />*/}
-              <Route path={"/:localname/Dashboard/*"} element={<DashboardRoutes/>} />
+              <Route path={"/:localname/Dashboard/*"} element={<DashboardRoutes />} />
               <Route path={"/Waiters/:localname/*"} element={<WaiterRoutes />} />
-              <Route path={"/:localname/*"} element={<ClientRoutes/>} />
+              <Route path={"/:localname/*"} element={<ClientRoutes />} />
+              <Route path={"/urlInvite/:id/:code"} element={<WaiterSignupPage />} />
+              <Route path={"/confirmAccount/:id/:code"} element={<ConfirmEmailPage />} />
+              <Route path={"/confirmByAdmin"} element={<WaiterAccountPendingAdminApproval />} />
+              <Route path={"/emailNotConfirmed/:id/:code"} element={<EmailNotConfirmedPage />} />
             </Routes>
           </UtilitiesProvider>
         </NotificationProvider>

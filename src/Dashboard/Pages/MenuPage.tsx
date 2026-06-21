@@ -1,6 +1,6 @@
 // src/pages/MenuPage.tsx
 import React, { useEffect, useState, useMemo } from "react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useData } from "../../Context/DataContext";
 import { IdWithOrder, ProductDto } from "../../types";
 import ProductCard from "../../Components/ProductCard";
@@ -8,9 +8,7 @@ import { useParams } from "react-router-dom";
 import DeletePopup from "../../Components/DeletePopup";
 import { useHistory } from "../../Context/HistoryContext";
 import CustomLoading from "../../Components/CustomLoading";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import {GripVerticalIcon} from "lucide-react";
-import {PlusIcon} from "@heroicons/react/24/solid";
+import { GripVerticalIcon, Search, Plus } from "lucide-react";
 const MenuPage: React.FC = () => {
 
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -25,16 +23,11 @@ const MenuPage: React.FC = () => {
         changeAvailableAddable,
         deleteEntity,
         changeOrderCategories,
-        //changeOrderProducts, // todo
+        changeOrderProducts,
     } = useData();
 
     const { navigateWithHistory } = useHistory();
     const { localname } = useParams();
-
-    const changeOrderProducts = (primo: any, secondo: any) => {
-
-    }
-
 
     useEffect(() => {
         if (!loading && selectedCategory === null && categoriesMap.size > 0) {
@@ -59,21 +52,22 @@ const MenuPage: React.FC = () => {
             reorderedCategories.splice(destination.index, 0, movedItem);
             const orderedIds: IdWithOrder[] = reorderedCategories.map((cat, index) => ({ id: cat.id, order: index + 1 }));
             await changeOrderCategories(orderedIds);
-        } else if (type === "product" && selectedCategory) {
-            const category = categoriesMap.get(selectedCategory);
-            if (!category) return;
-            const reorderedProducts = [...category.products].sort((a, b) => a.intValue - b.intValue);
+        }
+
+        if (type === "product" && selectedCategory) {
+            if (searchTerm) return;
+            const reorderedProducts = [...filteredAndSortedProducts];
             const [movedItem] = reorderedProducts.splice(source.index, 1);
             reorderedProducts.splice(destination.index, 0, movedItem);
-            const orderedIds: IdWithOrder[] = reorderedProducts.map((prod, index) => ({ id: prod.longValue, order: index + 1 }));
-            await changeOrderProducts(selectedCategory, orderedIds);
+            const orderedIds: IdWithOrder[] = reorderedProducts.map((p, index) => ({ id: p.id, order: index + 1 }));
+            await changeOrderProducts(orderedIds, selectedCategory);
         }
     };
 
     const filteredAndSortedProducts = useMemo(() => {
         if (!selectedCategory) return [];
         const category = categoriesMap.get(selectedCategory);
-        if (!category) return [];
+        if (!category || !category.products) return [];
         return category.products
             .map(p => productsMap.get(p.longValue))
             .filter((p): p is ProductDto => p !== undefined && p.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -150,7 +144,7 @@ const MenuPage: React.FC = () => {
                                         onClick={() => navigateWithHistory(((`/${localname}/Dashboard/AddCategory`) + (window.location.hash.replace('#', '').trim() !== "" ? window.location.hash : "")))}
                                         className="flex-shrink-0 md:flex-shrink-1 flex items-center justify-center p-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:text-primary hover:border-primary cursor-pointer transition-colors"
                                     >
-                                        <PlusIcon className="w-5 h-5 mr-1" />
+                                        <Plus className="w-5 h-5 mr-1" />
                                         <span className="font-semibold text-sm md:text-base">Nuova</span>
                                     </div>
                                 </div>
@@ -167,13 +161,13 @@ const MenuPage: React.FC = () => {
                                     <h1 className="text-2xl md:text-3xl font-bold text-gray-800 truncate">{categoriesMap.get(selectedCategory)?.name}</h1>
                                     <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
                                         <div className="relative flex-1">
-                                            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+                                            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"/>
                                             <input type="text" placeholder="Cerca..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-primary/50"/>
                                         </div>
                                         <button onClick={() => navigateWithHistory((`/${localname}/Dashboard/AddProduct#${selectedCategory}`) + (window.location.hash.replace('#', '').trim() !== "" ? window.location.hash : ""))}
                                                 className="bg-primary text-white p-2.5 rounded-lg shadow-md hover:bg-primary-dark font-semibold">
-                                            <PlusIcon className="w-6 h-6 md:hidden"/>
+                                            <Plus className="w-6 h-6 md:hidden"/>
                                             <span className="hidden md:block">Aggiungi Prodotto</span>
                                         </button>
                                     </div>

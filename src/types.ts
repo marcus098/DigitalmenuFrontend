@@ -2,7 +2,6 @@ import React from "react";
 import {Comand} from "./ComandType";
 import {UserProfile} from "./Dashboard/Pages/ProfilePage";
 import {Orders} from "./Dashboard/Pages/OrderPage";
-import exp from "node:constants";
 import {Table} from "./Dashboard/Pages/TablesPageTest";
 
 export interface ApiResponse<T = any>{
@@ -43,6 +42,7 @@ export interface DataContextType{
     updateIngredient: (updateIngredient: UpdateIngredient) => Promise<boolean>
     deleteEntity: (id: number, entity: Entity) => Promise<boolean>
     changeOrderCategories: (ordered: IdWithOrder[]) => Promise<boolean>
+    changeOrderProducts: (ordered: IdWithOrder[], categoryId: number) => Promise<boolean>
     mapRawOrderToOrder: (hasComands?: Comand[]) => Orders[]
     forceDeleteTable: (id: number) => Promise<boolean>
     deleteTable: (id: number) => Promise<string>
@@ -76,6 +76,18 @@ export interface UpdateStyle {
     cardStyle: string
     showImages: boolean
     font: string
+    description: string
+    openingHours: string
+    whatsapp: string
+    tiktokUrl: string
+    features?: string
+    sectionMenuTitle?: string
+    sectionBookingTitle?: string
+    sectionWhyTitle?: string
+    showWhyUs?: boolean
+    showBooking?: boolean
+    showTicker?: boolean
+    landingTemplate?: string
 }
 
 export interface Entity{
@@ -116,7 +128,7 @@ export interface LoginContextType{
     updateProfileFunc: (userProfile: UserProfile) => Promise<boolean>
     register: (formData: FormData) => Promise<"Success" | "Errore">
     transparentLoading: boolean
-    errorType: 'credenziali' | 'connection' | null
+    errorType: 'credenziali' | 'connection' | 'billing' | null
     checkVariable: (value: number) => boolean
 }
 
@@ -219,6 +231,12 @@ export interface IngredientOrderPlus {
     price: number
 }
 
+export interface FeatureCard {
+    icon: string;
+    title: string;
+    sub: string;
+}
+
 export interface StyleDto{
     backgroundGradient: string[],
     cardBackground: string,
@@ -236,8 +254,20 @@ export interface StyleDto{
     cardStyle: "soft" | "rounded" | "sharp",
     showImages: boolean,
     font: string,
+    description?: string,
+    openingHours?: string,
+    whatsapp?: string,
+    tiktokUrl?: string,
     sessionUpdating?: string,
-    changeType?: string
+    changeType?: string,
+    features?: FeatureCard[],
+    sectionMenuTitle?: string,
+    sectionBookingTitle?: string,
+    sectionWhyTitle?: string,
+    showWhyUs?: boolean,
+    showBooking?: boolean,
+    showTicker?: boolean,
+    landingTemplate?: 'default' | 'minimal' | 'luxury',
 }
 
 export interface ImageDto{
@@ -516,6 +546,47 @@ export interface SignupWaiter {
     password: string
     phone?: string
     code: string
+}
+
+export interface PaymentDto {
+    id: number
+    idAgency: number
+    idTable?: number
+    comandId?: string
+    amountCents: number
+    currency: string
+    stripePaymentIntentId?: string
+    status: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface PaymentIntentResponse {
+    clientSecret: string
+    paymentIntentId: string
+}
+
+export interface ReservationDto {
+    id: number
+    idAgency: number
+    customerName: string
+    customerPhone: string
+    customerEmail?: string
+    partySize: number
+    reservationDate: string
+    reservationTime: string
+    specialRequests?: string
+    status: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface EslConfigDto {
+    id: number
+    tableId: number
+    idAgency: number
+    eslTagMac: string | null
+    eslApUrl: string | null
 }
 
 export const IS_ADMIN = 2;

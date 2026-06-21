@@ -3,6 +3,15 @@ import {Orders} from "../Dashboard/Pages/OrderPage";
 
 export const MOBILE_WIDTH = 350
 
+export const resolveImageUrl = (path: string | undefined | null, fallback = ""): string => {
+    if (!path) return fallback;
+    const prefix = process.env.REACT_APP_IMAGE_URL_START;
+    if (prefix && path.startsWith(prefix)) {
+        return (process.env.REACT_APP_BUCKET_URL ?? "") + path;
+    }
+    return path;
+};
+
 export const allergens = [
     { id: 1, name: 'Glutine', icon: '/icons/glutine.png' },
     { id: 2, name: 'Latte', icon: '/icons/latte.png' },
@@ -22,7 +31,6 @@ export const allergens = [
 
 export const setCookie = (name: string, value: any, days: number): void => {
     let expires = "";
-    console.log(value)
     if (days) {
         let date = new Date();
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -102,24 +110,21 @@ const generateCartKey = (productCart: ProductCard): string => {
     return `id=${productCart.id}|opt=${productCart.optionName}|plus=${plus}|minus=${minus}`;
 };
 
+export const CART_UPDATED_EVENT = 'restaurantflow:cart-updated';
+
 export const addProductToCart = (productCart: ProductCard, cartName?: string) => {
     const nameCart = "cart_" + (cartName ?? "tmp0");
     const cartMap = getCartMap(nameCart);
-    console.log(cartMap)
-    console.log(productCart)
 
     const key = generateCartKey(productCart);
 
     if (cartMap[key]) {
         cartMap[key].quantity += productCart.quantity;
     } else {
-        console.log("entro nell'else")
         cartMap[key] = { ...productCart };
-//        console.log(cartMap)
-//        console.log(JSON.stringify(cartMap))
     }
-    console.log(JSON.stringify(cartMap))
     setCookie(nameCart, JSON.stringify(cartMap), 1);
+    window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
     return true;
 };
 
@@ -202,6 +207,7 @@ export function saveCart(productCard: ProductCard[], name: string | undefined){
         }else {
             setCookie(nameCart, JSON.stringify(productCard), 1);
         }
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         return true;
     }catch (except){
         return false

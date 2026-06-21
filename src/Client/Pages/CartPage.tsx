@@ -1,117 +1,360 @@
-// src/pages/client/CartPage.tsx
+import React, { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useNotification } from '../../Context/NotificationContext';
+import { useData } from '../../Context/DataContext';
+import { getCartMap, saveCart, emptyCart, CART_UPDATED_EVENT } from '../../Utilities/Utilities';
+import { sendClientOrderApi, sendTakeawayOrderApi } from '../../Utilities/api';
+import { ProductCard } from '../../types';
 
-import React, {useEffect, useMemo, useState} from 'react';
-import {getCartMap, removeProductFromCart, saveCart, updateProductQuantity} from "../../Utilities/Utilities";
-import CartItem from "../../Components/CartItem";
-import { ProductCard } from "../../types";
-import CartPopupWaiter from "../../Components/Waiters/CartPopupWaiter";
-import ClientHeader from "../../Components/ClientHeader";
-import { FaArrowLeft } from 'react-icons/fa';
-import {useNavigate, useParams} from 'react-router-dom';
-import {useNotification} from "../../Context/NotificationContext";
-import {useData} from "../../Context/DataContext";
-import CustomLoading from "../../Components/CustomLoading";
+import CustomLoading from '../../Components/CustomLoading';
+import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
+import AllergenModal from '../../Components/Client/AllergenModal';
+import ModernCartItem from '../../Components/Client/ModernCartItem';
+import CartPopupWaiter from '../../Components/Waiters/CartPopupWaiter';
+import ShimmerButton from '../../Components/ui/ShimmerButton';
+import useCartCount from '../../Utilities/useCartCount';
+import { ArrowLeft, ShoppingBasket, CheckCircle } from 'lucide-react';
 
 interface CartPageProps {
     waiter: boolean;
 }
 
+const MENU_BG = '#17140f';
+
+const pageVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.07, delayChildren: 0.05 },
+    },
+};
+
+const slideUp = {
+    hidden: { opacity: 0, y: 20 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+    },
+};
+
 const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
     const [cart, setCart] = useState<ProductCard[]>([]);
-    const [showPopup, setShowPopup] = useState<boolean>(false);
-    const navigate = useNavigate();
-    const { localname } = useParams()
-    const { addNotification } = useNotification()
-    const { loading } = useData()
+    const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [takeawayForm, setTakeawayForm] = useState({ name: '', phone: '', time: '' });
 
-    // Carica il carrello all'avvio
+    const navigate = useNavigate();
+    const { localname } = useParams();
+    const { addNotification } = useNotification();
+    const { loading, setSelectedAllergens, styles } = useData();
+    const cartCount = useCartCount(waiter ? 'waiter' : undefined);
+
+    const primaryColor = styles?.primary?.trim() || '#f97316';
+    const isTakeaway = !waiter && !localStorage.getItem('rf_table_id');
+
     useEffect(() => {
-        const cartFromStorage = waiter ? getCartMap("waiter") : getCartMap();
+        document.body.style.backgroundColor = MENU_BG;
+        return () => { document.body.style.backgroundColor = ''; };
+    }, []);
+
+    useEffect(() => {
+        const storageKey = waiter ? 'waiter' : undefined;
+        const cartFromStorage = getCartMap(storageKey);
         setCart(cartFromStorage ? Object.values(cartFromStorage) : []);
     }, [waiter]);
 
-    // Funzione per aggiornare sia lo stato che lo storage
     const updateCartStateAndStorage = (newCart: ProductCard[]) => {
-        const storageKey = waiter ? "waiter" : undefined;
-        const value = saveCart(newCart, storageKey);
-        if(value)
+        const storageKey = waiter ? 'waiter' : undefined;
+        if (saveCart(newCart, storageKey)) {
             setCart(newCart);
-        else
-            addNotification({message: "Errore", type: "error"})
-    }
-
-    // --- LOGICA IMPLEMENTATA ---
-    const removeItem = (itemIndex: number) => {
-        const newCart = cart.filter((_, index) => index !== itemIndex);
-        updateCartStateAndStorage(newCart);
-    };
-
-    const updateItemQuantity = (itemIndex: number, newQuantity: number) => {
-        if (newQuantity < 1) return;
-        const newCart = [...cart];
-        newCart[itemIndex].quantity = newQuantity;
-        updateCartStateAndStorage(newCart);
-    };
-    // -------------------------
-
-    const handleOrder = () => {
-        if (waiter) {
-            setShowPopup(true);
         } else {
-            navigate("/" + localname + '/checkout');
+            addNotification({ message: 'Errore nel salvataggio del carrello', type: 'error' });
         }
     };
 
-    const total = useMemo(() => {
-        return cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-    }, [cart]);
+    const removeItem = (id: string) =>
+        updateCartStateAndStorage(cart.filter(i => i.id.toString() !== id));
+
+    const updateItemQuantity = (id: string, qty: number) => {
+        if (qty < 1) return;
+        updateCartStateAndStorage(
+            cart.map(i => (i.id.toString() === id ? { ...i, quantity: qty } : i))
+        );
+    };
+
+    const handleOrder = async () => {
+        if (waiter) { setIsOrderModalOpen(true); return; }
+
+        const orders = cart.map(item => ({
+            products: [{
+                idProduct: item.id,
+                productOption: item.optionName,
+                note: item.note ?? '',
+                quantity: item.quantity,
+                ingredientsMinus: item.ingredientsMinus,
+                ingredientsPlus: item.ingredientsPlus,
+            }],
+        }));
+
+        if (isTakeaway) {
+            if (!takeawayForm.name.trim() || !takeawayForm.phone.trim()) {
+                addNotification({ message: 'Inserisci nome e telefono per procedere', type: 'error' });
+                return;
+            }
+            setIsSubmitting(true);
+            const result = await sendTakeawayOrderApi(localname!, {
+                customerName: takeawayForm.name,
+                customerPhone: takeawayForm.phone,
+                pickupTime: takeawayForm.time || undefined,
+                orders,
+            });
+            setIsSubmitting(false);
+            if (result.success && result.data) {
+                emptyCart();
+                window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+                navigate(`/${localname}/order-status/${(result.data as any).data ?? result.data}`);
+            } else {
+                addNotification({ message: "Errore nell'invio dell'ordine. Riprova.", type: 'error' });
+            }
+            return;
+        }
+
+        const rawTableId = localStorage.getItem('rf_table_id');
+        if (!rawTableId) {
+            addNotification({ message: 'Scansiona il QR code del tuo tavolo per ordinare', type: 'error' });
+            return;
+        }
+        setIsSubmitting(true);
+        const result = await sendClientOrderApi(Number(rawTableId), orders);
+        setIsSubmitting(false);
+        if (result.success && result.data) {
+            emptyCart();
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+            navigate(`/${localname}/order-status/${result.data}`);
+        } else {
+            addNotification({ message: "Errore nell'invio dell'ordine. Riprova.", type: 'error' });
+        }
+    };
+
+    const total = useMemo(
+        () => cart.reduce((acc, item) => acc + item.price * item.quantity, 0),
+        [cart]
+    );
+
+    if (loading) return <CustomLoading />;
 
     return (
-        <div className="flex flex-col bg-slate-100" style={{minHeight:'105vh'}}>
-            {showPopup && <CartPopupWaiter cart={cart} close={() => setShowPopup(false)} />}
+        <div style={{ background: MENU_BG, minHeight: '100vh' }}>
+            <style>{`:root { --c-accent: ${primaryColor}; }`}</style>
 
-            {loading && <CustomLoading isTransparent={true} isFullPage={true} />}
+            <div className="max-w-4xl mx-auto" style={{ minHeight: '100vh' }}>
+                <ClientStickyHeader
+                    restaurantName={styles?.restaurantName || localname || ''}
+                    onAllergenClick={() => setIsAllergenModalOpen(true)}
+                    onCartClick={() => {}}
+                    cartItemCount={cartCount}
+                    primaryColor={primaryColor}
+                />
 
-            <ClientHeader localname="Riepilogo Ordine" />
+                <motion.main
+                    className="px-4 md:px-6 pt-7 pb-16"
+                    variants={pageVariants}
+                    initial="hidden"
+                    animate="show"
+                >
+                    {/* Back button */}
+                    <motion.button
+                        variants={slideUp}
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-2 font-nunito text-sm font-medium mb-6"
+                        style={{ color: '#8a7d6a', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                        whileHover={{ x: -3 } as any}
+                        onHoverStart={e => { (e.target as any).style.color = '#ede8da'; }}
+                        onHoverEnd={e => { (e.target as any).style.color = '#8a7d6a'; }}
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Continua a ordinare
+                    </motion.button>
 
-            {/* Aggiungiamo un padding in basso al main per non far coprire i contenuti dal footer fisso */}
-            <main className="flex-grow container mx-auto max-w-3xl p-4 space-y-4 pb-32">
-                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-primary font-semibold transition-colors mb-4">
-                    <FaArrowLeft />
-                    <span>Continua a ordinare</span>
-                </button>
-                <h1 className="text-3xl font-bold mb-4 text-gray-800">🛒 Il tuo Carrello</h1>
+                    {/* Title */}
+                    <motion.h1
+                        variants={slideUp}
+                        className="font-cormorant font-semibold mb-1"
+                        style={{
+                            color: '#ede8da',
+                            fontSize: 'clamp(2rem, 6vw, 2.8rem)',
+                            lineHeight: 1.1,
+                        }}
+                    >
+                        Il Tuo Ordine
+                    </motion.h1>
 
-                {cart.length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-                        <p className="font-semibold text-xl text-gray-600">Il tuo carrello è vuoto</p>
-                        <p className="text-gray-500 mt-2">Aggiungi qualcosa di buono dal nostro menu!</p>
-                    </div>
-                ) : (
-                    cart.map((item, index) => (
-                        <CartItem
-                            key={`${item.id}-${item.optionName}-${index}`} // Chiave più robusta
-                            productCard={item}
-                            onRemove={() => removeItem(index)}
-                            onQuantityChange={(newQuantity) => updateItemQuantity(index, newQuantity)}
-                        />
-                    ))
-                )}
-            </main>
+                    {cart.length > 0 && (
+                        <motion.p
+                            variants={slideUp}
+                            className="font-nunito mb-6"
+                            style={{ color: '#8a7d6a', fontSize: '0.82rem' }}
+                        >
+                            {cart.length} {cart.length === 1 ? 'prodotto' : 'prodotti'} selezionati
+                        </motion.p>
+                    )}
 
-            {/* --- FOOTER FISSO (STICKY) --- */}
-            {cart.length > 0 && (
-                <footer className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-primary/50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-                    <div className="container mx-auto max-w-3xl p-4 flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-500">Totale</p>
-                            <div className="text-2xl md:text-3xl font-bold text-gray-900">€{total.toFixed(2)}</div>
-                        </div>
-                        <button onClick={handleOrder} className="btn-primary w-1/2 md:w-auto">
-                            Procedi all'Ordine
-                        </button>
-                    </div>
-                </footer>
+                    {/* Divider */}
+                    <motion.div
+                        variants={slideUp}
+                        className="mb-6"
+                        style={{ height: 1, background: 'rgba(255,255,255,0.06)' }}
+                    />
+
+                    {cart.length === 0 ? (
+                        <motion.div
+                            variants={slideUp}
+                            className="flex flex-col items-center justify-center py-20 text-center"
+                        >
+                            <motion.div
+                                animate={{ y: [0, -8, 0] }}
+                                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                            >
+                                <ShoppingBasket
+                                    className="w-20 h-20 mx-auto mb-5"
+                                    style={{ color: 'rgba(138,125,106,0.4)' }}
+                                />
+                            </motion.div>
+                            <h2
+                                className="font-cormorant font-semibold"
+                                style={{ color: '#ede8da', fontSize: '1.6rem' }}
+                            >
+                                Il carrello è vuoto
+                            </h2>
+                            <p
+                                className="font-nunito mt-2"
+                                style={{ color: '#8a7d6a', fontSize: '0.85rem' }}
+                            >
+                                Aggiungi qualcosa di delizioso dal menù!
+                            </p>
+                        </motion.div>
+                    ) : (
+                        <>
+                            <div className="flex flex-col gap-3">
+                                {cart.map(item => (
+                                    <ModernCartItem
+                                        key={item.id}
+                                        item={item}
+                                        onRemove={() => removeItem(item.id.toString())}
+                                        onQuantityChange={qty =>
+                                            updateItemQuantity(item.id.toString(), qty)
+                                        }
+                                    />
+                                ))}
+                            </div>
+
+                            <motion.div
+                                variants={slideUp}
+                                className="mt-8 pt-6"
+                                style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+                            >
+                                {/* Takeaway form */}
+                                {isTakeaway && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 12 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="mb-6 p-4 rounded-2xl"
+                                        style={{
+                                            background: 'rgba(201,168,76,0.07)',
+                                            border: '1px solid rgba(201,168,76,0.2)',
+                                        }}
+                                    >
+                                        <p
+                                            className="font-nunito text-xs font-bold uppercase tracking-widest mb-3"
+                                            style={{ color: '#c9a84c' }}
+                                        >
+                                            🛍 Asporto — Dati di contatto
+                                        </p>
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Nome e Cognome *"
+                                                value={takeawayForm.name}
+                                                onChange={e =>
+                                                    setTakeawayForm(f => ({ ...f, name: e.target.value }))
+                                                }
+                                                className="dark-input"
+                                            />
+                                            <input
+                                                type="tel"
+                                                placeholder="Telefono *"
+                                                value={takeawayForm.phone}
+                                                onChange={e =>
+                                                    setTakeawayForm(f => ({ ...f, phone: e.target.value }))
+                                                }
+                                                className="dark-input"
+                                            />
+                                            <input
+                                                type="time"
+                                                placeholder="Orario ritiro"
+                                                value={takeawayForm.time}
+                                                onChange={e =>
+                                                    setTakeawayForm(f => ({ ...f, time: e.target.value }))
+                                                }
+                                                className="dark-input"
+                                            />
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Totals */}
+                                <div className="space-y-3 mb-6">
+                                    <div className="flex justify-between font-nunito" style={{ color: '#8a7d6a' }}>
+                                        <span>Subtotale</span>
+                                        <span>€{total.toFixed(2)}</span>
+                                    </div>
+                                    <div
+                                        className="flex justify-between font-cormorant font-bold"
+                                        style={{ color: '#ede8da', fontSize: '1.5rem' }}
+                                    >
+                                        <span>Totale</span>
+                                        <span>€{total.toFixed(2)}</span>
+                                    </div>
+                                </div>
+
+                                {/* Confirm button */}
+                                <ShimmerButton
+                                    onClick={handleOrder}
+                                    disabled={isSubmitting}
+                                    className="w-full py-4 rounded-2xl text-white"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${primaryColor} 0%, #ea580c 100%)`,
+                                        boxShadow: `0 8px 24px ${primaryColor}44`,
+                                        fontSize: '1rem',
+                                    }}
+                                >
+                                    <CheckCircle className="w-5 h-5" />
+                                    {isSubmitting
+                                        ? 'Invio in corso...'
+                                        : isTakeaway
+                                        ? 'Invia Ordine Asporto'
+                                        : 'Conferma Ordine'}
+                                </ShimmerButton>
+                            </motion.div>
+                        </>
+                    )}
+                </motion.main>
+            </div>
+
+            <AllergenModal
+                isOpen={isAllergenModalOpen}
+                onClose={() => setIsAllergenModalOpen(false)}
+                onApplyFilters={selected => {
+                    setSelectedAllergens(selected);
+                    setIsAllergenModalOpen(false);
+                }}
+            />
+
+            {waiter && isOrderModalOpen && (
+                <CartPopupWaiter cart={cart} close={() => setIsOrderModalOpen(false)} />
             )}
         </div>
     );

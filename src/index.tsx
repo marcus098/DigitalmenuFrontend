@@ -4,17 +4,20 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { initSentry, Sentry } from './Utilities/sentry';
+import { registerServiceWorker } from './Utilities/registerServiceWorker';
+import ErrorFallback from './Components/ErrorFallback';
+
+initSentry();
+registerServiceWorker();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <>
+  <Sentry.ErrorBoundary fallback={({ error, resetError }) => <ErrorFallback error={error} resetError={resetError} />}>
     <App />
-  </>
+  </Sentry.ErrorBoundary>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();

@@ -2,8 +2,8 @@ import React, {useEffect, useState} from 'react';
 import {useLoginContext} from "../Context/LoginContext";
 import {useNotification} from "../Context/NotificationContext";
 import NotificationDisplay from "../Components/NotificationDisplay";
-import {Loader} from "lucide-react";
 import CustomLoading from "../Components/CustomLoading";
+import {useSearchParams} from "react-router-dom";
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -11,11 +11,18 @@ const LoginPage: React.FC = () => {
 
     const { _login, errorType, loading, transparentLoading } = useLoginContext()
     const { addNotification, notifications } = useNotification()
+    const [searchParams] = useSearchParams()
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         await _login(email, password);
     };
+
+    useEffect(() => {
+        if (searchParams.get('reason') === 'billing') {
+            addNotification({ message: 'Abbonamento scaduto. Rinnova per continuare.', type: 'error' })
+        }
+    }, []);
 
     useEffect(() => {
         if(errorType === 'connection'){

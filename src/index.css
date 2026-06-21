@@ -1,27 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=Nunito:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Base ─────────────────────────────────────────── */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* ─── Magic UI: Shimmer ─────────────────────────────── */
+@keyframes shimmerSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Magic UI: Border Beam ─────────────────────────── */
+@keyframes borderBeamRotate {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ─── Magic UI: Glow Pulse ──────────────────────────── */
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.5; box-shadow: 0 0 12px var(--glow-color, #f97316); }
+  50%       { opacity: 1;   box-shadow: 0 0 28px var(--glow-color, #f97316); }
+}
+
+/* ─── Menu client animations ───────────────────────── */
+@keyframes menuFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes menuFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes menuHeroScale {
+  from { transform: scale(1.06); }
+  to   { transform: scale(1); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-5px); }
+}
+
+/* ─── Menu utility classes ──────────────────────────── */
+.menu-fade-up {
+  opacity: 0;
+  animation: menuFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.menu-fade-in {
+  opacity: 0;
+  animation: menuFadeIn 0.4s ease-out forwards;
+}
+.menu-hero-img {
+  animation: menuHeroScale 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* staggered children — kept for legacy CSS consumers */
+.menu-stagger > *:nth-child(1)  { animation-delay: 0.05s; }
+.menu-stagger > *:nth-child(2)  { animation-delay: 0.10s; }
+.menu-stagger > *:nth-child(3)  { animation-delay: 0.15s; }
+.menu-stagger > *:nth-child(4)  { animation-delay: 0.20s; }
+.menu-stagger > *:nth-child(5)  { animation-delay: 0.25s; }
+.menu-stagger > *:nth-child(6)  { animation-delay: 0.30s; }
+.menu-stagger > *:nth-child(7)  { animation-delay: 0.35s; }
+.menu-stagger > *:nth-child(8)  { animation-delay: 0.40s; }
+.menu-stagger > *:nth-child(9)  { animation-delay: 0.45s; }
+.menu-stagger > *:nth-child(10) { animation-delay: 0.50s; }
+
+/* category nav scrollbar hidden */
+.menu-nav-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.menu-nav-scroll::-webkit-scrollbar { display: none; }
+
+/* ─── Dashboard scroll ──────────────────────────────── */
+.dash-scroll::-webkit-scrollbar { width: 4px; }
+.dash-scroll::-webkit-scrollbar-track { background: transparent; }
+.dash-scroll::-webkit-scrollbar-thumb { background: rgba(156,163,175,0.4); border-radius: 99px; }
+
+/* ─── Component helpers ─────────────────────────────── */
 .input-style {
-  @apply block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition;
+  @apply block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400/50 focus:border-primary-400 transition;
 }
 .btn-primary {
-  @apply bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-primary-dark font-semibold transition-colors;
+  @apply bg-primary-500 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-primary-600 font-semibold transition-colors;
+}
+.btn-primary-danger {
+  @apply bg-red-500 text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-red-600 font-semibold transition-colors;
 }
 .btn-secondary {
   @apply px-5 py-2.5 rounded-lg text-gray-600 hover:bg-gray-100 font-semibold transition-colors;
 }
+.label-style {
+  @apply block text-sm font-semibold text-gray-700;
+}
+
+/* ─── Dark cart / product page ──────────────────────── */
+.dark-input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #ede8da;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.dark-input::placeholder { color: #5a5048; }
+.dark-input:focus { border-color: var(--c-accent, #f97316); }
+.dark-input[type="time"] { color-scheme: dark; }

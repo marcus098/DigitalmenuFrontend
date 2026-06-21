@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1.7
+
+# --- Build stage ---
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install deps first (better layer caching)
+COPY package*.json ./
+RUN npm ci --no-audit --no-fund
+
+# Build-time env vars (CRA bakes them into the bundle).
+# Pass via: docker build --build-arg REACT_APP_API_URL=... etc.
+ARG REACT_APP_URL
+ARG REACT_APP_API_URL
+ARG REACT_APP_BACKEND_URL_BASE
+ARG REACT_APP_BACKEND_WEBFLUX_URL_BASE
+ARG REACT_APP_BACKEND_NUMBER
+ARG REACT_APP_BACKEND_PORTS
+ARG REACT_APP_WS_URL_BASE
+ARG REACT_APP_BUCKET_URL
+ARG REACT_APP_IMAGE_URL_START
+ARG REACT_APP_STRIPE_PUBLISHABLE_KEY
+ARG REACT_APP_SENTRY_DSN
+ARG REACT_APP_SENTRY_ENV
+ARG REACT_APP_SENTRY_RELEASE
+ENV REACT_APP_URL=$REACT_APP_URL \
+    REACT_APP_API_URL=$REACT_APP_API_URL \
+    REACT_APP_BACKEND_URL_BASE=$REACT_APP_BACKEND_URL_BASE \
+    REACT_APP_BACKEND_WEBFLUX_URL_BASE=$REACT_APP_BACKEND_WEBFLUX_URL_BASE \
+    REACT_APP_BACKEND_NUMBER=$REACT_APP_BACKEND_NUMBER \
+    REACT_APP_BACKEND_PORTS=$REACT_APP_BACKEND_PORTS \
+    REACT_APP_WS_URL_BASE=$REACT_APP_WS_URL_BASE \
+    REACT_APP_BUCKET_URL=$REACT_APP_BUCKET_URL \
+    REACT_APP_IMAGE_URL_START=$REACT_APP_IMAGE_URL_START \
+    REACT_APP_STRIPE_PUBLISHABLE_KEY=$REACT_APP_STRIPE_PUBLISHABLE_KEY \
+    REACT_APP_SENTRY_DSN=$REACT_APP_SENTRY_DSN \
+    REACT_APP_SENTRY_ENV=$REACT_APP_SENTRY_ENV \
+    REACT_APP_SENTRY_RELEASE=$REACT_APP_SENTRY_RELEASE \
+    CI=true \
+    GENERATE_SOURCEMAP=true
+
+COPY . .
+RUN npm run build
+
+# --- Runtime stage ---
+FROM nginx:1.27-alpine AS runtime
+RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/build /usr/share/nginx/html
+
+EXPOSE 80
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost/healthz || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

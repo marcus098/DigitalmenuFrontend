@@ -5,7 +5,7 @@ import CustomLoading from "../../Components/CustomLoading";
 import { useData } from "../../Context/DataContext";
 import { useParams } from "react-router-dom";
 import ToggleSwitch from "../../Components/ToggleSwitch";
-import {FaArrowLeft, FaPlus, FaSave} from "react-icons/fa";
+import { ArrowLeft, Plus, Save } from "lucide-react";
 import {useHistory} from "../../Context/HistoryContext";
 import {useNotification} from "../../Context/NotificationContext";
 import ManageItemsModal from "../../Components/Dashboard/ManageItemsModal";
@@ -129,7 +129,7 @@ const IngredientPage: React.FC<IngredientPageProps> = ({ isNew }) => {
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div>
                     <button onClick={() => handleNavigation(`/${localname}/Dashboard/Ingredients`)} className="flex items-center gap-2 text-gray-500 hover:text-primary font-semibold transition-colors">
-                        <FaArrowLeft />
+                        <ArrowLeft />
                         <span>Torna a Ingredienti</span>
                     </button>
                     <h1 className="text-3xl font-bold text-gray-800 mt-1">
@@ -139,11 +139,11 @@ const IngredientPage: React.FC<IngredientPageProps> = ({ isNew }) => {
                 <div className="flex items-center gap-2 w-full md:w-auto">
                     {isNew ? (
                         <>
-                            <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><FaSave className="mr-2"/>Salva e Chiudi</button>
-                            <button onClick={() => handleSave(true)} className="btn-secondary w-full md:w-auto flex items-center justify-center"><FaPlus className="mr-2"/>Salva e Continua</button>
+                            <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><Save className="mr-2"/>Salva e Chiudi</button>
+                            <button onClick={() => handleSave(true)} className="btn-secondary w-full md:w-auto flex items-center justify-center"><Plus className="mr-2"/>Salva e Continua</button>
                         </>
                     ) : (
-                        <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><FaSave className="mr-2"/>Salva Modifiche</button>
+                        <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><Save className="mr-2"/>Salva Modifiche</button>
                     )}
                 </div>
             </div>

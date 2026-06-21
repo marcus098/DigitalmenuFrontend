@@ -1,20 +1,18 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {DocumentTextIcon, PhotoIcon, EllipsisVerticalIcon, TrashIcon} from '@heroicons/react/24/solid';
 import {FileDto} from "../../types";
-import {PencilIcon} from "@heroicons/react/24/outline";
 import DeletePopup from "../DeletePopup";
-import {DownloadIcon} from "lucide-react";
+import { FileText, Image, MoreVertical, Trash2, Pencil, Download } from "lucide-react";
 
 // Funzione helper per le icone
 const getFileIcon = (type: string) => {
     switch (type) {
-        case 'pdf': return <DocumentTextIcon className="w-10 h-10 text-red-500" />;
-        case 'image': return <PhotoIcon className="w-10 h-10 text-blue-500" />;
-        case 'jpg': return <PhotoIcon className="w-10 h-10 text-blue-500" />;
-        case 'jpeg': return <PhotoIcon className="w-10 h-10 text-blue-500" />;
-        case 'webp': return <PhotoIcon className="w-10 h-10 text-blue-500" />;
-        case 'png': return <PhotoIcon className="w-10 h-10 text-blue-500" />;
-        default: return <DocumentTextIcon className="w-10 h-10 text-gray-500" />;
+        case 'pdf': return <FileText className="w-10 h-10 text-red-500" />;
+        case 'image': return <Image className="w-10 h-10 text-blue-500" />;
+        case 'jpg': return <Image className="w-10 h-10 text-blue-500" />;
+        case 'jpeg': return <Image className="w-10 h-10 text-blue-500" />;
+        case 'webp': return <Image className="w-10 h-10 text-blue-500" />;
+        case 'png': return <Image className="w-10 h-10 text-blue-500" />;
+        default: return <FileText className="w-10 h-10 text-gray-500" />;
     }
 };
 
@@ -111,7 +109,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onDelete, onRename, on
 
             <div className="relative" ref={menuRef}>
                 <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full hover:bg-gray-100 text-gray-500">
-                    <EllipsisVerticalIcon className="w-5 h-5"/>
+                    <MoreVertical className="w-5 h-5"/>
                 </button>
 
                 {/* --- MENU A TENDINA --- */}
@@ -121,19 +119,19 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onDelete, onRename, on
                             <li>
                                 <button onClick={handleRenameClick}
                                         className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 text-gray-700">
-                                    <PencilIcon className="w-4 h-4"/> Rinomina
+                                    <Pencil className="w-4 h-4"/> Rinomina
                                 </button>
                             </li>
                             <li>
                                 <button onClick={() => onDownload(file.id)}
                                         className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 text-gray-700">
-                                    <DownloadIcon className="w-4 h-4"/> Scarica
+                                    <Download className="w-4 h-4"/> Scarica
                                 </button>
                             </li>
                             <li>
                                 <button onClick={() => setConfirmPopup(true)}
                                         className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-100 text-red-600">
-                                    <TrashIcon className="w-4 h-4"/> Elimina
+                                    <Trash2 className="w-4 h-4"/> Elimina
                                 </button>
                             </li>
                         </ul>

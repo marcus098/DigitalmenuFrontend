@@ -1,169 +1,152 @@
-// src/pages/client/OrderHistoryPage.tsx
-
 import React, { useState, useEffect } from 'react';
-import { ProductCard, ProductDto } from '../../types';
 import { useData } from '../../Context/DataContext';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ClockIcon, UserIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
-import ClientHeader from '../../Components/ClientHeader';
+import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
+import AllergenModal from '../../Components/Client/AllergenModal';
+import useCartCount from '../../Utilities/useCartCount';
+import { getClientOrderHistoryApi } from '../../Utilities/api';
+import { Comand } from '../../ComandType';
+import { Clock, Wallet, ArrowLeft, History, PlusCircle, MinusCircle } from 'lucide-react';
 
-// --- TIPI E DATI MOCKUP PER LA SIMULAZIONE ---
-
-// Oggetto che rappresenta un singolo articolo ordinato da un utente
-interface OrderItem {
-    ownerId: string; // ID dell'ospite che ha ordinato questo articolo
-    ownerName: string; // Es. "Tu" o "Ospite 2"
-    productCard: ProductCard;
-}
-
-// Oggetto che rappresenta una "comanda" inviata alla cucina in un dato momento
-interface Comanda {
-    id: string;
-    timestamp: Date;
-    tableId: string;
-    items: OrderItem[];
-}
-
-// SIMULIAMO UN DATABASE CON LA CRONOLOGIA DEGLI ORDINI PER IL TAVOLO T08
-const mockOrderHistoryDB: Comanda[] = [
-    {
-        id: 'CMD-002',
-        timestamp: new Date(new Date().setMinutes(new Date().getMinutes() - 15)), // 15 minuti fa
-        tableId: 'T08',
-        items: [
-            { ownerId: 'guest-xyz-789', ownerName: 'Ospite 2', productCard: { id: 4, quantity: 2, optionName: 'default', price: 5.00, note: 'Senza ghiaccio', ingredientsPlus: [], ingredientsMinus: [] }},
-            { ownerId: 'my-session-id-123', ownerName: 'Tu', productCard: { id: 6, quantity: 1, optionName: 'default', price: 3.00, note: '', ingredientsPlus: [], ingredientsMinus: [] }},
-        ]
-    },
-    {
-        id: 'CMD-001',
-        timestamp: new Date(new Date().setMinutes(new Date().getMinutes() - 45)), // 45 minuti fa
-        tableId: 'T08',
-        items: [
-            { ownerId: 'my-session-id-123', ownerName: 'Tu', productCard: { id: 1, quantity: 1, optionName: 'default', price: 8.50, note: 'Ben cotta', ingredientsPlus: [], ingredientsMinus: [2] }},
-            { ownerId: 'guest-abc-456', ownerName: 'Ospite 3', productCard: { id: 1, quantity: 1, optionName: 'default', price: 8.50, note: '', ingredientsPlus: [], ingredientsMinus: [] }},
-            { ownerId: 'guest-xyz-789', ownerName: 'Ospite 2', productCard: { id: 5, quantity: 1, optionName: 'default', price: 2.50, note: '', ingredientsPlus: [], ingredientsMinus: [] }},
-        ]
-    }
-];
-
-// Funzione che simula il recupero della cronologia per un tavolo
-const fetchOrderHistory = (tableId: string): Promise<Comanda[]> => {
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve(mockOrderHistoryDB.filter(c => c.tableId === tableId));
-        }, 500);
-    });
+const STATUS_LABEL: Record<string, string> = {
+    AWAIT: 'In attesa',
+    PENDING: 'In attesa',
+    PROGRESS: 'In preparazione',
+    COMPLETED: 'Completato',
+    DELETED: 'Annullato',
+};
+const STATUS_COLOR: Record<string, string> = {
+    AWAIT: 'bg-zinc-100 text-zinc-600',
+    PENDING: 'bg-yellow-100 text-yellow-700',
+    PROGRESS: 'bg-amber-100 text-amber-700',
+    COMPLETED: 'bg-green-100 text-green-700',
+    DELETED: 'bg-red-100 text-red-600',
 };
 
-// Funzione per ottenere o creare l'ID ospite
-const getMyGuestId = (): string => {
-    let guestId = localStorage.getItem('guestId');
-    if (!guestId) {
-        guestId = `my-session-id-123`; // In questo mockup, siamo sempre lo stesso utente per coerenza
-        localStorage.setItem('guestId', guestId);
-    }
-    return guestId;
-};
-
-// --- FINE SEZIONE MOCKUP ---
-
-
-// --- COMPONENTI INTERNI ---
-
-const OrderItemRow: React.FC<{ item: OrderItem, isMine: boolean }> = ({ item, isMine }) => {
-    const { productsMap, ingredientsMap } = useData();
-    const product = productsMap.get(item.productCard.id);
-    if (!product) return null;
+const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
+    const total = comanda.orders.reduce((acc, order) =>
+        acc + order.products.reduce((s, p) => s + (p.productOption?.price ?? 0) * p.quantity, 0), 0);
+    const date = new Date(comanda.createdAt);
+    const statusKey = comanda.status ?? 'AWAIT';
 
     return (
-        <div className={`p-3 rounded-lg flex gap-3 ${isMine ? 'bg-primary/10' : 'bg-slate-50'}`}>
-            <img src={product.image ? process.env.REACT_APP_BUCKET_URL + product.image : '/placeholder.png'} alt={product.name} className="w-16 h-16 object-cover rounded-md flex-shrink-0"/>
-            <div className="flex-grow">
-                <div className="flex justify-between items-start">
-                    <p className="font-bold text-gray-800">
-                        <span className="font-semibold">{item.productCard.quantity}x</span> {product.name}
-                    </p>
-                    <p className="font-bold text-gray-800">€{(item.productCard.price * item.productCard.quantity).toFixed(2)}</p>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-200 shadow-lg">
+            <div className="flex justify-between items-center border-b border-zinc-200 pb-3 mb-4">
+                <div className="flex items-center gap-2 text-zinc-500">
+                    <Clock className="w-5 h-5" />
+                    <span className="font-semibold">{date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                {/* Visualizzazione personalizzazioni */}
-                <div className="text-xs text-gray-600 mt-1 space-y-0.5">
-                    {item.productCard.optionName !== "default" && <p>Opzione: <span className="font-semibold">{item.productCard.optionName}</span></p>}
-                    {item.productCard.ingredientsPlus.length > 0 && <p className="text-green-600">+ {item.productCard.ingredientsPlus.map(id => ingredientsMap.get(id)?.name).join(", ")}</p>}
-                    {item.productCard.ingredientsMinus.length > 0 && <p className="text-red-600">- {item.productCard.ingredientsMinus.map(id => ingredientsMap.get(id)?.name).join(", ")}</p>}
-                    {item.productCard.note && <p className="italic">Nota: "{item.productCard.note}"</p>}
+                <div className="flex items-center gap-3">
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${STATUS_COLOR[statusKey] ?? STATUS_COLOR.AWAIT}`}>
+                        {STATUS_LABEL[statusKey] ?? statusKey}
+                    </span>
+                    <div className="flex items-center gap-1 text-lg font-bold text-zinc-800">
+                        <Wallet className="w-4 h-4 text-zinc-400" />
+                        <span>€{total.toFixed(2)}</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
-};
 
-const ComandaCard: React.FC<{ comanda: Comanda, myGuestId: string }> = ({ comanda, myGuestId }) => {
-    const total = comanda.items.reduce((acc, item) => acc + (item.productCard.price * item.productCard.quantity), 0);
-
-    return (
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
-            <div className="flex justify-between items-center border-b pb-3 mb-3">
-                <div className="flex items-center gap-2 text-gray-500">
-                    <ClockIcon className="w-5 h-5"/>
-                    <span className="font-semibold">Ordine delle {comanda.timestamp.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div className="text-lg font-bold text-gray-800">Totale: €{total.toFixed(2)}</div>
-            </div>
             <div className="space-y-3">
-                {comanda.items.map((item, index) => (
-                    <OrderItemRow key={index} item={item} isMine={item.ownerId === myGuestId} />
-                ))}
+                {comanda.orders.flatMap((order, oi) =>
+                    order.products.map((prod, pi) => (
+                        <div key={`${oi}-${pi}`} className="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
+                            <div className="flex justify-between items-start">
+                                <p className="font-bold text-zinc-800">
+                                    <span className="font-semibold">{prod.quantity}x</span> {prod.productName}
+                                </p>
+                                <p className="font-bold text-zinc-700">€{((prod.productOption?.price ?? 0) * prod.quantity).toFixed(2)}</p>
+                            </div>
+                            {prod.note && <p className="text-xs text-zinc-500 mt-1 italic">"{prod.note}"</p>}
+                            {prod.ingredientsMinus.length > 0 && (
+                                <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
+                                    <MinusCircle size={12} /> {prod.ingredientsMinus.map(i => i.name).join(', ')}
+                                </p>
+                            )}
+                            {prod.ingredientsPlus.length > 0 && (
+                                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                                    <PlusCircle size={12} /> {prod.ingredientsPlus.map(i => i.name).join(', ')}
+                                </p>
+                            )}
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );
 };
 
-
-// --- PAGINA PRINCIPALE ---
 const HistoryOrdersPage: React.FC = () => {
-    const [comande, setComande] = useState<Comanda[]>([]);
-    const [myGuestId, setMyGuestId] = useState<string>('');
+    const [comande, setComande] = useState<Comand[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    // const { tableId } = useParams(); // Da usare in un'app reale
+    const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
+
+    const { setSelectedAllergens, styles } = useData();
+    const { localname } = useParams();
     const navigate = useNavigate();
+    const cartCount = useCartCount();
 
     useEffect(() => {
-        const guestId = getMyGuestId();
-        setMyGuestId(guestId);
-
-        // Simuliamo il fetch per un tavolo fisso, es. 'T08'
-        fetchOrderHistory('T08').then(data => {
-            setComande(data);
+        const rawTableId = localStorage.getItem('rf_table_id');
+        if (!rawTableId || !localname) {
+            setIsLoading(false);
+            return;
+        }
+        getClientOrderHistoryApi(Number(rawTableId), localname).then(result => {
+            if (result.success && result.data) {
+                const list = Array.isArray(result.data) ? result.data : [result.data];
+                setComande(list.filter((c: Comand) => c.status !== 'DELETED'));
+            }
             setIsLoading(false);
         });
-    }, []);
+    }, [localname]);
 
     return (
-        <div className="bg-slate-100 min-h-screen">
-            <ClientHeader localname="Cronologia Ordini" />
+        <div className="bg-gray-50">
+            <div className="max-w-4xl mx-auto bg-white shadow-2xl shadow-zinc-200 min-h-screen">
+                <ClientStickyHeader
+                    restaurantName={styles?.restaurantName || localname || ""}
+                    onAllergenClick={() => setIsAllergenModalOpen(true)}
+                    onCartClick={() => navigate(`/${localname}/cart`)}
+                    cartItemCount={cartCount}
+                />
 
-            <main className="container mx-auto max-w-3xl p-4 md:p-6">
-                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-primary font-semibold transition-colors mb-6">
-                    <ArrowLeftIcon className="w-5 h-5" />
-                    <span>Indietro</span>
-                </button>
+                <main className="p-4 md:p-6">
+                    <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-zinc-600 hover:text-amber-500 mb-6 font-semibold">
+                        <ArrowLeft className="w-5 h-5" />
+                        <span>Indietro</span>
+                    </button>
+                    <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-900 mb-6 tracking-tight">Cronologia Ordini</h1>
 
-                {isLoading ? (
-                    <p>Caricamento cronologia...</p>
-                ) : comande.length === 0 ? (
-                    <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-                        <p className="font-semibold text-xl text-gray-600">Nessun ordine trovato</p>
-                        <p className="text-gray-500 mt-2">Non sono ancora state inviate comande per questo tavolo.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        {comande.map(comanda => (
-                            <ComandaCard key={comanda.id} comanda={comanda} myGuestId={myGuestId} />
-                        ))}
-                    </div>
-                )}
-            </main>
+                    {isLoading ? (
+                        <p className="text-zinc-500">Caricamento cronologia...</p>
+                    ) : !localStorage.getItem('rf_table_id') ? (
+                        <div className="text-center py-16">
+                            <History className="w-20 h-20 mx-auto text-zinc-300" />
+                            <h2 className="mt-4 text-xl font-semibold text-zinc-700">Nessun tavolo associato</h2>
+                            <p className="mt-2 text-zinc-500">Scansiona il QR code del tuo tavolo per vedere gli ordini.</p>
+                        </div>
+                    ) : comande.length === 0 ? (
+                        <div className="text-center py-16">
+                            <History className="w-20 h-20 mx-auto text-zinc-300" />
+                            <h2 className="mt-4 text-xl font-semibold text-zinc-700">Nessun ordine trovato</h2>
+                            <p className="mt-2 text-zinc-500">Non sono ancora state inviate comande per questo tavolo.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {comande.map(comanda => (
+                                <ComandaCard key={comanda.id} comanda={comanda} />
+                            ))}
+                        </div>
+                    )}
+                </main>
+
+                <AllergenModal
+                    isOpen={isAllergenModalOpen}
+                    onClose={() => setIsAllergenModalOpen(false)}
+                    onApplyFilters={(selected) => setSelectedAllergens(selected)}
+                />
+            </div>
         </div>
     );
 };

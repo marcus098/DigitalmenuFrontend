@@ -116,7 +116,7 @@ const WaitersPage: React.FC = () => {
     const confirmWaiterFunc = async(id: number) => {
         const response = await confirmWaiter(id)
         if(response){
-            // todo aggiorno la lista mettendo waiter confermato
+            await loadWaiters()
         }else{
             addNotification({message: "Errore", type: "error"})
         }

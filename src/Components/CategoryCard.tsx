@@ -1,6 +1,6 @@
 // src/Components/CategoryCard.tsx
 import React from "react";
-import { FaEdit, FaTrashAlt } from "react-icons/fa";
+import { Pencil, Trash2 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import {CategoryDto, IS_ADMIN} from "../types";
 import { useHistory } from "../Context/HistoryContext";
@@ -58,7 +58,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                         title="Modifica"
                         onClick={() => navigateWithHistory(`/${localname}/Dashboard/Category/${category.id}`)}
                     >
-                        <FaEdit size={18} />
+                        <Pencil size={18} />
                     </button>
                     {checkVariable(IS_ADMIN) &&
                         <button
@@ -66,7 +66,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
                             title="Elimina"
                             onClick={() => deleteCategory(category.id, category.name)}
                         >
-                            <FaTrashAlt size={18} />
+                            <Trash2 size={18} />
                         </button>
                     }
                 </div>

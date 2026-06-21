@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  # Dummy values so Vite build doesn't fail on missing vars.
+  REACT_APP_URL: https://app.example.com
+  REACT_APP_API_URL: https://api.example.com
+  REACT_APP_BACKEND_URL_BASE: https://api.example.com
+  REACT_APP_BACKEND_WEBFLUX_URL_BASE: https://reactive.example.com
+  REACT_APP_BACKEND_NUMBER: "1"
+  REACT_APP_BACKEND_PORTS: "7070"
+  REACT_APP_WS_URL_BASE: wss://ws.example.com
+  REACT_APP_BUCKET_URL: https://s3.example.com/
+  REACT_APP_IMAGE_URL_START: test-bucket
+  REACT_APP_STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+  REACT_APP_SENTRY_DSN: ""
+  REACT_APP_SENTRY_ENV: ci
+  CI: "true"
+  GENERATE_SOURCEMAP: "false"
+
+jobs:
+  typecheck-and-build:
+    name: Typecheck & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install deps
+        run: npm ci --no-audit --no-fund --legacy-peer-deps
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: build/
+          retention-days: 7
+
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    needs: typecheck-and-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install deps
+        run: npm ci --no-audit --no-fund --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Start dev server
+        run: npm start &
+        env:
+          BROWSER: none
+
+      - name: Wait for dev server
+        run: npx wait-on http://localhost:3000 --timeout 180000
+
+      - name: Run Playwright
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  docker-build:
+    name: Docker build (smoke)
+    runs-on: ubuntu-latest
+    needs: typecheck-and-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            REACT_APP_URL=${{ env.REACT_APP_URL }}
+            REACT_APP_API_URL=${{ env.REACT_APP_API_URL }}
+            REACT_APP_BACKEND_URL_BASE=${{ env.REACT_APP_BACKEND_URL_BASE }}
+            REACT_APP_BACKEND_WEBFLUX_URL_BASE=${{ env.REACT_APP_BACKEND_WEBFLUX_URL_BASE }}
+            REACT_APP_BACKEND_NUMBER=${{ env.REACT_APP_BACKEND_NUMBER }}
+            REACT_APP_BACKEND_PORTS=${{ env.REACT_APP_BACKEND_PORTS }}
+            REACT_APP_WS_URL_BASE=${{ env.REACT_APP_WS_URL_BASE }}
+            REACT_APP_BUCKET_URL=${{ env.REACT_APP_BUCKET_URL }}
+            REACT_APP_IMAGE_URL_START=${{ env.REACT_APP_IMAGE_URL_START }}
+            REACT_APP_STRIPE_PUBLISHABLE_KEY=${{ env.REACT_APP_STRIPE_PUBLISHABLE_KEY }}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RestaurantFlow">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0bc60"/>
+      <stop offset="50%" stop-color="#c9a84c"/>
+      <stop offset="100%" stop-color="#a8862f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#17140f"/>
+  <circle cx="256" cy="256" r="184" fill="none" stroke="url(#gold)" stroke-width="6" opacity="0.35"/>
+  <text x="50%" y="56%" text-anchor="middle" dominant-baseline="middle"
+        font-family="Cormorant Garamond, Garamond, Georgia, serif"
+        font-weight="700" font-size="320" fill="url(#gold)" font-style="italic">R</text>
+</svg>

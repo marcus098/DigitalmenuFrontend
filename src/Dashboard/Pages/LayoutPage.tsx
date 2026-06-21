@@ -1,84 +1,125 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { FaSave } from 'react-icons/fa';
+import { Save, Paintbrush, FileText, Settings, Eye, Pencil, Image, X, Loader, Trash2, Layout } from 'lucide-react';
 import { useData } from '../../Context/DataContext';
-
-import { PaintBrushIcon, DocumentTextIcon, CogIcon, EyeIcon, PencilIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import {StyleDto, UpdateStyle} from "../../types";
-import {useNotification} from "../../Context/NotificationContext";
-import {Loader} from "lucide-react";
-import {TrashIcon} from "@heroicons/react/24/solid";
+import { FeatureCard, StyleDto, UpdateStyle } from "../../types";
+import { useNotification } from "../../Context/NotificationContext";
 import CustomLoading from "../../Components/CustomLoading";
 
-// --- Componenti Riutilizzabili (Nessuna modifica qui) ---
-const ColorInput: React.FC<{ label: string; value: string; onChange: (value: string) => void; onRemove?: () => void }> = ({ label, value, onChange, onRemove }) => (
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const DEFAULT_FEATURES: FeatureCard[] = [
+    { icon: '🥩', title: 'Ingredienti Freschi', sub: 'Selezionati ogni giorno' },
+    { icon: '👨‍🍳', title: 'Ricette Originali',  sub: 'Chef di esperienza' },
+    { icon: '⚡',  title: 'Veloce & Buono',     sub: 'Pronto in pochissimo' },
+    { icon: '📱', title: 'Ordina dal Tavolo',  sub: 'Scansiona il QR' },
+];
+
+const TEMPLATES = [
+    {
+        key: 'default',
+        label: 'Classico',
+        desc: 'Hero grande, ticker colorato, dark info section. Il layout originale, ricco di impatto.',
+        preview: (primary: string) => (
+            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col gap-0.5">
+                <div className="h-16 flex items-end p-2" style={{ background: `linear-gradient(135deg, #111 60%, ${primary}33)` }}>
+                    <div className="w-12 h-2 rounded bg-white/60" />
+                </div>
+                <div className="h-3" style={{ backgroundColor: primary }} />
+                <div className="flex gap-1 px-2 pt-1.5 flex-1 bg-gray-50">
+                    <div className="flex-1 h-8 rounded bg-gray-200" />
+                    <div className="flex-1 h-8 rounded bg-gray-200" />
+                    <div className="flex-1 h-8 rounded bg-gray-200" />
+                </div>
+            </div>
+        ),
+    },
+    {
+        key: 'minimal',
+        label: 'Minimal',
+        desc: 'Layout pulito, tutto bianco. Navbar sempre visibile, hero compatto, focus sul menu.',
+        preview: (primary: string) => (
+            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col gap-0.5">
+                <div className="h-8 bg-white border-b border-gray-200 flex items-center px-3 gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: primary }} />
+                    <div className="w-16 h-2 rounded bg-gray-200" />
+                </div>
+                <div className="h-14 bg-gray-50 flex items-center justify-center">
+                    <div className="w-24 h-4 rounded bg-gray-300" />
+                </div>
+                <div className="flex gap-1 px-2 pt-1 flex-1 bg-white">
+                    <div className="flex-1 h-6 rounded bg-gray-100" />
+                    <div className="flex-1 h-6 rounded bg-gray-100" />
+                </div>
+            </div>
+        ),
+    },
+    {
+        key: 'luxury',
+        label: 'Luxury',
+        desc: 'Dark premium, cinematografico. Hero full-screen, tutto nero, accenti nel colore primario.',
+        preview: (primary: string) => (
+            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col">
+                <div className="h-20 bg-[#080808] flex items-end p-3">
+                    <div>
+                        <div className="w-4 h-0.5 rounded mb-1" style={{ backgroundColor: primary }} />
+                        <div className="w-20 h-3 rounded bg-white/70" />
+                    </div>
+                </div>
+                <div className="flex gap-0.5 flex-1 bg-[#111]">
+                    <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
+                    <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
+                    <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
+                </div>
+            </div>
+        ),
+    },
+] as const;
+
+// ─── Reusable sub-components ──────────────────────────────────────────────────
+
+const ColorInput: React.FC<{ label: string; value: string; onChange: (v: string) => void; onRemove?: () => void }> = ({ label, value, onChange, onRemove }) => (
     <div>
         <label className="label-style text-sm">{label}</label>
         <div className="flex items-center gap-3 mt-1">
-            <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-10 h-10 p-0 border-none rounded-md cursor-pointer"/>
-            <input type="text" value={value} onChange={e => onChange(e.target.value)} className="input-style flex-grow"/>
-            {onRemove && <button onClick={onRemove} className="p-2 text-gray-400 hover:text-red-500 rounded-full"><XMarkIcon className="w-5 h-5"/></button>}
+            <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-10 h-10 p-0 border-none rounded-md cursor-pointer" />
+            <input type="text" value={value} onChange={e => onChange(e.target.value)} className="input-style flex-grow" />
+            {onRemove && <button onClick={onRemove} className="p-2 text-gray-400 hover:text-red-500 rounded-full"><X className="w-5 h-5" /></button>}
         </div>
     </div>
 );
 
-const ToggleInput: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void }> = ({ label, checked, onChange }) => (
+const ToggleInput: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) => void; description?: string }> = ({ label, checked, onChange, description }) => (
     <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border">
-        <label className="font-semibold text-gray-700">{label}</label>
-        <div onClick={() => onChange(!checked)} className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors ${checked ? 'bg-primary' : 'bg-gray-300'}`}>
-            <span className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform transform ${checked ? 'translate-x-5' : 'translate-x-0'}`}></span>
+        <div>
+            <label className="font-semibold text-gray-700 text-sm">{label}</label>
+            {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
+        </div>
+        <div onClick={() => onChange(!checked)} className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors shrink-0 ml-3 ${checked ? 'bg-primary' : 'bg-gray-300'}`}>
+            <span className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
         </div>
     </div>
 );
 
-const ImageUploader: React.FC<{
-    label: string;
-    imageUrl: string | null; // Meglio usare null per indicare l'assenza
-    onImageChange: (file: File) => void;
-    onImageRemove?: () => void; // <-- NUOVA PROP
-}> = ({ label, imageUrl, onImageChange, onImageRemove }) => {
-    const uniqueId = `file-upload-${label.replace(/\s+/g, '-')}`;
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            onImageChange(e.target.files[0]);
-        }
-    };
-
-    const handleRemoveClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-        // Impedisce che il click sul cestino apra anche la finestra di dialogo per caricare i file
-        e.stopPropagation();
-        if (onImageRemove) {
-            onImageRemove();
-        }
-    };
-
+const ImageUploader: React.FC<{ label: string; imageUrl: string | null; onImageChange: (f: File) => void; onImageRemove?: () => void }> = ({ label, imageUrl, onImageChange, onImageRemove }) => {
+    const uid = `file-upload-${label.replace(/\s+/g, '-')}`;
     return (
         <div>
             <label className="label-style">{label}</label>
-            {/* Aggiungiamo la classe "relative" per posizionare il cestino */}
             <div className="relative mt-1 w-full aspect-video bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300 group">
-                {/* Il div principale ora apre il selettore di file, ma non se si clicca sul cestino */}
-                <div onClick={() => document.getElementById(uniqueId)?.click()} className="w-full h-full cursor-pointer hover:border-primary transition-colors flex items-center justify-center">
-                    <input type="file" id={uniqueId} accept="image/*" onChange={handleFileSelect} className="hidden" />
+                <div onClick={() => document.getElementById(uid)?.click()} className="w-full h-full cursor-pointer flex items-center justify-center">
+                    <input type="file" id={uid} accept="image/*" onChange={e => e.target.files?.[0] && onImageChange(e.target.files[0])} className="hidden" />
                     {imageUrl ? (
                         <img src={imageUrl} alt="Anteprima" className="w-full h-full object-cover" />
                     ) : (
                         <div className="text-center text-gray-500">
-                            <PhotoIcon className="w-10 h-10 mx-auto text-gray-400"/>
+                            <Image className="w-10 h-10 mx-auto text-gray-400" />
                             <p className="mt-1 text-xs font-semibold">Carica Immagine</p>
                         </div>
                     )}
                 </div>
-
-                {/* --- NUOVO: Pulsante Cestino --- */}
-                {/* Mostra il cestino solo se c'è un'immagine e una funzione per rimuoverla */}
                 {imageUrl && onImageRemove && (
-                    <button
-                        onClick={handleRemoveClick}
-                        className="absolute top-2 right-2 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-red-600 transition-all duration-200 z-10"
-                        aria-label="Rimuovi immagine"
-                    >
-                        <TrashIcon className="w-5 h-5" />
+                    <button onClick={e => { e.stopPropagation(); onImageRemove(); }} className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-red-600 transition-all z-10">
+                        <Trash2 className="w-5 h-5" />
                     </button>
                 )}
             </div>
@@ -86,207 +127,340 @@ const ImageUploader: React.FC<{
     );
 };
 
-
 const MockHeader: React.FC<{ theme: StyleDto }> = ({ theme }) => (
-    <div style={{ backgroundColor: theme.primary, backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${process.env.REACT_APP_IMAGE_URL_START && theme.logoUrl.startsWith(process.env.REACT_APP_IMAGE_URL_START) ? process.env.REACT_APP_BUCKET_URL + theme.heroImageUrl : theme.heroImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-         className="p-8 text-center shadow-lg">
-        <img src={(process.env.REACT_APP_IMAGE_URL_START && theme.logoUrl.startsWith(process.env.REACT_APP_IMAGE_URL_START) ? process.env.REACT_APP_BUCKET_URL + "" : "") + theme.logoUrl} alt="Logo" className="w-20 h-20 rounded-full mx-auto border-4 border-white/80 shadow-md"/>
+    <div style={{ backgroundColor: theme.primary, backgroundSize: 'cover', backgroundPosition: 'center' }} className="p-8 text-center shadow-lg">
+        {theme.logoUrl ? (
+            <img src={(process.env.REACT_APP_BUCKET_URL || '') + theme.logoUrl} alt="Logo" className="w-20 h-20 rounded-full mx-auto border-4 border-white/80 shadow-md object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        ) : (
+            <div className="w-20 h-20 rounded-full mx-auto border-4 border-white/80 shadow-md bg-white/20 flex items-center justify-center text-2xl font-black text-white">
+                {theme.restaurantName?.charAt(0).toUpperCase() || 'R'}
+            </div>
+        )}
         <h1 style={{ color: theme.textOnPrimary }} className="text-3xl font-bold mt-3">{theme.restaurantName}</h1>
+        {(theme as any).description && <p className="text-white/70 text-sm mt-1">{(theme as any).description}</p>}
     </div>
 );
 
-const MockCategoryCard: React.FC<{ theme: StyleDto, name: string }> = ({ theme, name }) => {
-    const cardStyles = {
-        soft: 'rounded-xl',
-        rounded: 'rounded-full',
-        sharp: 'rounded-none'
-    };
+const MockCategoryCard: React.FC<{ theme: StyleDto; name: string }> = ({ theme, name }) => {
+    const cardStyles = { soft: 'rounded-xl', rounded: 'rounded-full', sharp: 'rounded-none' };
     return (
         <div style={{ backgroundColor: theme.cardBackground }} className={`w-full aspect-square ${cardStyles[theme.cardStyle]} shadow-md flex flex-col items-center justify-center`}>
-            {theme.showImages && <div className="w-12 h-12 bg-gray-200 rounded-md mb-2"></div>}
-            <p style={{ color: theme.textTitle }} className="font-semibold">{name}</p>
+            {theme.showImages && <div className="w-12 h-12 bg-gray-200 rounded-md mb-2" />}
+            <p style={{ color: theme.textTitle }} className="font-semibold text-sm text-center px-2">{name}</p>
         </div>
     );
 };
 
+// ─── ControlPanel ─────────────────────────────────────────────────────────────
 
-// --- INIZIO MODIFICA CHIAVE ---
-// I componenti ControlPanel e PreviewPanel sono ora definiti FUORI da LayoutPage.
-// Devono ricevere tutti i dati e le funzioni di cui hanno bisogno tramite le props.
+type ActiveTab = 'colors' | 'content' | 'layout' | 'template';
 
 // @ts-ignore
 const ControlPanel: React.FC<{
-    activeTab: 'colors' | 'content' | 'layout';
-    setActiveTab: (tab: 'colors' | 'content' | 'layout') => void;
+    activeTab: ActiveTab;
+    setActiveTab: (t: ActiveTab) => void;
     draftTheme: StyleDto;
-    updateThemeValue: (key: keyof StyleDto, value: any) => void;
-    handleBgColorChange: (index: number, value: string) => void;
-    removeBgColor: (index: number) => void;
+    updateThemeValue: (k: keyof StyleDto | string, v: any) => void;
+    handleBgColorChange: (i: number, v: string) => void;
+    removeBgColor: (i: number) => void;
     addBgColor: () => void;
-    handleLogoSelect: (file: File) => void;
-    handleHeroSelect: (file: File) => void;
+    handleLogoSelect: (f: File) => void;
+    handleHeroSelect: (f: File) => void;
     removeLogo: () => void;
-    removeHero: () => void
+    removeHero: () => void;
+    updateFeature: (i: number, k: keyof FeatureCard, v: string) => void;
 }> = ({
-          activeTab,
-          setActiveTab,
-          draftTheme,
-          updateThemeValue,
-          handleBgColorChange,
-          removeBgColor,
-          addBgColor,
-          handleLogoSelect,
-          handleHeroSelect,
-          removeHero,
-          removeLogo
-      }) => (
-    <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg overflow-y-auto h-full">
-        <div className="flex border-b mb-4">
-            <button onClick={() => setActiveTab('colors')} className={`p-3 font-semibold text-sm md:text-base ${activeTab === 'colors' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}><PaintBrushIcon className="w-5 h-5 inline mr-1"/>Colori</button>
-            <button onClick={() => setActiveTab('content')} className={`p-3 font-semibold text-sm md:text-base ${activeTab === 'content' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}><DocumentTextIcon className="w-5 h-5 inline mr-1"/>Contenuti</button>
-            <button onClick={() => setActiveTab('layout')} className={`p-3 font-semibold text-sm md:text-base ${activeTab === 'layout' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}><CogIcon className="w-5 h-5 inline mr-1"/>Layout</button>
-        </div>
+    activeTab, setActiveTab, draftTheme, updateThemeValue,
+    handleBgColorChange, removeBgColor, addBgColor,
+    handleLogoSelect, handleHeroSelect, removeLogo, removeHero,
+    updateFeature,
+}) => {
+    const features: FeatureCard[] = draftTheme.features?.length ? draftTheme.features : DEFAULT_FEATURES;
+    const template = (draftTheme as any).landingTemplate || 'default';
 
-        {activeTab === 'colors' && (
-            <div className="space-y-4">
-                <div>
-                    <label className="label-style">Colori Sfondo (Gradiente)</label>
-                    <div className="space-y-2 mt-1 p-3 bg-slate-50 rounded-lg border">
-                        {draftTheme.backgroundGradient.map((color, index) => (
-                            <ColorInput key={index} label={`Colore ${index + 1}`} value={color}
-                                        onChange={v => handleBgColorChange(index, v)}
-                                        onRemove={() => removeBgColor(index)}/>
-                        ))}
-                        {draftTheme.backgroundGradient.length < 3 && <button onClick={addBgColor}
-                                                                             className="btn-secondary text-sm w-full justify-center items-center">Aggiungi Colore</button>}
+    const logoPreview = draftTheme.logoUrl
+        ? (draftTheme.logoUrl.startsWith('blob:') ? draftTheme.logoUrl : (process.env.REACT_APP_BUCKET_URL || '') + draftTheme.logoUrl)
+        : null;
+    const heroPreview = draftTheme.heroImageUrl
+        ? (draftTheme.heroImageUrl.startsWith('blob:') ? draftTheme.heroImageUrl : (process.env.REACT_APP_BUCKET_URL || '') + draftTheme.heroImageUrl)
+        : null;
+
+    const tabs: { key: ActiveTab; label: string; icon: React.FC<any> }[] = [
+        { key: 'colors',   label: 'Colori',    icon: Paintbrush },
+        { key: 'content',  label: 'Contenuti', icon: FileText },
+        { key: 'layout',   label: 'Layout',    icon: Settings },
+        { key: 'template', label: 'Template',  icon: Layout },
+    ];
+
+    return (
+        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg overflow-y-auto h-full">
+
+            {/* Tabs */}
+            <div className="flex border-b mb-5 gap-0 overflow-x-auto">
+                {tabs.map(({ key, label, icon: Icon }) => (
+                    <button
+                        key={key}
+                        onClick={() => setActiveTab(key)}
+                        className={`flex items-center gap-1 px-3 py-2.5 font-semibold text-xs whitespace-nowrap shrink-0 border-b-2 transition-colors ${
+                            activeTab === key ? 'text-primary border-primary' : 'text-gray-500 border-transparent hover:text-gray-700'
+                        }`}
+                    >
+                        <Icon className="w-4 h-4" />
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {/* ── Colors ── */}
+            {activeTab === 'colors' && (
+                <div className="space-y-4">
+                    <div>
+                        <label className="label-style">Colori Sfondo (Gradiente)</label>
+                        <div className="space-y-2 mt-1 p-3 bg-slate-50 rounded-lg border">
+                            {draftTheme.backgroundGradient.map((color, i) => (
+                                <ColorInput key={i} label={`Colore ${i + 1}`} value={color}
+                                    onChange={v => handleBgColorChange(i, v)}
+                                    onRemove={() => removeBgColor(i)} />
+                            ))}
+                            {draftTheme.backgroundGradient.length < 3 && (
+                                <button onClick={addBgColor} className="btn-secondary text-sm w-full justify-center items-center">Aggiungi Colore</button>
+                            )}
+                        </div>
+                    </div>
+                    <hr />
+                    <ColorInput label="Colore Primario" value={draftTheme.primary} onChange={v => updateThemeValue('primary', v)} />
+                    <ColorInput label="Testo su Primario" value={draftTheme.textOnPrimary} onChange={v => updateThemeValue('textOnPrimary', v)} />
+                    <ColorInput label="Sfondo Card" value={draftTheme.cardBackground} onChange={v => updateThemeValue('cardBackground', v)} />
+                    <ColorInput label="Testo Titoli" value={draftTheme.textTitle} onChange={v => updateThemeValue('textTitle', v)} />
+                    <ColorInput label="Testo Corpo" value={draftTheme.textBody} onChange={v => updateThemeValue('textBody', v)} />
+                </div>
+            )}
+
+            {/* ── Content ── */}
+            {activeTab === 'content' && (
+                <div className="space-y-4">
+                    <ImageUploader label="Logo Ristorante" imageUrl={logoPreview} onImageChange={handleLogoSelect} onImageRemove={removeLogo} />
+                    <ImageUploader label="Immagine Hero (Sito Vetrina)" imageUrl={heroPreview} onImageChange={handleHeroSelect} onImageRemove={removeHero} />
+                    <hr />
+                    <div>
+                        <label className="label-style">Nome Ristorante</label>
+                        <input type="text" value={draftTheme.restaurantName} onChange={e => updateThemeValue('restaurantName', e.target.value)} className="input-style mt-1" />
+                    </div>
+                    <div>
+                        <label className="label-style">Tagline / Descrizione Breve</label>
+                        <input type="text" value={(draftTheme as any).description || ''} onChange={e => updateThemeValue('description', e.target.value)} className="input-style mt-1" placeholder="es. Il gusto che ti stravolge" />
+                    </div>
+                    <div>
+                        <label className="label-style">Indirizzo</label>
+                        <input type="text" value={draftTheme.address} onChange={e => updateThemeValue('address', e.target.value)} className="input-style mt-1" />
+                    </div>
+                    <div>
+                        <label className="label-style">Orari di Apertura</label>
+                        <input type="text" value={(draftTheme as any).openingHours || ''} onChange={e => updateThemeValue('openingHours', e.target.value)} className="input-style mt-1" placeholder="es. Tutti i giorni 18:00 – 23:00" />
+                    </div>
+                    <div>
+                        <label className="label-style">Telefono</label>
+                        <input type="text" value={draftTheme.phone} onChange={e => updateThemeValue('phone', e.target.value)} className="input-style mt-1" />
+                    </div>
+                    <div>
+                        <label className="label-style">WhatsApp (numero con prefisso)</label>
+                        <input type="text" value={(draftTheme as any).whatsapp || ''} onChange={e => updateThemeValue('whatsapp', e.target.value)} className="input-style mt-1" placeholder="es. +39 333 123 4567" />
+                    </div>
+                    <hr />
+                    <div>
+                        <label className="label-style">Link Instagram</label>
+                        <input type="text" value={draftTheme.instagramUrl} onChange={e => updateThemeValue('instagramUrl', e.target.value)} className="input-style mt-1" />
+                    </div>
+                    <div>
+                        <label className="label-style">Link Facebook</label>
+                        <input type="text" value={draftTheme.facebookUrl} onChange={e => updateThemeValue('facebookUrl', e.target.value)} className="input-style mt-1" />
+                    </div>
+                    <div>
+                        <label className="label-style">Link TikTok</label>
+                        <input type="text" value={(draftTheme as any).tiktokUrl || ''} onChange={e => updateThemeValue('tiktokUrl', e.target.value)} className="input-style mt-1" />
+                    </div>
+                    <hr />
+                    {/* Feature cards editor */}
+                    <div>
+                        <label className="label-style">Sezione "Perché Noi" — 4 card</label>
+                        <p className="text-xs text-gray-400 mt-0.5 mb-3">Personalizza le 4 card che appaiono nella sezione highlights della landing page.</p>
+                        <div className="space-y-3">
+                            {features.map((f, i) => (
+                                <div key={i} className="p-3 bg-slate-50 rounded-xl border border-gray-200 space-y-2">
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Card {i + 1}</p>
+                                    <div className="flex gap-2">
+                                        <div className="w-16">
+                                            <label className="label-style text-xs">Icona</label>
+                                            <input type="text" value={f.icon} onChange={e => updateFeature(i, 'icon', e.target.value)} className="input-style mt-0.5 text-center text-xl" maxLength={4} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="label-style text-xs">Titolo</label>
+                                            <input type="text" value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} className="input-style mt-0.5" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="label-style text-xs">Sottotitolo</label>
+                                        <input type="text" value={f.sub} onChange={e => updateFeature(i, 'sub', e.target.value)} className="input-style mt-0.5" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
-                <hr/>
-                <ColorInput label="Colore Primario" value={draftTheme.primary} onChange={v => updateThemeValue('primary', v)}/>
-                <ColorInput label="Testo su Primario" value={draftTheme.textOnPrimary} onChange={v => updateThemeValue('textOnPrimary', v)}/>
-                <ColorInput label="Sfondo Card" value={draftTheme.cardBackground} onChange={v => updateThemeValue('cardBackground', v)}/>
-                <ColorInput label="Testo Titoli" value={draftTheme.textTitle} onChange={v => updateThemeValue('textTitle', v)}/>
-                <ColorInput label="Testo Corpo" value={draftTheme.textBody} onChange={v => updateThemeValue('textBody', v)}/>
-            </div>
-        )}
-        {activeTab === 'content' && (
-            <div className="space-y-4">
-                <ImageUploader label="Logo Ristorante" imageUrl={((process.env.REACT_APP_IMAGE_URL_START && draftTheme.logoUrl.startsWith(process.env.REACT_APP_IMAGE_URL_START) ? process.env.REACT_APP_BUCKET_URL + "" : "") + draftTheme.logoUrl) || ''} onImageChange={handleLogoSelect} onImageRemove={removeLogo}/>
-                <ImageUploader label="Immagine Header" imageUrl={((process.env.REACT_APP_IMAGE_URL_START && draftTheme.heroImageUrl.startsWith(process.env.REACT_APP_IMAGE_URL_START) ? process.env.REACT_APP_BUCKET_URL + "" : "") + draftTheme.heroImageUrl) || ''} onImageChange={handleHeroSelect} onImageRemove={removeHero}/>
-                <hr/>
-                <div>
-                    <label className="label-style">Nome Ristorante</label>
-                    <input type="text" value={draftTheme.restaurantName} onChange={e => updateThemeValue('restaurantName', e.target.value)} className="input-style mt-1"/>
+            )}
+
+            {/* ── Layout ── */}
+            {activeTab === 'layout' && (
+                <div className="space-y-4">
+                    <ToggleInput label="Mostra Immagini nelle Card" checked={draftTheme.showImages} onChange={v => updateThemeValue('showImages', v)} />
+                    <div>
+                        <label className="label-style">Stile Angoli Card</label>
+                        <select value={draftTheme.cardStyle} onChange={e => updateThemeValue('cardStyle', e.target.value)} className="input-style mt-1">
+                            <option value="soft">Morbido (consigliato)</option>
+                            <option value="rounded">Molto arrotondato</option>
+                            <option value="sharp">Squadrato</option>
+                        </select>
+                    </div>
+                    <hr />
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Sezioni visibili</p>
+                    <ToggleInput label='Sezione "Perché noi"' checked={(draftTheme as any).showWhyUs ?? true} onChange={v => updateThemeValue('showWhyUs', v)} description="I 4 box highlights sotto la hero" />
+                    <ToggleInput label="Ticker colorato" checked={(draftTheme as any).showTicker ?? true} onChange={v => updateThemeValue('showTicker', v)} description="La barra animata con le categorie" />
+                    <ToggleInput label="Sezione Prenotazioni" checked={(draftTheme as any).showBooking ?? true} onChange={v => updateThemeValue('showBooking', v)} description="Form per prenotare il tavolo" />
+                    <hr />
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Titoli sezioni</p>
+                    <div>
+                        <label className="label-style">Titolo sezione Menu</label>
+                        <input type="text" value={(draftTheme as any).sectionMenuTitle || ''} onChange={e => updateThemeValue('sectionMenuTitle', e.target.value)} className="input-style mt-1" placeholder="Il Nostro Menu" />
+                    </div>
+                    <div>
+                        <label className="label-style">Titolo sezione "Perché noi"</label>
+                        <input type="text" value={(draftTheme as any).sectionWhyTitle || ''} onChange={e => updateThemeValue('sectionWhyTitle', e.target.value)} className="input-style mt-1" placeholder="Lascia vuoto per nascondere il titolo" />
+                    </div>
+                    <div>
+                        <label className="label-style">Titolo sezione Prenotazioni</label>
+                        <input type="text" value={(draftTheme as any).sectionBookingTitle || ''} onChange={e => updateThemeValue('sectionBookingTitle', e.target.value)} className="input-style mt-1" placeholder="Prenota il tuo Tavolo" />
+                    </div>
                 </div>
-                <div>
-                    <label className="label-style">Indirizzo</label>
-                    <input type="text" value={draftTheme.address} onChange={e => updateThemeValue('address', e.target.value)} className="input-style mt-1"/>
+            )}
+
+            {/* ── Template ── */}
+            {activeTab === 'template' && (
+                <div className="space-y-4">
+                    <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">Scegli il layout della landing page</p>
+                        <p className="text-xs text-gray-400 mb-4">Il template cambia l'aspetto visivo complessivo. Tutti i tuoi contenuti (testi, immagini, colori) restano invariati.</p>
+                    </div>
+                    <div className="space-y-3">
+                        {TEMPLATES.map(t => {
+                            const isSelected = template === t.key;
+                            return (
+                                <button
+                                    key={t.key}
+                                    onClick={() => updateThemeValue('landingTemplate', t.key)}
+                                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                                        isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 bg-white'
+                                    }`}
+                                >
+                                    <div className="mb-3">{t.preview(draftTheme.primary)}</div>
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <p className={`font-black text-base ${isSelected ? 'text-primary' : 'text-gray-800'}`}>{t.label}</p>
+                                            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{t.desc}</p>
+                                        </div>
+                                        <div className={`w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center ${
+                                            isSelected ? 'border-primary bg-primary' : 'border-gray-300'
+                                        }`}>
+                                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
-                <div>
-                    <label className="label-style">Telefono</label>
-                    <input type="text" value={draftTheme.phone} onChange={e => updateThemeValue('phone', e.target.value)} className="input-style mt-1"/>
-                </div>
-                <div>
-                    <label className="label-style">Link Facebook</label>
-                    <input type="text" value={draftTheme.facebookUrl} onChange={e => updateThemeValue('facebookUrl', e.target.value)} className="input-style mt-1"/>
-                </div>
-                <div>
-                    <label className="label-style">Link Instagram</label>
-                    <input type="text" value={draftTheme.instagramUrl} onChange={e => updateThemeValue('instagramUrl', e.target.value)} className="input-style mt-1"/>
-                </div>
-            </div>
-        )}
-        {activeTab === 'layout' && (
-            <div className="space-y-4">
-                <ToggleInput label="Mostra Immagini nelle Card" checked={draftTheme.showImages} onChange={v => updateThemeValue('showImages', v)}/>
-                <div>
-                    <label className="label-style">Stile Angoli Card</label>
-                    <select value={draftTheme.cardStyle} onChange={e => updateThemeValue('cardStyle', e.target.value)} className="input-style mt-1">
-                        <option value="soft">Morbido (consigliato)</option>
-                        <option value="rounded">Molto arrotondato</option>
-                        <option value="sharp">Squadrato</option>
-                    </select>
-                </div>
-            </div>
-        )}
-    </div>
-);
+            )}
+        </div>
+    );
+};
+
+// ─── PreviewPanel ─────────────────────────────────────────────────────────────
 
 // @ts-ignore
-const PreviewPanel: React.FC<{
-    backgroundCss: React.CSSProperties;
-    draftTheme: StyleDto;
-}> = ({ backgroundCss, draftTheme }) => (
+const PreviewPanel: React.FC<{ backgroundCss: React.CSSProperties; draftTheme: StyleDto }> = ({ backgroundCss, draftTheme }) => (
     <div className="lg:col-span-2 rounded-xl p-2 md:p-4 flex justify-center items-center h-full" style={backgroundCss}>
         <div className="w-[375px] h-full max-h-[812px] bg-white rounded-3xl shadow-2xl overflow-hidden ring-4 ring-gray-800">
             <div className="w-full h-full overflow-y-auto" style={backgroundCss}>
                 <MockHeader theme={draftTheme} />
                 <main className="p-4">
                     <div className="grid grid-cols-2 gap-4">
-                        <MockCategoryCard theme={draftTheme} name="Pizze"/>
-                        <MockCategoryCard theme={draftTheme} name="Panini"/>
-                        <MockCategoryCard theme={draftTheme} name="Bibite"/>
-                        <MockCategoryCard theme={draftTheme} name="Dessert"/>
+                        <MockCategoryCard theme={draftTheme} name="Pizze" />
+                        <MockCategoryCard theme={draftTheme} name="Panini" />
+                        <MockCategoryCard theme={draftTheme} name="Bibite" />
+                        <MockCategoryCard theme={draftTheme} name="Dessert" />
                     </div>
                 </main>
             </div>
         </div>
     </div>
 );
-// --- FINE MODIFICA CHIAVE ---
 
+// ─── Main page ─────────────────────────────────────────────────────────────────
 
-// --- Pagina di Personalizzazione Principale ---
 const LayoutPage: React.FC = () => {
     const { updateStyle, styles, loading } = useData();
     const [draftTheme, setDraftTheme] = useState<StyleDto>(styles || {
         backgroundGradient: [], cardBackground: "#FFFFFF", primary: "#fb923c", textBody: "#6b7280",
-        textOnPrimary: "#FFFFFF", textTitle: "#1f2937", address: "Via dei Sapori, 123",
-        phone: "+39 012 345 6789", facebookUrl: "https://facebook.com", instagramUrl: "https://instagram.com",
-        heroImageUrl: "/images/hero_placeholder.jpg", logoUrl: "/images/logo_placeholder.png",
-        restaurantName: "Il Tuo Ristorante", cardStyle: "soft", showImages: true, font: "sans-serif"
+        textOnPrimary: "#FFFFFF", textTitle: "#1f2937", address: "", phone: "",
+        facebookUrl: "", instagramUrl: "", heroImageUrl: "", logoUrl: "",
+        restaurantName: "Il Tuo Ristorante", cardStyle: "soft", showImages: true, font: "sans-serif",
+        description: "", openingHours: "", whatsapp: "", tiktokUrl: "",
+        features: DEFAULT_FEATURES,
+        sectionMenuTitle: "", sectionBookingTitle: "", sectionWhyTitle: "",
+        showWhyUs: true, showBooking: true, showTicker: true, landingTemplate: 'default',
     });
 
-    const [activeTab, setActiveTab] = useState<'colors' | 'content' | 'layout'>('colors');
+    const [activeTab,        setActiveTab]        = useState<ActiveTab>('colors');
     const [activeMobileView, setActiveMobileView] = useState<'edit' | 'preview'>('edit');
-    const [logoFile, setLogoFile] = useState<File | null>(null);
-    const [heroFile, setHeroFile] = useState<File | null>(null);
-    const [isDirty, setIsDirty] = useState(false);
+    const [logoFile,         setLogoFile]         = useState<File | null>(null);
+    const [heroFile,         setHeroFile]         = useState<File | null>(null);
+    const [isDirty,          setIsDirty]          = useState(false);
     const { addNotification } = useNotification();
 
     useEffect(() => {
-        if (styles && !isDirty) {
-            setDraftTheme(styles);
-        }
+        if (styles && !isDirty) setDraftTheme(styles);
     }, [styles, isDirty]);
 
     const backgroundCss = useMemo(() => {
-        if (!draftTheme.backgroundGradient || draftTheme.backgroundGradient.length === 0) return { backgroundColor: '#F1F5F9' };
+        if (!draftTheme.backgroundGradient?.length) return { backgroundColor: '#F1F5F9' };
         if (draftTheme.backgroundGradient.length === 1) return { backgroundColor: draftTheme.backgroundGradient[0] };
         return { backgroundImage: `linear-gradient(to bottom right, ${draftTheme.backgroundGradient.join(', ')})` };
     }, [draftTheme.backgroundGradient]);
 
-    const updateThemeValue = useCallback((key: keyof StyleDto, value: any) => {
+    const updateThemeValue = useCallback((key: string, value: any) => {
         setDraftTheme(prev => ({ ...prev, [key]: value }));
         setIsDirty(true);
     }, []);
 
-    const handleBgColorChange = useCallback((index: number, value: string) => {
+    const updateFeature = useCallback((idx: number, key: keyof FeatureCard, val: string) => {
+        const features = draftTheme.features?.length ? [...draftTheme.features] : [...DEFAULT_FEATURES];
+        features[idx] = { ...features[idx], [key]: val };
+        updateThemeValue('features', features);
+    }, [draftTheme.features, updateThemeValue]);
+
+    const handleBgColorChange = useCallback((i: number, v: string) => {
         const newColors = [...draftTheme.backgroundGradient];
-        newColors[index] = value;
+        newColors[i] = v;
         updateThemeValue('backgroundGradient', newColors);
     }, [draftTheme.backgroundGradient, updateThemeValue]);
 
     const addBgColor = useCallback(() => {
-        if (draftTheme.backgroundGradient.length < 3) {
+        if (draftTheme.backgroundGradient.length < 3)
             updateThemeValue('backgroundGradient', [...draftTheme.backgroundGradient, '#ffffff']);
-        }
     }, [draftTheme.backgroundGradient, updateThemeValue]);
 
-    const removeBgColor = useCallback((index: number) => {
-        const newColors = draftTheme.backgroundGradient.filter((_, i) => i !== index);
-        updateThemeValue('backgroundGradient', newColors);
-    }, [draftTheme.backgroundGradient, updateThemeValue]);
+    const removeBgColor = useCallback((i: number) =>
+        updateThemeValue('backgroundGradient', draftTheme.backgroundGradient.filter((_, idx) => idx !== i)),
+    [draftTheme.backgroundGradient, updateThemeValue]);
 
     const handleLogoSelect = useCallback((file: File) => {
         setLogoFile(file);
@@ -299,93 +473,82 @@ const LayoutPage: React.FC = () => {
     }, [updateThemeValue]);
 
     const handleSaveTheme = async () => {
+        const d = draftTheme as any;
+        const features: FeatureCard[] = d.features?.length ? d.features : DEFAULT_FEATURES;
         const payload: UpdateStyle = {
             ...draftTheme,
             backgroundGradient: draftTheme.backgroundGradient.join(";"),
-            cardStyle: draftTheme.cardStyle as "soft" | "rounded" | "sharp"
+            cardStyle: draftTheme.cardStyle as "soft" | "rounded" | "sharp",
+            description: d.description || "",
+            openingHours: d.openingHours || "",
+            whatsapp: d.whatsapp || "",
+            tiktokUrl: d.tiktokUrl || "",
+            features: JSON.stringify(features),
+            sectionMenuTitle: d.sectionMenuTitle || "",
+            sectionBookingTitle: d.sectionBookingTitle || "",
+            sectionWhyTitle: d.sectionWhyTitle || "",
+            showWhyUs: d.showWhyUs ?? true,
+            showBooking: d.showBooking ?? true,
+            showTicker: d.showTicker ?? true,
+            landingTemplate: d.landingTemplate || "default",
         };
-        const response = await updateStyle(payload, logoFile, heroFile);
-        if(response) {
-            addNotification({message: "Stile modificato", type: "success"});
+        const ok = await updateStyle(payload, logoFile, heroFile);
+        if (ok) {
+            addNotification({ message: "Stile modificato", type: "success" });
             setLogoFile(null);
             setHeroFile(null);
             setIsDirty(false);
         } else {
-            addNotification({message: "Errore durante il salvataggio dello stile", type: "error"});
+            addNotification({ message: "Errore durante il salvataggio dello stile", type: "error" });
         }
     };
 
-    const removeHero = () => {
-        setHeroFile(null)
-        updateThemeValue('heroImageUrl', "DELETE")
-    }
+    const removeHero = () => { setHeroFile(null); updateThemeValue('heroImageUrl', "DELETE"); };
+    const removeLogo = () => { setLogoFile(null); updateThemeValue('logoUrl', "DELETE"); };
 
-    const removeLogo = () => {
-        setLogoFile(null)
-        updateThemeValue('logoUrl', "DELETE")
-    }
+    const panelProps = {
+        activeTab, setActiveTab, draftTheme, updateThemeValue,
+        handleBgColorChange, removeBgColor, addBgColor,
+        handleLogoSelect, handleHeroSelect, removeLogo, removeHero,
+        updateFeature,
+    };
 
     return (
         <div className="p-4 md:p-6 bg-slate-50 min-h-screen flex flex-col">
-            {loading && <CustomLoading isFullPage={true}/>}
+            {loading && <CustomLoading isFullPage />}
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800">Personalizza Aspetto</h1>
-                    <p className="text-gray-500 mt-1">Modifica l'aspetto del menu per i tuoi clienti in tempo reale.</p>
+                    <p className="text-gray-500 mt-1">Modifica l'aspetto del menu e della landing page.</p>
                 </div>
-                <button onClick={handleSaveTheme} disabled={!isDirty || loading} className="btn-primary flex-shrink-0 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <FaSave/><span>Salva Modifiche</span>
+                <button
+                    onClick={handleSaveTheme}
+                    disabled={!isDirty || loading}
+                    className="btn-primary flex-shrink-0 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <Save className="w-5 h-5" /><span>Salva Modifiche</span>
                 </button>
             </div>
 
-            {/* Ora i componenti vengono renderizzati passando le props necessarie */}
             <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow">
-                <ControlPanel
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    draftTheme={draftTheme}
-                    updateThemeValue={updateThemeValue}
-                    handleBgColorChange={handleBgColorChange}
-                    removeBgColor={removeBgColor}
-                    addBgColor={addBgColor}
-                    handleLogoSelect={handleLogoSelect}
-                    handleHeroSelect={handleHeroSelect}
-                    removeLogo={removeLogo}
-                    removeHero={removeHero}
-                />
-                <PreviewPanel
-                    backgroundCss={backgroundCss}
-                    draftTheme={draftTheme}
-                />
+                <ControlPanel {...panelProps} />
+                <PreviewPanel backgroundCss={backgroundCss} draftTheme={draftTheme} />
             </div>
 
-            {/* Logica per la vista mobile */}
             <div className="lg:hidden flex flex-col flex-grow mb-16">
-                {activeMobileView === 'edit' ? (
-                    <ControlPanel
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                        draftTheme={draftTheme}
-                        updateThemeValue={updateThemeValue}
-                        handleBgColorChange={handleBgColorChange}
-                        removeBgColor={removeBgColor}
-                        addBgColor={addBgColor}
-                        handleLogoSelect={handleLogoSelect}
-                        handleHeroSelect={handleHeroSelect}
-                        removeHero={removeHero}
-                        removeLogo={removeLogo}
-                    />
-                ) : (
-                    <PreviewPanel
-                        backgroundCss={backgroundCss}
-                        draftTheme={draftTheme}
-                    />
-                )}
+                {activeMobileView === 'edit'
+                    ? <ControlPanel {...panelProps} />
+                    : <PreviewPanel backgroundCss={backgroundCss} draftTheme={draftTheme} />
+                }
             </div>
 
             <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[-2px_0_8px_rgba(0,0,0,0.1)] border-t z-40 flex justify-around">
-                <button onClick={() => setActiveMobileView('edit')} className={`flex-1 flex flex-col items-center p-3 text-sm font-semibold transition-colors ${activeMobileView === 'edit' ? 'text-primary' : 'text-gray-500'}`}><PencilIcon className="w-6 h-6"/><span>Modifica</span></button>
-                <button onClick={() => setActiveMobileView('preview')} className={`flex-1 flex flex-col items-center p-3 text-sm font-semibold transition-colors ${activeMobileView === 'preview' ? 'text-primary' : 'text-gray-500'}`}><EyeIcon className="w-6 h-6"/><span>Anteprima</span></button>
+                <button onClick={() => setActiveMobileView('edit')} className={`flex-1 flex flex-col items-center p-3 text-sm font-semibold ${activeMobileView === 'edit' ? 'text-primary' : 'text-gray-500'}`}>
+                    <Pencil className="w-6 h-6" /><span>Modifica</span>
+                </button>
+                <button onClick={() => setActiveMobileView('preview')} className={`flex-1 flex flex-col items-center p-3 text-sm font-semibold ${activeMobileView === 'preview' ? 'text-primary' : 'text-gray-500'}`}>
+                    <Eye className="w-6 h-6" /><span>Anteprima</span>
+                </button>
             </div>
         </div>
     );

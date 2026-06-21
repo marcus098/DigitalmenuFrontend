@@ -1,6 +1,6 @@
 // src/Components/IngredientCard.tsx
 import React from "react";
-import { FaEdit, FaTrashAlt } from "react-icons/fa";
+import { Pencil, Trash2 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import {IngredientDto, IS_ADMIN} from "../types";
 import { useHistory } from "../Context/HistoryContext";
@@ -49,14 +49,14 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
                         title="Modifica"
                         onClick={() => navigateWithHistory(`/${localname}/Dashboard/Ingredient/${ingredient.id}`)}
                     >
-                        <FaEdit size={18} />
+                        <Pencil size={18} />
                     </button>
                     {checkVariable(IS_ADMIN) && <button
                         className="p-3 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition"
                         title="Elimina"
                         onClick={() => deleteIngredient(ingredient.id, ingredient.name)}
                     >
-                        <FaTrashAlt size={18} />
+                        <Trash2 size={18} />
                     </button>}
                 </div>
             </div>

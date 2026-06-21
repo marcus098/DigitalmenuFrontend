@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RestaurantFlow">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0bc60"/>
+      <stop offset="50%" stop-color="#c9a84c"/>
+      <stop offset="100%" stop-color="#a8862f"/>
+    </linearGradient>
+  </defs>
+  <!-- Full bleed background — maskable safe zone is central 80% (~410px circle) -->
+  <rect width="512" height="512" fill="#17140f"/>
+  <text x="50%" y="56%" text-anchor="middle" dominant-baseline="middle"
+        font-family="Cormorant Garamond, Garamond, Georgia, serif"
+        font-weight="700" font-size="260" fill="url(#gold)" font-style="italic">R</text>
+</svg>

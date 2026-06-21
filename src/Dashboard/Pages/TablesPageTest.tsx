@@ -9,7 +9,7 @@ import TableItem from "../../Components/Dashboard/TableItem";
 import AddTableModal from "../../Components/Dashboard/AddTableModal";
 import EditTableModal from "../../Components/Dashboard/EditTableModal";
 import DeletePopup from "../../Components/DeletePopup";
-import {PlusIcon, CheckIcon} from "@heroicons/react/24/solid";
+import { Plus, Check } from "lucide-react";
 import {useNotification} from "../../Context/NotificationContext";
 import {AddTable, UpdateTableRow, UpdateTables} from "../../types";
 import {all} from "axios";
@@ -292,8 +292,8 @@ const TablesPageTest: React.FC = () => {
 
             {/* BOTTONI FLOTTANTI */}
             <div className="absolute bottom-6 right-6 flex flex-col gap-4 z-40">
-                {isModified && <button onClick={handleSaveLayout} className="btn-primary p-4 rounded-full shadow-lg"><CheckIcon className="w-7 h-7"/></button>}
-                <button onClick={() => setIsAddModalOpen(true)} className="bg-primary text-white p-4 rounded-full shadow-lg"><PlusIcon className="w-7 h-7" /></button>
+                {isModified && <button onClick={handleSaveLayout} className="btn-primary p-4 rounded-full shadow-lg"><Check className="w-7 h-7"/></button>}
+                <button onClick={() => setIsAddModalOpen(true)} className="bg-primary text-white p-4 rounded-full shadow-lg"><Plus className="w-7 h-7" /></button>
             </div>
 
             {/* MODALI E POPUP */}

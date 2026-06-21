@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="it" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strafame - Panineria Creperia Piadineria</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Oswald:wght@300;400;500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Barlow', 'sans-serif'],
+                        display: ['Oswald', 'sans-serif'],
+                        hand: ['Permanent Marker', 'cursive'],
+                    },
+                    colors: {
+                        brand: {
+                            blue: '#00AEEF',
+                            dark: '#0e0e0e',
+                            light: '#FFFFFF',
+                            gray: '#F3F4F6',
+                            success: '#2ECC71'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --cyan: #00AEEF;
+            --dark: #0e0e0e;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark); }
+        ::-webkit-scrollbar-thumb { background: var(--cyan); border-radius: 3px; }
+
+        /* Grain overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(28px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-24px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0,174,239,0); }
+            50% { box-shadow: 0 0 32px 8px rgba(0,174,239,0.25); }
+        }
+        @keyframes heroFloat {
+            0%, 100% { transform: rotate(-2deg) scale(1); }
+            50% { transform: rotate(-2deg) scale(1.01); }
+        }
+
+        .animate-fade-up { animation: fadeUp 0.65s ease-out forwards; }
+        .animate-slide-right { animation: slideRight 0.5s ease-out forwards; }
+        .loader { border: 3px solid rgba(255,255,255,0.2); border-radius: 50%; border-top-color: white; width: 22px; height: 22px; animation: spin 0.8s linear infinite; }
+
+        /* Hero title float */
+        .hero-title { animation: heroFloat 6s ease-in-out infinite; }
+
+        /* Marquee ticker */
+        .marquee-wrapper { overflow: hidden; white-space: nowrap; }
+        .marquee-inner { display: inline-block; animation: marquee 22s linear infinite; }
+
+        /* Menu card hover */
+        .menu-card { transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease; }
+        .menu-card:hover { transform: translateY(-8px) scale(1.01); }
+
+        /* Category pill active */
+        .cat-pill.active { background: var(--cyan); color: white; border-color: var(--cyan); }
+
+        /* Stripe input */
+        .stripe-input { transition: border-color 0.2s, box-shadow 0.2s; }
+        .stripe-input:focus { border-color: #635BFF; box-shadow: 0 0 0 3px rgba(99,91,255,0.18); outline: none; }
+
+        /* Scroll reveal */
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* Specials tag */
+        .special-tag {
+            background: var(--cyan);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            padding: 2px 8px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Nav link underline */
+        .nav-link { position: relative; }
+        .nav-link::after { content:''; position:absolute; bottom:-2px; left:0; width:0; height:2px; background:var(--cyan); transition: width 0.3s ease; }
+        .nav-link:hover::after { width:100%; }
+
+        /* Section divider */
+        .slant { clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%); }
+        .slant-bottom { clip-path: polygon(0 0, 100% 6%, 100% 100%, 0 100%); }
+
+        /* Social hover glow */
+        .social-btn:hover { box-shadow: 0 0 16px rgba(0,174,239,0.5); }
+    </style>
+</head>
+
+<body class="bg-white text-brand-dark font-sans antialiased selection:bg-brand-blue selection:text-white overflow-x-hidden">
+
+    <!-- ═══ NAVBAR ═══ -->
+    <nav class="fixed w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-[72px]">
+                <!-- Logo -->
+                <a href="#home" class="flex items-center gap-2.5 group">
+                    <div class="w-9 h-9 rounded-full bg-brand-blue flex items-center justify-center text-white shadow-md shadow-cyan-400/30 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-utensils text-sm"></i>
+                    </div>
+                    <span class="font-hand text-[1.9rem] text-brand-blue leading-none" style="text-shadow:1px 1px 0 rgba(0,0,0,0.08)">Strafame</span>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#home" class="nav-link text-gray-500 hover:text-brand-dark font-display font-semibold uppercase text-sm tracking-wider transition-colors">Home</a>
+                    <a href="#specials" class="nav-link text-gray-500 hover:text-brand-dark font-display font-semibold uppercase text-sm tracking-wider transition-colors">Speciali</a>
+                    <a href="#menu" class="nav-link text-gray-500 hover:text-brand-dark font-display font-semibold uppercase text-sm tracking-wider transition-colors">Menu</a>
+                    <a href="#prenota" class="nav-link text-gray-500 hover:text-brand-dark font-display font-semibold uppercase text-sm tracking-wider transition-colors">Prenota</a>
+                    <button onclick="toggleCart()" class="relative bg-brand-dark text-white pl-5 pr-4 py-2.5 rounded-full hover:bg-brand-blue transition-all duration-300 font-display font-bold tracking-wider text-sm flex items-center gap-3 group">
+                        <i class="fa-solid fa-bag-shopping text-sm group-hover:scale-110 transition-transform"></i>
+                        <span>Ordine</span>
+                        <span class="w-6 h-6 rounded-full bg-brand-blue group-hover:bg-white group-hover:text-brand-blue flex items-center justify-center text-xs font-bold transition-all" id="cart-count-badge">0</span>
+                    </button>
+                </div>
+
+                <!-- Mobile -->
+                <div class="md:hidden flex items-center gap-3">
+                    <button onclick="toggleCart()" class="relative w-10 h-10 rounded-full bg-brand-blue text-white flex items-center justify-center">
+                        <i class="fa-solid fa-bag-shopping text-sm"></i>
+                        <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-brand-dark text-white text-xs font-bold flex items-center justify-center" id="mobile-cart-count">0</span>
+                    </button>
+                    <button onclick="toggleMobileMenu()" class="text-brand-dark hover:text-brand-blue">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Panel -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 px-4 pt-3 pb-5 space-y-1">
+            <a href="#home" class="block py-3 font-display font-bold uppercase text-sm text-gray-700 hover:text-brand-blue border-b border-gray-50" onclick="toggleMobileMenu()">Home</a>
+            <a href="#specials" class="block py-3 font-display font-bold uppercase text-sm text-gray-700 hover:text-brand-blue border-b border-gray-50" onclick="toggleMobileMenu()">Speciali</a>
+            <a href="#menu" class="block py-3 font-display font-bold uppercase text-sm text-gray-700 hover:text-brand-blue border-b border-gray-50" onclick="toggleMobileMenu()">Menu</a>
+            <a href="#prenota" class="block py-3 font-display font-bold uppercase text-sm text-gray-700 hover:text-brand-blue" onclick="toggleMobileMenu()">Prenota</a>
+        </div>
+    </nav>
+
+    <!-- ═══ HERO ═══ -->
+    <section id="home" class="relative min-h-[95vh] flex items-center justify-center overflow-hidden bg-brand-dark slant">
+        <!-- BG image -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+                 alt="Burger" class="w-full h-full object-cover opacity-50">
+            <div class="absolute inset-0 bg-gradient-to-br from-brand-dark via-brand-dark/70 to-transparent"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent"></div>
+        </div>
+        <!-- Cyan glow blob -->
+        <div class="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-brand-blue/10 blur-[120px] pointer-events-none"></div>
+
+        <div class="relative z-10 text-center px-4 max-w-5xl mx-auto mt-20">
+            <!-- Badge -->
+            <div class="inline-flex items-center gap-2 bg-brand-blue/10 border border-brand-blue/30 text-brand-blue px-4 py-1.5 rounded-full text-xs font-bold tracking-[0.2em] uppercase mb-8 animate-fade-up" style="animation-delay:0.1s">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-blue animate-pulse"></span>
+                Panineria · Creperia · Piadineria
+            </div>
+
+            <h1 class="font-hand text-7xl md:text-[9rem] lg:text-[11rem] text-white leading-none mb-2 hero-title animate-fade-up" style="animation-delay:0.2s; text-shadow: 4px 4px 0px rgba(0,174,239,0.3), 0 0 60px rgba(0,174,239,0.1)">
+                Strafame
+            </h1>
+
+            <p class="font-display text-xl md:text-3xl text-gray-300 mb-3 font-light uppercase tracking-[0.12em] animate-fade-up" style="animation-delay:0.35s">
+                Il gusto che ti <span class="text-brand-blue font-bold">stravolge</span>.
+            </p>
+            <p class="text-gray-500 text-sm mb-10 tracking-widest animate-fade-up" style="animation-delay:0.45s">
+                Via Cristoforo Colombo 1, Vittoria (RG) &nbsp;·&nbsp; Aperto dalle 17:00
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up" style="animation-delay:0.55s">
+                <a href="#menu" class="bg-brand-blue text-white px-10 py-4 rounded-full font-display font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-brand-blue transition-all duration-300 shadow-[0_0_30px_rgba(0,174,239,0.4)] hover:shadow-[0_0_40px_rgba(0,174,239,0.6)] transform hover:scale-105">
+                    <i class="fa-solid fa-fire mr-2"></i>Ordina Ora
+                </a>
+                <a href="#prenota" class="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-display font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-brand-dark transition-all duration-300 hover:border-white">
+                    <i class="fa-regular fa-calendar mr-2"></i>Prenota Tavolo
+                </a>
+            </div>
+        </div>
+
+        <!-- Scroll hint -->
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 animate-fade-up" style="animation-delay:1s">
+            <div class="w-5 h-8 rounded-full border-2 border-white/30 flex items-start justify-center p-1">
+                <div class="w-1 h-2 rounded-full bg-white/60" style="animation: fadeUp 1.5s ease-in-out infinite alternate;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ TICKER TAPE ═══ -->
+    <div class="bg-brand-blue py-3 overflow-hidden z-10 relative">
+        <div class="marquee-wrapper">
+            <div class="marquee-inner text-white font-display font-bold text-sm uppercase tracking-widest">
+                &nbsp;🍔 Strafame &nbsp;·&nbsp; Panini Artigianali &nbsp;·&nbsp; Burritos &nbsp;·&nbsp; Antipasti &nbsp;·&nbsp; Bevande &nbsp;·&nbsp; Creperie &nbsp;·&nbsp; Piadineria &nbsp;·&nbsp; Vittoria RG &nbsp;·&nbsp; Dal 2022 &nbsp;·&nbsp; 🍔 Strafame &nbsp;·&nbsp; Panini Artigianali &nbsp;·&nbsp; Burritos &nbsp;·&nbsp; Antipasti &nbsp;·&nbsp; Bevande &nbsp;·&nbsp; Creperie &nbsp;·&nbsp; Piadineria &nbsp;·&nbsp; Vittoria RG &nbsp;·&nbsp; Dal 2022 &nbsp;·&nbsp;
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ WHY US ═══ -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                <div class="reveal p-6 rounded-2xl hover:bg-gray-50 transition-colors group cursor-default">
+                    <div class="text-4xl mb-3 group-hover:scale-110 transition-transform inline-block">🥩</div>
+                    <div class="font-display font-bold text-lg uppercase">Carne Fresca</div>
+                    <div class="text-gray-400 text-sm mt-1">Selezionata ogni giorno</div>
+                </div>
+                <div class="reveal p-6 rounded-2xl hover:bg-gray-50 transition-colors group cursor-default" style="transition-delay:0.1s">
+                    <div class="text-4xl mb-3 group-hover:scale-110 transition-transform inline-block">🍞</div>
+                    <div class="font-display font-bold text-lg uppercase">Pane Artigianale</div>
+                    <div class="text-gray-400 text-sm mt-1">Sfornato fresco ogni sera</div>
+                </div>
+                <div class="reveal p-6 rounded-2xl hover:bg-gray-50 transition-colors group cursor-default" style="transition-delay:0.2s">
+                    <div class="text-4xl mb-3 group-hover:scale-110 transition-transform inline-block">📍</div>
+                    <div class="font-display font-bold text-lg uppercase">Km Zero</div>
+                    <div class="text-gray-400 text-sm mt-1">Prodotti locali siciliani</div>
+                </div>
+                <div class="reveal p-6 rounded-2xl hover:bg-gray-50 transition-colors group cursor-default" style="transition-delay:0.3s">
+                    <div class="text-4xl mb-3 group-hover:scale-110 transition-transform inline-block">⚡</div>
+                    <div class="font-display font-bold text-lg uppercase">Veloce & Buono</div>
+                    <div class="text-gray-400 text-sm mt-1">Pronto in 15 minuti</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ SPECIALI ═══ -->
+    <section id="specials" class="py-20 bg-brand-dark slant-bottom relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-80 h-80 bg-brand-blue/10 blur-[100px] rounded-full pointer-events-none"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="mb-14">
+                <p class="text-brand-blue font-hand text-2xl mb-2 reveal">Da non perdere</p>
+                <h2 class="font-display text-4xl md:text-6xl font-bold text-white uppercase reveal" style="transition-delay:0.1s">
+                    I Nostri <span class="text-brand-blue">Speciali</span>
+                </h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Special 1 -->
+                <div class="reveal relative rounded-3xl overflow-hidden group h-80 cursor-pointer" style="transition-delay:0.1s">
+                    <img src="https://images.unsplash.com/photo-1547584370-2cc98b8b8dc8?auto=format&fit=crop&w=700&q=80"
+                         class="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700" alt="Ivan">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 p-6">
+                        <span class="special-tag mb-2 inline-block">Signature</span>
+                        <h3 class="font-hand text-3xl text-white leading-tight">Ivan</h3>
+                        <p class="text-gray-300 text-sm mt-1">Tagliata di scottona, burrata, pesto di pistacchio</p>
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-brand-blue font-display font-bold text-xl">€10,00</span>
+                            <button onclick="addToCart(1)" class="px-4 py-1.5 rounded-full border border-brand-blue text-brand-blue text-xs font-bold hover:bg-brand-blue hover:text-white transition-all">
+                                + Aggiungi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special 2 — large center -->
+                <div class="reveal relative rounded-3xl overflow-hidden group h-80 md:h-auto md:row-span-1 cursor-pointer" style="transition-delay:0.2s">
+                    <img src="https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=700&q=80"
+                         class="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700" alt="Scottona">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                    <div class="absolute top-4 left-4">
+                        <span class="special-tag" style="background:#ff4343">🔥 Best Seller</span>
+                    </div>
+                    <div class="absolute bottom-0 left-0 p-6">
+                        <h3 class="font-hand text-3xl text-white">Scottona</h3>
+                        <p class="text-gray-300 text-sm mt-1">Hamburger di scottona, cheddar, cipolla, crocchette</p>
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-brand-blue font-display font-bold text-xl">€8,50</span>
+                            <button onclick="addToCart(7)" class="px-4 py-1.5 rounded-full bg-brand-blue text-white text-xs font-bold hover:bg-white hover:text-brand-blue transition-all">
+                                + Aggiungi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Special 3 -->
+                <div class="reveal relative rounded-3xl overflow-hidden group h-80 cursor-pointer" style="transition-delay:0.3s">
+                    <img src="https://images.unsplash.com/photo-1566740933430-b5e70b06d2d5?auto=format&fit=crop&w=700&q=80"
+                         class="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700" alt="Tex-Mex">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 p-6">
+                        <span class="special-tag mb-2 inline-block" style="background:#ff9900">Picante</span>
+                        <h3 class="font-hand text-3xl text-white">Tex-Mex Suprem</h3>
+                        <p class="text-gray-300 text-sm mt-1">Carne trita, funghi piccanti, salsa burger, bacon</p>
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-brand-blue font-display font-bold text-xl">€8,00</span>
+                            <button onclick="addToCart(11)" class="px-4 py-1.5 rounded-full border border-brand-blue text-brand-blue text-xs font-bold hover:bg-brand-blue hover:text-white transition-all">
+                                + Aggiungi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ MENU ═══ -->
+    <section id="menu" class="py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-14 reveal">
+                <p class="text-brand-blue font-hand text-2xl mb-1">Cosa mangi stasera?</p>
+                <h2 class="font-display text-5xl md:text-6xl font-bold text-brand-dark uppercase">
+                    Il Nostro <span class="text-brand-blue">Menu</span>
+                </h2>
+                <p class="text-gray-400 mt-3 max-w-xl mx-auto">Ingredienti freschi, porzioni abbondanti, gusti che ricordi.</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex justify-center flex-wrap gap-3 mb-12 sticky top-[68px] z-30 bg-gray-50/95 backdrop-blur-sm py-4 rounded-2xl reveal">
+                <button onclick="filterMenu('all')" class="cat-pill active px-6 py-2.5 rounded-full border-2 border-brand-blue font-display font-bold uppercase text-sm tracking-wide transition-all">Tutto</button>
+                <button onclick="filterMenu('panini')" class="cat-pill px-6 py-2.5 rounded-full border-2 border-gray-200 text-gray-500 font-display font-bold uppercase text-sm tracking-wide hover:border-brand-blue hover:text-brand-blue transition-all">🍔 Panini</button>
+                <button onclick="filterMenu('burritos')" class="cat-pill px-6 py-2.5 rounded-full border-2 border-gray-200 text-gray-500 font-display font-bold uppercase text-sm tracking-wide hover:border-brand-blue hover:text-brand-blue transition-all">🌯 Burritos</button>
+                <button onclick="filterMenu('antipasti')" class="cat-pill px-6 py-2.5 rounded-full border-2 border-gray-200 text-gray-500 font-display font-bold uppercase text-sm tracking-wide hover:border-brand-blue hover:text-brand-blue transition-all">🍟 Antipasti</button>
+                <button onclick="filterMenu('bevande')" class="cat-pill px-6 py-2.5 rounded-full border-2 border-gray-200 text-gray-500 font-display font-bold uppercase text-sm tracking-wide hover:border-brand-blue hover:text-brand-blue transition-all">🥤 Bevande</button>
+            </div>
+
+            <!-- Grid -->
+            <div id="menu-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+    </section>
+
+    <!-- ═══ PRENOTA ═══ -->
+    <section id="prenota" class="py-24 bg-brand-dark relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-blue rounded-full opacity-[0.07] blur-[130px] pointer-events-none -translate-y-1/3 translate-x-1/3"></div>
+        <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-blue rounded-full opacity-[0.05] blur-[100px] pointer-events-none translate-y-1/2 -translate-x-1/3"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <!-- Info -->
+                <div class="text-white reveal">
+                    <p class="text-brand-blue font-hand text-3xl mb-3">Vieni a trovarci</p>
+                    <h2 class="font-display text-5xl md:text-6xl font-bold mb-10 leading-[1.1] uppercase">
+                        Prenota il tuo<br>tavolo da<br><span class="text-brand-blue">Strafame</span>
+                    </h2>
+                    
+                    <div class="space-y-7">
+                        <div class="flex items-start gap-5 group">
+                            <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-blue text-xl shrink-0 group-hover:bg-brand-blue group-hover:border-brand-blue group-hover:text-white transition-all duration-300">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-display font-semibold text-lg uppercase tracking-wide">Dove siamo</h4>
+                                <p class="text-gray-400 mt-0.5">Via Cristoforo Colombo 1, Vittoria (RG)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-5 group">
+                            <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-blue text-xl shrink-0 group-hover:bg-brand-blue group-hover:border-brand-blue group-hover:text-white transition-all duration-300">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-display font-semibold text-lg uppercase tracking-wide">Orari</h4>
+                                <p class="text-gray-400 mt-0.5">Tutti i giorni · dalle 17:00</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-5 group">
+                            <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-brand-blue text-xl shrink-0 group-hover:bg-brand-blue group-hover:border-brand-blue group-hover:text-white transition-all duration-300">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-display font-semibold text-lg uppercase tracking-wide">WhatsApp</h4>
+                                <p class="text-gray-400 mt-0.5">+39 333 123 4567 · risposta rapida</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <div class="bg-white rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(0,174,239,0.12)] reveal" style="transition-delay:0.15s">
+                    <div class="h-1.5 bg-gradient-to-r from-brand-blue via-sky-400 to-brand-blue"></div>
+                    <div class="p-8 md:p-10">
+                        <h3 class="font-display font-bold text-2xl text-brand-dark mb-7 uppercase tracking-wide">Richiesta Prenotazione</h3>
+                        <form id="booking-form" onsubmit="handleReservation(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="relative">
+                                    <i class="fa-solid fa-user absolute left-4 top-3.5 text-gray-300 text-sm"></i>
+                                    <input type="text" required class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all text-sm font-medium placeholder-gray-400" placeholder="Nome e Cognome">
+                                </div>
+                                <div class="relative">
+                                    <i class="fa-solid fa-phone absolute left-4 top-3.5 text-gray-300 text-sm"></i>
+                                    <input type="tel" required class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all text-sm font-medium placeholder-gray-400" placeholder="Telefono">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="relative">
+                                    <i class="fa-regular fa-calendar absolute left-4 top-3.5 text-gray-300 text-sm"></i>
+                                    <input type="date" required class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all text-sm font-medium text-gray-600">
+                                </div>
+                                <div class="relative">
+                                    <i class="fa-regular fa-clock absolute left-4 top-3.5 text-gray-300 text-sm"></i>
+                                    <select required class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all text-sm font-medium text-gray-600 appearance-none">
+                                        <option value="">Orario</option>
+                                        <option>17:00</option><option>17:30</option><option>18:00</option>
+                                        <option>18:30</option><option>19:00</option><option>19:30</option>
+                                        <option>20:00</option><option>20:30</option><option>21:00</option>
+                                        <option>21:30</option><option>22:00</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <i class="fa-solid fa-users absolute left-4 top-3.5 text-gray-300 text-sm"></i>
+                                <input type="number" min="1" max="20" required class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all text-sm font-medium placeholder-gray-400" placeholder="Numero Persone">
+                            </div>
+                            <div class="relative">
+                                <i class="fa-regular fa-message absolute left-4 top-3.5 text-gray-300 text-sm"></i>
+                                <textarea rows="3" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all text-sm font-medium resize-none placeholder-gray-400" placeholder="Note o richieste particolari…"></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-brand-dark text-white py-4 rounded-xl font-display font-bold text-base uppercase tracking-widest hover:bg-brand-blue transition-all duration-300 mt-2 shadow-lg flex items-center justify-center gap-2 group">
+                                Conferma Prenotazione
+                                <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="bg-[#080808] text-white py-14 border-t border-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-3 gap-10 mb-10">
+                <div>
+                    <span class="font-hand text-4xl text-brand-blue block mb-3">Strafame</span>
+                    <p class="text-gray-500 text-sm leading-relaxed max-w-xs">Panineria · Creperia · Piadineria.<br>Il gusto che ti stravolge, a Vittoria (RG).</p>
+                </div>
+                <div>
+                    <h4 class="font-display font-bold uppercase text-sm tracking-widest text-gray-400 mb-4">Naviga</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#home" class="text-gray-500 hover:text-brand-blue transition-colors text-sm">Home</a></li>
+                        <li><a href="#specials" class="text-gray-500 hover:text-brand-blue transition-colors text-sm">Speciali</a></li>
+                        <li><a href="#menu" class="text-gray-500 hover:text-brand-blue transition-colors text-sm">Menu</a></li>
+                        <li><a href="#prenota" class="text-gray-500 hover:text-brand-blue transition-colors text-sm">Prenota</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-display font-bold uppercase text-sm tracking-widest text-gray-400 mb-4">Seguici</h4>
+                    <div class="flex gap-3">
+                        <a href="#" class="social-btn w-11 h-11 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center hover:bg-brand-blue hover:border-brand-blue hover:scale-110 transition-all duration-300">
+                            <i class="fa-brands fa-instagram text-sm"></i>
+                        </a>
+                        <a href="#" class="social-btn w-11 h-11 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center hover:bg-brand-blue hover:border-brand-blue hover:scale-110 transition-all duration-300">
+                            <i class="fa-brands fa-facebook-f text-sm"></i>
+                        </a>
+                        <a href="#" class="social-btn w-11 h-11 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center hover:bg-brand-blue hover:border-brand-blue hover:scale-110 transition-all duration-300">
+                            <i class="fa-brands fa-tiktok text-sm"></i>
+                        </a>
+                        <a href="#" class="social-btn w-11 h-11 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center hover:bg-brand-blue hover:border-brand-blue hover:scale-110 transition-all duration-300">
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                        </a>
+                    </div>
+                    <p class="text-gray-600 text-xs mt-5">📍 Via Cristoforo Colombo 1, Vittoria (RG)</p>
+                    <p class="text-gray-600 text-xs mt-1">📞 +39 333 123 4567</p>
+                </div>
+            </div>
+            <div class="border-t border-gray-900 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-600">
+                <p>© 2026 Strafame — Tutti i diritti riservati.</p>
+                <p>Made with <span class="text-brand-blue">♥</span> a Vittoria, Sicilia</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ═══ CART SIDEBAR ═══ -->
+    <div id="cart-modal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="toggleCart()"></div>
+        <div id="cart-sidebar" class="absolute right-0 top-0 h-full w-full max-w-[420px] bg-white shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-full">
+            <div class="p-6 bg-brand-dark text-white flex justify-between items-center border-b border-gray-800">
+                <div>
+                    <h2 class="font-display font-bold text-xl uppercase tracking-wider">Il Tuo Ordine</h2>
+                    <p class="text-gray-400 text-xs mt-0.5">Strafame · Vittoria RG</p>
+                </div>
+                <button onclick="toggleCart()" class="w-9 h-9 rounded-full bg-gray-800 hover:bg-red-500 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-times text-sm"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6" id="cart-items-container">
+                <div class="text-center text-gray-400 mt-16 flex flex-col items-center">
+                    <i class="fa-solid fa-burger text-5xl mb-4 opacity-10"></i>
+                    <p class="font-display font-bold uppercase text-sm tracking-widest mb-1">Carrello vuoto</p>
+                    <p class="text-xs">Hai una fame da lupi?</p>
+                    <button onclick="toggleCart()" class="mt-5 px-5 py-2 bg-brand-blue text-white rounded-full font-bold text-xs hover:bg-brand-dark transition-colors">VAI AL MENU</button>
+                </div>
+            </div>
+            <div class="p-6 bg-gray-50 border-t border-gray-100">
+                <div class="flex justify-between items-baseline mb-5">
+                    <span class="text-gray-400 text-sm font-medium uppercase tracking-wide">Totale ordine</span>
+                    <span class="font-display font-bold text-3xl text-brand-dark" id="cart-total">€0,00</span>
+                </div>
+                <button onclick="openStripeModal()" id="checkout-btn" disabled
+                    class="w-full bg-brand-blue text-white py-4 rounded-xl font-display font-bold uppercase tracking-wider shadow-lg shadow-brand-blue/30 hover:bg-brand-dark transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 group">
+                    <i class="fa-solid fa-lock text-sm"></i>
+                    <span>Procedi al Pagamento</span>
+                    <i class="fa-solid fa-arrow-right text-sm group-hover:translate-x-1 transition-transform"></i>
+                </button>
+                <p class="text-center text-gray-400 text-xs mt-3 flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-shield-halved text-gray-300"></i>
+                    Pagamento sicuro con Stripe
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ STRIPE MODAL ═══ -->
+    <div id="stripe-modal" class="fixed inset-0 z-[70] hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeStripeModal()"></div>
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative z-10 animate-fade-up">
+            <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-lock text-gray-400 text-xs"></i>
+                    <span class="text-gray-400 text-xs font-medium uppercase tracking-widest">Pagamento sicuro con</span>
+                    <span class="font-black text-[#635BFF] text-xl tracking-tighter">stripe</span>
+                </div>
+                <button onclick="closeStripeModal()" class="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors">
+                    <i class="fa-solid fa-times text-sm"></i>
+                </button>
+            </div>
+            <div class="p-8">
+                <div class="text-center mb-7">
+                    <p class="text-gray-400 text-sm font-medium">Stai pagando a</p>
+                    <p class="font-hand text-2xl text-brand-blue">Strafame</p>
+                    <h3 class="text-5xl font-black text-brand-dark mt-1" id="stripe-total">€0,00</h3>
+                </div>
+                <form onsubmit="processPayment(event)" class="space-y-3">
+                    <input type="email" required placeholder="Email di conferma" class="stripe-input w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium placeholder-gray-400">
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <input type="text" required placeholder="Numero carta" class="stripe-input w-full px-4 py-3 border-b border-gray-200 bg-gray-50 text-sm font-medium placeholder-gray-400" maxlength="19">
+                        <div class="flex">
+                            <input type="text" required placeholder="MM / AA" class="stripe-input w-1/2 px-4 py-3 border-r border-gray-200 bg-gray-50 text-sm font-medium placeholder-gray-400" maxlength="5">
+                            <input type="text" required placeholder="CVC" class="stripe-input w-1/2 px-4 py-3 bg-gray-50 text-sm font-medium placeholder-gray-400" maxlength="3">
+                        </div>
+                    </div>
+                    <input type="text" required placeholder="Nome sulla carta" class="stripe-input w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium placeholder-gray-400">
+                    <button type="submit" id="pay-button"
+                        class="w-full bg-[#635BFF] hover:bg-[#4f48cc] text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-indigo-200 transition-all mt-2 flex justify-center items-center h-14">
+                        <span id="pay-text">Paga Ora</span>
+                        <div id="pay-loader" class="loader ml-2 hidden"></div>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TOAST ═══ -->
+    <div id="notification" class="fixed bottom-6 right-6 bg-brand-dark text-white px-5 py-4 rounded-2xl shadow-2xl transform translate-y-40 transition-all duration-500 z-[80] flex items-center gap-3 border-l-4 border-brand-blue max-w-xs pointer-events-none">
+        <div class="w-8 h-8 rounded-full bg-brand-success/15 flex items-center justify-center text-brand-success shrink-0">
+            <i class="fa-solid fa-check text-sm"></i>
+        </div>
+        <div>
+            <h4 class="font-bold text-sm">Aggiunto!</h4>
+            <p class="text-gray-400 text-xs leading-snug" id="notification-msg"></p>
+        </div>
+    </div>
+
+    <!-- ═══ SCRIPT ═══ -->
+    <script>
+        // ── Data ──────────────────────────────────────────────
+        const menuItems = [
+            { id:1,  name:"Ivan",           desc:"Tagliata di scottona, bacon, burrata, pesto di pistacchio",           price:10.00, category:"panini",    img:"https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=600&q=80" },
+            { id:2,  name:"Saro",           desc:"Cotoletta di pollo, mozzarella, lattuga, pomodoro, patatine",         price:7.00,  category:"panini",    img:"https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&w=600&q=80" },
+            { id:3,  name:"Kebab",          desc:"Kebab, mozzarella, yogurt, patatine, km0",                             price:7.00,  category:"panini",    img:"https://images.unsplash.com/photo-1633321702518-7fe2bf4296f3?auto=format&fit=crop&w=600&q=80" },
+            { id:4,  name:"Bomba",          desc:"Ventricina piccante, emmental, cipolla, funghi piccanti, tabasco",     price:7.00,  category:"panini",    img:"https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80" },
+            { id:5,  name:"Joy Bite",       desc:"Wurstel, hamburger, prosciutto, mozzarella, patatine",                price:7.00,  category:"panini",    img:"https://images.unsplash.com/photo-1551782450-a2132b4ba21d?auto=format&fit=crop&w=600&q=80" },
+            { id:6,  name:"Polletto",       desc:"Hamburger di pollo, mozzarella, lattuga, pomodoro, patatine",         price:7.00,  category:"panini",    img:"https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=600&q=80" },
+            { id:7,  name:"Scottona",       desc:"Hamburger di scottona, cheddar, cipolla, crocchette",                 price:8.50,  category:"panini",    img:"https://images.unsplash.com/photo-1547584370-2cc98b8b8dc8?auto=format&fit=crop&w=600&q=80", hot:true },
+            { id:8,  name:"Polpetta",       desc:"Polpetta di cavallo, pesto di pistacchio, mozzarella, cipolla",       price:9.00,  category:"panini",    img:"https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?auto=format&fit=crop&w=600&q=80" },
+            { id:9,  name:"Porchettata",    desc:"Porchetta, mozzarella, cipolla, patatine",                            price:8.00,  category:"panini",    img:"https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=600&q=80" },
+            { id:10, name:"Fattillu Tu",    desc:"1 carne, 1 formaggio, patatine, lattuga — componi il tuo panino",     price:11.00, category:"panini",    img:"https://images.unsplash.com/photo-1513185158878-8d8c2a2a3da3?auto=format&fit=crop&w=600&q=80", tag:"Custom" },
+            { id:11, name:"Tex-Mex Suprem", desc:"Carne trita, cipolla, funghi piccanti, salsa burger, bacon",          price:8.00,  category:"burritos",  img:"https://images.unsplash.com/photo-1566740933430-b5e70b06d2d5?auto=format&fit=crop&w=600&q=80", hot:true },
+            { id:12, name:"Fiesta di Pollo",desc:"Pollo, cipolla, peperoni, fagioli, mais, pomodoro",                   price:7.00,  category:"burritos",  img:"https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=600&q=80" },
+            { id:13, name:"Piccante De Vaca",desc:"Vitello, cipolla, peperoni, fagioli, mais, peperoncino",             price:7.00,  category:"burritos",  img:"https://images.unsplash.com/photo-1584650549033-c3c162638844?auto=format&fit=crop&w=600&q=80", hot:true },
+            { id:14, name:"Patatine Fritte",desc:"Porzione classica di patatine fritte croccanti",                      price:3.00,  category:"antipasti", img:"https://images.unsplash.com/photo-1573080496987-a199f8cd75c5?auto=format&fit=crop&w=600&q=80" },
+            { id:15, name:"Frittura Mista", desc:"Misto caldo di specialità fritte dello chef",                         price:5.00,  category:"antipasti", img:"https://images.unsplash.com/photo-1626082927389-d52b83b46ad1?auto=format&fit=crop&w=600&q=80" },
+            { id:16, name:"Anelli di Cipolla",desc:"Anelli di cipolla dorati e croccanti",                              price:3.00,  category:"antipasti", img:"https://images.unsplash.com/photo-1639024471283-03518883512d?auto=format&fit=crop&w=600&q=80" },
+            { id:17, name:"Coca Cola",      desc:"Lattina 33cl",                                                         price:2.00,  category:"bevande",   img:"https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80" },
+            { id:18, name:"Birra Heineken", desc:"Bottiglia 33cl",                                                       price:3.00,  category:"bevande",   img:"https://images.unsplash.com/photo-1567696911980-2eed69a46042?auto=format&fit=crop&w=600&q=80" },
+            { id:19, name:"Acqua",          desc:"Bottiglia 50cl naturale o frizzante",                                 price:1.00,  category:"bevande",   img:"https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=600&q=80" }
+        ];
+
+        let cart = [];
+
+        // ── Render Menu ──────────────────────────────────────────────
+        function renderMenu(filter = 'all') {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+            const items = filter === 'all' ? menuItems : menuItems.filter(i => i.category === filter);
+
+            items.forEach((item, idx) => {
+                const card = document.createElement('div');
+                card.className = 'menu-card bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-100 group';
+                card.style.animationDelay = `${idx * 40}ms`;
+                card.innerHTML = `
+                    <div class="relative h-52 overflow-hidden">
+                        <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full text-brand-dark font-display font-bold text-sm shadow-sm">
+                            €${item.price.toFixed(2)}
+                        </div>
+                        ${item.hot ? '<div class="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-sm">🔥 Hot</div>' : ''}
+                        ${item.tag ? `<div class="absolute top-3 left-3 bg-brand-blue text-white text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-sm">${item.tag}</div>` : ''}
+                    </div>
+                    <div class="p-5 flex flex-col flex-1">
+                        <div class="mb-1.5">
+                            <span class="text-[10px] font-bold text-brand-blue uppercase tracking-[0.12em]">${item.category}</span>
+                            <h3 class="font-display font-bold text-xl text-gray-900 leading-tight mt-0.5">${item.name}</h3>
+                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed mb-5 flex-1">${item.desc}</p>
+                        <button onclick="addToCart(${item.id})" class="w-full py-3 bg-brand-dark text-white font-display font-bold uppercase text-sm tracking-wider rounded-xl hover:bg-brand-blue transition-all duration-200 flex items-center justify-center gap-2 group/btn">
+                            <i class="fa-solid fa-plus text-xs group-hover/btn:rotate-90 transition-transform duration-300"></i>
+                            Aggiungi
+                        </button>
+                    </div>`;
+                grid.appendChild(card);
+            });
+
+            // update filter pills
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                const f = btn.textContent.trim().toLowerCase();
+                const isActive = (filter === 'all' && f === 'tutto') || f.includes(filter);
+                btn.classList.toggle('active', isActive);
+            });
+        }
+
+        function filterMenu(cat) { renderMenu(cat); }
+
+        // ── Cart ──────────────────────────────────────────────
+        function addToCart(id) {
+            const item = menuItems.find(i => i.id === id);
+            const existing = cart.find(i => i.id === id);
+            if (existing) existing.qty++;
+            else cart.push({ ...item, qty: 1 });
+            updateCartUI();
+            showNotification(`${item.name} aggiunto!`);
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(i => i.id !== id);
+            updateCartUI();
+        }
+
+        function updateQty(id, delta) {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) removeFromCart(id);
+            else updateCartUI();
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+            const count = cart.reduce((s, i) => s + i.qty, 0);
+            const fmt = v => '€' + v.toFixed(2).replace('.', ',');
+
+            document.getElementById('cart-count-badge').textContent = count;
+            document.getElementById('mobile-cart-count').textContent = count;
+            document.getElementById('cart-total').textContent = fmt(total);
+            document.getElementById('stripe-total').textContent = fmt(total);
+            document.getElementById('checkout-btn').disabled = count === 0;
+
+            if (count === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-400 mt-16 flex flex-col items-center">
+                        <i class="fa-solid fa-burger text-5xl mb-4 opacity-10"></i>
+                        <p class="font-display font-bold uppercase text-sm tracking-widest mb-1">Carrello vuoto</p>
+                        <p class="text-xs">Hai una fame da lupi?</p>
+                        <button onclick="toggleCart()" class="mt-5 px-5 py-2 bg-brand-blue text-white rounded-full font-bold text-xs hover:bg-brand-dark transition-colors">VAI AL MENU</button>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            cart.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'flex items-center gap-4 mb-5 pb-5 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0';
+                el.innerHTML = `
+                    <div class="w-16 h-16 rounded-xl overflow-hidden shrink-0 shadow-sm">
+                        <img src="${item.img}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-display font-bold text-sm text-gray-900 truncate">${item.name}</h4>
+                        <p class="text-brand-blue font-bold text-sm mt-0.5">${fmt(item.price * item.qty)}</p>
+                        <p class="text-gray-400 text-xs">€${item.price.toFixed(2)} cad.</p>
+                    </div>
+                    <div class="flex flex-col items-center gap-1 shrink-0">
+                        <button onclick="updateQty(${item.id},1)" class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-brand-blue hover:text-white flex items-center justify-center transition-colors"><i class="fa-solid fa-plus text-xs"></i></button>
+                        <span class="font-bold text-sm w-5 text-center">${item.qty}</span>
+                        <button onclick="updateQty(${item.id},-1)" class="w-7 h-7 rounded-lg bg-gray-100 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors"><i class="fa-solid fa-minus text-xs"></i></button>
+                    </div>`;
+                container.appendChild(el);
+            });
+        }
+
+        // ── UI Helpers ──────────────────────────────────────────────
+        function toggleCart() {
+            const modal = document.getElementById('cart-modal');
+            const sidebar = document.getElementById('cart-sidebar');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => sidebar.classList.remove('translate-x-full'), 10);
+            } else {
+                sidebar.classList.add('translate-x-full');
+                document.body.style.overflow = '';
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        function showNotification(msg) {
+            const el = document.getElementById('notification');
+            document.getElementById('notification-msg').textContent = msg;
+            el.classList.remove('translate-y-40');
+            el.classList.add('translate-y-0');
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => {
+                el.classList.add('translate-y-40');
+                el.classList.remove('translate-y-0');
+            }, 2800);
+        }
+
+        function openStripeModal() {
+            toggleCart();
+            document.getElementById('stripe-modal').classList.remove('hidden');
+        }
+
+        function closeStripeModal() {
+            document.getElementById('stripe-modal').classList.add('hidden');
+        }
+
+        function processPayment(e) {
+            e.preventDefault();
+            const btn = document.getElementById('pay-button');
+            const txt = document.getElementById('pay-text');
+            const ldr = document.getElementById('pay-loader');
+            txt.textContent = '';
+            ldr.classList.remove('hidden');
+            btn.disabled = true;
+            setTimeout(() => {
+                closeStripeModal();
+                cart = [];
+                updateCartUI();
+                txt.textContent = 'Paga Ora';
+                ldr.classList.add('hidden');
+                btn.disabled = false;
+                showNotification('Grazie! Ordine ricevuto 🎉');
+            }, 2000);
+        }
+
+        function handleReservation(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type=submit]');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Invio in corso…';
+            btn.disabled = true;
+            setTimeout(() => {
+                showNotification('Prenotazione confermata! A presto 👋');
+                e.target.reset();
+                btn.innerHTML = orig;
+                btn.disabled = false;
+            }, 1500);
+        }
+
+        // ── Scroll & Reveal ──────────────────────────────────────────────
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            nav.classList.toggle('shadow-lg', window.scrollY > 40);
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // ── Init ──────────────────────────────────────────────
+        renderMenu();
+    </script>
+</body>
+</html>

@@ -6,7 +6,6 @@ import {
     XMarkIcon,
     ShoppingCartIcon,
     ClockIcon,
-    CreditCardIcon
 } from '@heroicons/react/24/solid';
 
 const CartIcon: React.FC = () => {
@@ -30,7 +29,6 @@ const CartIcon: React.FC = () => {
     }, []);
 
     const actions = [
-        { label: 'Checkout', icon: CreditCardIcon, onClick: () => navigate(`/${localname}/checkout`), bgColor: 'bg-green-500' },
         { label: 'Cronologia Ordini', icon: ClockIcon, onClick: () => navigate(`/${localname}/history`), bgColor: 'bg-blue-500' },
         { label: 'Carrello', icon: ShoppingCartIcon, onClick: () => navigate(window.location.href.toLowerCase().includes('/waiters/') ? `/Waiters/${localname}/cart` : `/${localname}/cart`), bgColor: 'bg-orange-500' },
     ];

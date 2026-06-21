@@ -1,87 +1,167 @@
-// src/pages/client/ProductsPage.tsx
+// src/pages/client/ClientProductsPage.tsx
 
-import React, { useState } from 'react';
-import { useData } from "../../Context/DataContext";
-import { useParams, useNavigate } from "react-router-dom";
-import { FaArrowLeft } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useData } from '../../Context/DataContext';
+import { ProductDto } from '../../types';
 
-import ClientHeader from "../../Components/ClientHeader";
-import ClientFooter from "../../Components/ClientFooter";
-import AllergensSelector from "../../Components/AllergensSelector";
-import ClientProductCard from "../../Components/ClientProductCard";
-import CustomLoading from "../../Components/CustomLoading";
-import CartIcon from "../../Components/Client/CartIcon";
+import CustomLoading from '../../Components/CustomLoading';
+import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
+import CategoryNavBar from '../../Components/Client/CategoryNavBar';
+import ProductListItem from '../../Components/Client/ProductListItem';
+import AllergenModal from '../../Components/Client/AllergenModal';
+import ProductCustomizationDrawer from '../../Components/ProductCustomizationDrawer';
+import useCartCount from '../../Utilities/useCartCount';
 
-import { allergens as mockAllergens } from "../../Utilities/Utilities";
-import { ProductDto } from "../../types";
-import ProductCustomizationDrawer from "../../Components/ProductCustomizationDrawer";
+const MENU_BG = '#17140f';
 
 const ClientProductsPage: React.FC = () => {
     const [selectedDish, setSelectedDish] = useState<ProductDto | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
 
-    const { loading, setSelectedAllergens, ingredientsMap, categoriesMap, productsMap } = useData();
+    const { loading, setSelectedAllergens, selectedAllergens, categoriesMap, productsMap, ingredientsMap, waiters, styles } = useData();
+    const cartCount = useCartCount(waiters ? 'waiter' : undefined);
     const { idCategory, localname } = useParams();
     const navigate = useNavigate();
 
-    const category = idCategory ? categoriesMap.get(Number(idCategory)) : null;
+    /* fix flash of white on navigation */
+    useEffect(() => {
+        document.body.style.backgroundColor = MENU_BG;
+        return () => { document.body.style.backgroundColor = ''; };
+    }, []);
 
-    const openDrawer = (dish: ProductDto) => {
-        setSelectedDish(dish);
-        setIsDrawerOpen(true);
-    };
+    /* trim to handle empty/whitespace primary from default StyleDto */
+    const primaryColor = styles?.primary?.trim() || '#f97316';
+
+    const currentCategoryId = Number(idCategory);
+    const category = categoriesMap.get(currentCategoryId);
+
+    const visibleProducts = Array.from(productsMap.values())
+        .filter(p => p.idCategory === currentCategoryId)
+        .filter(p => {
+            if (selectedAllergens.length === 0) return true;
+            const productAllergenIds = p.ingredients.flatMap(
+                ingId => ingredientsMap.get(ingId)?.allergens ?? []
+            );
+            return !selectedAllergens.some(a => productAllergenIds.includes(a));
+        });
+
+    if (loading) return <CustomLoading />;
 
     return (
-        <>
-            {loading ? <CustomLoading /> :
-                <div className="flex flex-col bg-slate-100" style={{minHeight:'105vh'}}>
-                    <ClientHeader
-                        localname={category?.name || "I nostri Prodotti"}
-                        backgroundImage={category?.image ? process.env.REACT_APP_BUCKET_URL + category.image : "/images/restaurant-background.jpg"}
-                    />
-                    <CartIcon />
-                    <main className="flex-grow">
-                        <div className="container mx-auto max-w-7xl">
-                            <div className="p-4">
-                                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-primary font-semibold transition-colors mb-4">
-                                    <FaArrowLeft />
-                                    <span>Torna alle Categorie</span>
-                                </button>
-                                <AllergensSelector allergens={mockAllergens} onAllergenChange={setSelectedAllergens} />
-                            </div>
-                            <hr className="mx-4 border-gray-200"/>
+        <div style={{ background: MENU_BG, minHeight: '100vh' }}>
+            <div className="max-w-4xl mx-auto" style={{ minHeight: '100vh' }}>
 
-                            {/* Griglia dei prodotti */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4 md:p-6">
-                                {Array.from(productsMap.values())
-                                    .filter((p) => p.idCategory === Number(idCategory))
-                                    .map((dish) => (
-                                        <ClientProductCard
-                                            key={dish.id}
-                                            imageSrc={dish.image || ""}
-                                            name={dish.name}
-                                            ingredients={dish.ingredients.map(i => ingredientsMap.get(i)?.name).join(", ")}
-                                            options={dish.options}
-                                            onAddToCart={() => openDrawer(dish)}
-                                        />
-                                    ))}
-                            </div>
+                {/* ── Main header (sticky top-0) ── */}
+                <ClientStickyHeader
+                    restaurantName={styles?.restaurantName || localname || ''}
+                    onAllergenClick={() => setIsAllergenModalOpen(true)}
+                    onCartClick={() => navigate(`/${localname}/cart`)}
+                    cartItemCount={cartCount}
+                    primaryColor={primaryColor}
+                />
+
+                {/* ── Category nav (sticky below header) ── */}
+                <CategoryNavBar
+                    categories={Array.from(categoriesMap.values())}
+                    activeCategoryId={currentCategoryId}
+                    onSelectCategory={newId => {
+                        const base = waiters ? `/${localname}/waiters` : ``;
+                        navigate(`${base}/${localname}/products/${newId}`);
+                    }}
+                    primaryColor={primaryColor}
+                />
+
+                {/* ── Page content ── */}
+                <main className="px-4 md:px-6 pt-7 pb-12">
+
+                    {/* Category title */}
+                    <div
+                        className="mb-6 menu-fade-up"
+                        style={{ animationDelay: '0.05s' }}
+                    >
+                        <h1
+                            className="font-cormorant font-semibold leading-none"
+                            style={{
+                                color: '#ede8da',
+                                fontSize: 'clamp(2rem, 7vw, 3rem)',
+                            }}
+                        >
+                            {category?.name || 'Prodotti'}
+                        </h1>
+                        {visibleProducts.length > 0 && (
+                            <p
+                                className="font-nunito mt-1.5"
+                                style={{ color: '#8a7d6a', fontSize: '0.8rem' }}
+                            >
+                                {visibleProducts.length}{' '}
+                                {visibleProducts.length === 1 ? 'piatto disponibile' : 'piatti disponibili'}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Divider */}
+                    <div
+                        className="mb-6"
+                        style={{ height: 1, background: 'rgba(255,255,255,0.06)' }}
+                    />
+
+                    {/* Products */}
+                    {visibleProducts.length === 0 ? (
+                        <div
+                            className="flex flex-col items-center justify-center py-20 menu-fade-in"
+                            style={{ animationDelay: '0.1s' }}
+                        >
+                            <p
+                                className="font-cormorant italic"
+                                style={{ color: '#8a7d6a', fontSize: '1.5rem' }}
+                            >
+                                Nessun piatto disponibile
+                            </p>
+                            {selectedAllergens.length > 0 && (
+                                <p
+                                    className="font-nunito mt-2"
+                                    style={{ color: '#5a5048', fontSize: '0.82rem' }}
+                                >
+                                    Prova a rimuovere i filtri allergeni.
+                                </p>
+                            )}
                         </div>
-                    </main>
-                    <ProductCustomizationDrawer
-                        isOpen={isDrawerOpen}
-                        onClose={() => setIsDrawerOpen(false)}
-                        dish={selectedDish}
-                        waiter={window.location.href.toLowerCase().includes("/waiters/")}
-                    />
-                    <ClientFooter
-                        address="Via Roma, 123 - Milano"
-                        phone="+39 012 345 6789"
-                        socialLinks={[/*...*/]}
-                    />
-                </div>
-            }
-        </>
+                    ) : (
+                        <div className="flex flex-col gap-3 menu-stagger">
+                            {visibleProducts.map(dish => (
+                                <div key={dish.id} className="menu-fade-up">
+                                    <ProductListItem
+                                        product={dish}
+                                        onClick={() => {
+                                            setSelectedDish(dish);
+                                            setIsDrawerOpen(true);
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </main>
+            </div>
+
+            <AllergenModal
+                isOpen={isAllergenModalOpen}
+                onClose={() => setIsAllergenModalOpen(false)}
+                onApplyFilters={selected => {
+                    setSelectedAllergens(selected);
+                    setIsAllergenModalOpen(false);
+                }}
+            />
+
+            <ProductCustomizationDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                dish={selectedDish}
+                waiter={window.location.href.toLowerCase().includes('/waiters/')}
+            />
+        </div>
     );
 };
 

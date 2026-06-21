@@ -1,12 +1,12 @@
  import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
-import {deleteCookie, getCookie, setCookie} from "../Utilities/Utilities";
-import {changePassword, check, getToken, login, updateProfileApi} from "../Utilities/api";
+import {deleteCookie, setCookie} from "../Utilities/Utilities";
+import {changePassword, check, login, updateProfileApi} from "../Utilities/api";
 import axios from "axios";
 import {useNavigate, useParams} from "react-router-dom";
 import {User, LoginResponse, LoginContextType} from "../types";
 import {UserProfile} from "../Dashboard/Pages/ProfilePage";
 
-const LoginContext = createContext<LoginContextType | undefined>(undefined);
+export const LoginContext = createContext<LoginContextType | undefined>(undefined);
 
 export const useLoginContext = () => {
     const context = useContext(LoginContext);
@@ -21,7 +21,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [transparentLoading, setTransparentLoading] = useState<boolean>(false)
     const [authorized, setAuthorized] = useState<boolean>(false)
     const [user, setUser] = useState<User | null>(null);
-    const [errorType, setErrorType] = useState<'credenziali' | 'connection' | null>(null)
+    const [errorType, setErrorType] = useState<'credenziali' | 'connection' | 'billing' | null>(null)
     const { localname } = useParams()
     const navigate = useNavigate()
 
@@ -57,7 +57,11 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     }
                 }
                 if(response.status === 402){
-                    _deleteAuthorized("Errore") // todo gestire errori custom
+                    setAuthorized(false)
+                    setUser(null)
+                    deleteCookie("token")
+                    setTransparentLoading(false)
+                    navigate("/login?reason=billing")
                 }
                 if(response.status === 401){
                     _deleteAuthorized("Accesso negato")
@@ -70,7 +74,6 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 }
                 setLoading(false)
             }else{
-                // TODO gestire i diversi tipi di accessi
                 setAuthorized(false)
                 setUser(null)
                 if(!window.location.href.includes("/register") && !window.location.href.includes("/login")) {
@@ -79,7 +82,6 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 setLoading(false)
             }
         }catch (error){
-            console.log(error)
             if(!window.location.href.includes("/register") && !window.location.href.includes("/login")) {
                 navigate("/login")
             }
@@ -102,7 +104,6 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setTransparentLoading(true)
         try {
             const response = await login(email, password);
-            console.log(response)
             if(response && response.data){
                 if(response.data.status === 200){
                     setErrorType(null)
@@ -116,12 +117,10 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                         controlsVariable: response.data.controlsVariable
                     })
                     setLoading(false)
-                    //console.log(getCookie("token"))
                     navigate("/" + response.data.localname + "/Dashboard/Home")
                     return
 
                 }else if(response.data.status === 401){
-                    console.log(response)
                     setErrorType("credenziali")
                     deleteCookie("token")
 
@@ -151,9 +150,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 setErrorType('connection')
             }
         } catch (error) {
-            console.log("catch")
-            console.log(error)
-            // TODO: gestione casistiche accesso (account da confermare, abbonamento scaduto)
+            setErrorType('connection')
         }
         setTransparentLoading(false)
     }
@@ -166,7 +163,6 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 status = true
             }
         }catch (error){
-            console.log(error)
         }
         return status;
     }
@@ -188,7 +184,6 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 })
             }
         }catch (error){
-            console.log(error)
         }
         return status;
     }

@@ -1,4 +1,4 @@
-import React, {useEffect, useState, createContext, useContext, useMemo} from 'react';
+import React, {useEffect, useRef, useState, createContext, useContext, useMemo, useCallback} from 'react';
 import {
     AddCategory, AddIngredient, AddProduct, AddTable,
     CategoryDto,
@@ -15,7 +15,7 @@ import {
     addIngredientApi,
     addProductApi, addTableApi,
     changeComandStatusApi,
-    changeOrderCategoriesApi, confirmWaiterApi,
+    changeOrderCategoriesApi, changeOrderProductsApi, confirmWaiterApi,
     deleteCategoryApi,
     deleteIngredientApi,
     deleteProductApi,
@@ -30,7 +30,6 @@ import {
     setAvailableIngredientApi,
     setAvailableProductApi, setBusyTableApi,
     UPDATE_ENDPOINT,
-    UPDATE_ENDPOINT_DASHBOARD,
     updateCategoryApi,
     updateIngredientApi,
     updateProductApi, updateSingleTableApi, updateStyleApi, updateTablesApi
@@ -40,6 +39,7 @@ import {allergens} from "../Utilities/Utilities";
 import {Comand} from "../ComandType";
 import {useNotification} from "./NotificationContext";
 import {OrderItem, Orders} from "../Dashboard/Pages/OrderPage";
+import {LoginContext} from "./LoginContext";
 
 const allergensMap = new Map([
     [1, { id: 1, name: "glutine" }],
@@ -83,7 +83,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     const { addNotification } = useNotification()
 
     const [loading, setLoading] = useState(true);
+
+    // ── Real-time connections ──────────────────────────────────────────────
+    // Dashboard → WebSocket (Rust server, port 8083)
+    // Public    → SSE (Spring WebFlux, port 8081) — unchanged
+    const wsRef = useRef<WebSocket | null>(null);
+    const reconnectDelayRef = useRef<number>(1000);
+    const isMountedRef = useRef<boolean>(true);
     const [eventSource, setEventSource] = useState<EventSource | null>(null);
+
+    // Read agencyId from LoginContext (available only inside DashboardRoutes).
+    const loginCtx = useContext(LoginContext);
+    const agencyId = loginCtx?.user?.idAgency;
 
     const setStates = (tmp: ListToExport) => {
         if(tmp.categoriesList){
@@ -116,17 +127,92 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
 
     }
 
+    // ── Transforms the Rust WS payload into the internal ListToExport format ──
+    const wsDataToListToExport = (data: any): ListToExport => {
+        const result: ListToExport = {};
+        if (data.categories?.length)
+            result.categoriesList = new Map((data.categories as CategoryDto[]).map(c => [c.id, c]));
+        if (data.products?.length)
+            result.productsList = new Map((data.products as ProductDto[]).map(p => [p.id, p]));
+        if (data.ingredients?.length)
+            result.ingredientsList = new Map((data.ingredients as IngredientDto[]).map(i => [i.id, i]));
+        if (data.tables?.length)
+            result.tablesList = new Map((data.tables as TableDto[]).map(t => [t.id, t]));
+        if (data.images?.length)
+            result.imagesList = data.images;
+        if (data.styles?.length)
+            result.styleDto = data.styles[data.styles.length - 1];
+        if (data.orders?.length)
+            result.comands = data.orders;
+        return result;
+    };
+
+    // ── Dashboard WebSocket (Rust server) ─────────────────────────────────
+    const stopWS = useCallback(() => {
+        if (wsRef.current) {
+            // Prevent the onclose handler from triggering a reconnect.
+            wsRef.current.onclose = null;
+            wsRef.current.close();
+            wsRef.current = null;
+        }
+    }, []);
+
+    const startWS = useCallback((aid: number) => {
+        stopWS();
+        const token = getToken();
+        if (!token) return;
+
+        const base = process.env.REACT_APP_WS_URL_BASE;
+        if (!base) {
+            console.error('[WS] REACT_APP_WS_URL_BASE is not configured');
+            return;
+        }
+        const url = `${base}/ws?token=${encodeURIComponent(token)}&agencyId=${aid}`;
+        const ws = new WebSocket(url);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+            reconnectDelayRef.current = 1000;
+            console.log('[WS] connected');
+        };
+
+        ws.onmessage = (event: MessageEvent) => {
+            try {
+                const msg = JSON.parse(event.data as string);
+                if (msg.type === 'AGGREGATED_UPDATE' && msg.data) {
+                    setStates(wsDataToListToExport(msg.data));
+                }
+            } catch (e) {
+                console.error('[WS] parse error', e);
+            }
+        };
+
+        ws.onerror = () => ws.close();
+
+        ws.onclose = () => {
+            wsRef.current = null;
+            if (!isMountedRef.current) return;
+            const delay = Math.min(reconnectDelayRef.current, 30_000);
+            reconnectDelayRef.current = delay * 2;
+            console.log(`[WS] reconnecting in ${delay}ms`);
+            setTimeout(() => {
+                if (isMountedRef.current) startWS(aid);
+            }, delay);
+        };
+    }, [stopWS]);
+
+    // ── Public SSE (Spring WebFlux, unchanged) ────────────────────────────
     // Funzione per caricare i dati iniziali
     const loadData = async () => {
         try {
             setLoading(true);
-            console.log(dashboard)
             let response = await getAll(dashboard, dashboard ? '' : localname);
-            console.log(response)
             if (response && response.data) {
                 setStates(response.data)
             }
-            startSSE()
+            // Public mode starts SSE immediately; dashboard WS is started
+            // by a separate effect once agencyId is resolved from LoginContext.
+            if (!dashboard) startSSE();
         } catch (err) {
             console.error("Errore nel caricamento iniziale dei dati:", err);
         } finally {
@@ -174,46 +260,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return orders
     };
 
-    // Funzione per avviare la connessione SSE
+    // SSE — used only for public/client mode (unauthenticated menu browsing).
     const startSSE = () => {
-        if (eventSource) {
-            stopSSE(); // Chiudi eventuali connessioni esistenti
+        if (eventSource) stopSSE();
+        const webfluxBase = process.env.REACT_APP_BACKEND_WEBFLUX_URL_BASE;
+        if (!webfluxBase) {
+            console.error('[SSE] REACT_APP_BACKEND_WEBFLUX_URL_BASE is not configured');
+            return;
         }
-
-        let url = process.env.REACT_APP_BACKEND_WEBFLUX_URL_BASE + (dashboard ? UPDATE_ENDPOINT_DASHBOARD : UPDATE_ENDPOINT(localname || "", true));
-
-        // Aggiungi il token come parametro di query solo per l'endpoint dashboard
-        const token = getToken()
-        if (dashboard && token) {
-            url += `?token=${token}`;
-        }
-
-        const newEventSource = new EventSource(url);
-        //const newEventSource = new EventSource(process.env.REACT_APP_BACKEND_URL_BASE + "" + (dashboard ? UPDATE_ENDPOINT_DASHBOARD : UPDATE_ENDPOINT(localname || "")));
-
-        newEventSource.onmessage = (event) => {
+        const url = webfluxBase + UPDATE_ENDPOINT(localname ?? '', true);
+        const es = new EventSource(url);
+        es.onmessage = (event) => {
             const update = JSON.parse(event.data);
-
-            if (update && update.updates) {
-                setStates(update.updates as ListToExport)
-            }
-
+            if (update?.updates) setStates(update.updates as ListToExport);
         };
-
-        newEventSource.onerror = (err) => {
-            console.error("Errore nella connessione SSE:", err);
-            newEventSource.close();
-        };
-
-        setEventSource(newEventSource);
+        es.onerror = () => es.close();
+        setEventSource(es);
     };
 
-    // Funzione per chiudere la connessione SSE
     const stopSSE = () => {
-        if (eventSource) {
-            eventSource.close();
-            setEventSource(null);
-        }
+        eventSource?.close();
+        setEventSource(null);
     };
 
     const changeAvailableAddable = async (entity: Entity, id: number, value: boolean, isAvailable: boolean) => {
@@ -317,6 +384,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return false
     }
 
+
+    const changeOrderProducts = async (ordered: IdWithOrder[], categoryId: number) => {
+        const response = await changeOrderProductsApi(ordered)
+        if(response?.status === 200 && response.data){
+            const tmpProducts = new Map(productsMap)
+            for(const p of ordered){
+                const product = tmpProducts.get(p.id)
+                if(product) {
+                    product.positionProgressive = p.order
+                    tmpProducts.set(p.id, product)
+                }
+            }
+            setProductsMap(tmpProducts)
+
+            const tmpCategories = new Map(categoriesMap)
+            const category = tmpCategories.get(categoryId)
+            if(category) {
+                category.products = ordered.map(p => ({longValue: p.id, intValue: p.order}))
+                tmpCategories.set(categoryId, category)
+            }
+            setCategoriesMap(tmpCategories)
+            return true
+        }
+        return false
+    }
 
     const changeOrderCategories = async (ordered: IdWithOrder[]) => {
         let response = await changeOrderCategoriesApi(ordered)
@@ -474,6 +566,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         formData.append("cardStyle", updateStyle.cardStyle)
         formData.append("showImages", updateStyle.showImages.toString())
         formData.append("font", updateStyle.font)
+        formData.append("description", updateStyle.description || "")
+        formData.append("openingHours", updateStyle.openingHours || "")
+        formData.append("whatsapp", updateStyle.whatsapp || "")
+        formData.append("tiktokUrl", updateStyle.tiktokUrl || "")
+        formData.append("features", updateStyle.features || "[]")
+        formData.append("sectionMenuTitle", updateStyle.sectionMenuTitle || "")
+        formData.append("sectionBookingTitle", updateStyle.sectionBookingTitle || "")
+        formData.append("sectionWhyTitle", updateStyle.sectionWhyTitle || "")
+        formData.append("showWhyUs", (updateStyle.showWhyUs ?? true).toString())
+        formData.append("showBooking", (updateStyle.showBooking ?? true).toString())
+        formData.append("showTicker", (updateStyle.showTicker ?? true).toString())
+        formData.append("landingTemplate", updateStyle.landingTemplate || "default")
         const response = await updateStyleApi(formData)
         if(response?.status === 200 && response.data){
             setStyles(response.data.data)
@@ -578,15 +682,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return false
     }
 
-    // Effetto per caricare i dati iniziali
+    // Initial data load + public SSE.
     useEffect(() => {
+        isMountedRef.current = true;
         loadData();
-
-        // Cleanup quando il provider viene smontato
         return () => {
+            isMountedRef.current = false;
             stopSSE();
+            stopWS();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Dashboard WebSocket: connect once both initial load is done and agencyId
+    // is resolved from LoginContext (may arrive slightly after mount).
+    useEffect(() => {
+        if (dashboard && !loading && agencyId) {
+            startWS(agencyId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dashboard, loading, agencyId]);
 
     const freeTableContext = async(id: number): Promise<string> => {
         const response = await freeTableApi(id)
@@ -786,12 +901,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return false
     }
 
-    // Cleanup quando il provider viene smontato
-    //useEffect(() => {
-    //    return () => {
-    //        stopSSE();
-    //    };
-    //}, []);
 
     const contextValue = useMemo(() => ({
         categoriesMap,
@@ -824,6 +933,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         updateIngredient,
         deleteEntity,
         changeOrderCategories,
+        changeOrderProducts,
         mapRawOrderToOrder,
         updateStyle,
         getWaiters,

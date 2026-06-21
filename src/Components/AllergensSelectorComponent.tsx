@@ -1,5 +1,4 @@
-import React, {useContext, useState} from 'react';
-import {ThemeContext} from "../Context/ThemeContext";
+import React, { useState } from 'react';
 
 interface AllergensSelectorComponentProps {
     allergen: {
@@ -11,9 +10,7 @@ interface AllergensSelectorComponentProps {
     toggleAllergen: (id: number) => void
 }
 
-const AllergensSelectorComponent: React.FC<AllergensSelectorComponentProps> = ({allergen, toggleAllergen, isSelected}) => {
-    const theme = useContext(ThemeContext)
-
+const AllergensSelectorComponent: React.FC<AllergensSelectorComponentProps> = ({ allergen, toggleAllergen, isSelected }) => {
     const [hovered, setHovered] = useState(false);
 
     return (
@@ -22,14 +19,17 @@ const AllergensSelectorComponent: React.FC<AllergensSelectorComponentProps> = ({
             onClick={() => toggleAllergen(allergen.id)}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
-            className={`flex flex-col items-center p-1 rounded-lg border`}
-            style={{backgroundColor: isSelected || hovered ? theme?.theme.colors.color1 + "" : theme?.theme.colors.color2, color: isSelected || hovered ? theme?.theme.colors.text1 + "" : theme?.theme.colors.text}}
+            className={`flex flex-col items-center p-1 rounded-lg border transition-colors duration-150 ${
+                isSelected || hovered
+                    ? 'bg-primary-400 border-primary-500 text-white'
+                    : 'bg-white border-neutral-200 text-neutral-700'
+            }`}
         >
             <img
                 src={allergen.icon}
                 alt={allergen.name}
                 className="w-16 h-17 mb-1 object-contain"
-                style={{maxWidth: "350px"}}
+                style={{ maxWidth: "350px" }}
             />
         </button>
     );

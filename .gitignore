@@ -13,10 +13,30 @@
 
 # misc
 .DS_Store
+.env
 .env.local
+.env.development
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
+
+# IDE / agent local state
+.idea/
+.vscode/
+.claude/
+
+# Vite / TypeScript build artifacts
+.tsnode-build/
+*.tsbuildinfo
+
+# Playwright
+/playwright-report
+/test-results
+/tests/screenshots
+
+# Personal scratch / session notes
+continue.md
 
 npm-debug.log*
 yarn-debug.log*

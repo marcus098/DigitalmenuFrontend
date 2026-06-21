@@ -1,119 +1,153 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, { Suspense, lazy } from 'react';
 import './App.css';
-import {BrowserRouter, Route, Routes} from "react-router-dom";
-import {ThemeProvider} from "./Context/ThemeContext";
-import {UtilitiesProvider} from "./Context/UtilitiesContext";
-import {LoginProvider} from "./Context/LoginContext";
-import {DataProvider} from "./Context/DataContext";
-import {NotificationProvider} from "./Context/NotificationContext";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { UtilitiesProvider } from "./Context/UtilitiesContext";
+import { LoginProvider } from "./Context/LoginContext";
+import { DataProvider } from "./Context/DataContext";
+import { NotificationProvider } from "./Context/NotificationContext";
+import { HistoryProvider } from "./Context/HistoryContext";
+import { CookieConsentProvider } from "./Context/CookieConsentContext";
+import CookieBanner from "./Components/CookieConsent/CookieBanner";
+import PWAInstallPrompt from "./Components/PWAInstallPrompt";
 import Layout from "./Dashboard/Layout";
+
+// Pagine sempre necessarie (piccole, fuori da route lazy)
 import LoginPage from "./GeneralPages/LoginPage";
 import SignupPage from "./GeneralPages/SignupPage";
-import ProfilePage from "./Dashboard/Pages/ProfilePage";
-import QRCodePage from "./Dashboard/Pages/QRCodePage";
-import HomePage from "./Dashboard/Pages/HomePage";
-import MenuPage from "./Dashboard/Pages/MenuPage";
-import ProductPage from "./Dashboard/Pages/ProductPage";
-import IngredientsPage from "./Dashboard/Pages/IngredientsPage";
-import TablesPageTest from "./Dashboard/Pages/TablesPageTest";
-import OrderPage from "./Dashboard/Pages/OrderPage";
-import WaitersPage from "./Dashboard/Pages/WaitersPage";
-import CategoryPage from "./Dashboard/Pages/CategoryPage";
-import IngredientPage from "./Dashboard/Pages/IngredientPage";
-import CategoriesPage from "./Dashboard/Pages/CategoriesPage";
-import ClientCategoriesPage from "./Client/Pages/ClientCategoriesPage";
-import ClientProductsPage from "./Client/Pages/ProductsPage";
-import ClientProductPage from "./Client/Pages/ClientProductPage";
-import {HistoryProvider} from "./Context/HistoryContext";
-import CartPage from "./Client/Pages/CartPage";
-import DocumentsPage from "./Dashboard/Pages/DocumentsPage";
-import LoyaltyCardsPage from "./Dashboard/Pages/LoyaltyCardsPage";
 import CardStatusPage from "./All/CardStatusPage";
-import GroupOrderWaitingPage from "./Client/Pages/GroupOrderWaitingPage";
-import HistoryOrdersPage from "./Client/Pages/HistoryOrdersPage";
-import LayoutPage from "./Dashboard/Pages/LayoutPage";
 import WaiterSignupPage from "./Dashboard/Pages/WaiterSignupPage";
 import ConfirmEmailPage from "./Dashboard/Pages/ConfirmEmailPage";
 import WaiterAccountPendingAdminApproval from "./Dashboard/Pages/WaiterAccountPendingAdminApproval";
 import EmailNotConfirmedPage from "./Dashboard/Pages/EmailNotConfirmedPage";
 
+// Legal — lazy loaded
+const PrivacyPolicyPage = lazy(() => import("./GeneralPages/PrivacyPolicyPage"));
+const CookiePolicyPage  = lazy(() => import("./GeneralPages/CookiePolicyPage"));
+
+// Dashboard — lazy loaded
+const ProfilePage          = lazy(() => import("./Dashboard/Pages/ProfilePage"));
+const QRCodePage           = lazy(() => import("./Dashboard/Pages/QRCodePage"));
+const HomePage             = lazy(() => import("./Dashboard/Pages/HomePage"));
+const MenuPage             = lazy(() => import("./Dashboard/Pages/MenuPage"));
+const ProductPage          = lazy(() => import("./Dashboard/Pages/ProductPage"));
+const IngredientsPage      = lazy(() => import("./Dashboard/Pages/IngredientsPage"));
+const TablesPageTest       = lazy(() => import("./Dashboard/Pages/TablesPageTest"));
+const OrderPage            = lazy(() => import("./Dashboard/Pages/OrderPage"));
+const WaitersPage          = lazy(() => import("./Dashboard/Pages/WaitersPage"));
+const CategoryPage         = lazy(() => import("./Dashboard/Pages/CategoryPage"));
+const IngredientPage       = lazy(() => import("./Dashboard/Pages/IngredientPage"));
+const CategoriesPage       = lazy(() => import("./Dashboard/Pages/CategoriesPage"));
+const DocumentsPage        = lazy(() => import("./Dashboard/Pages/DocumentsPage"));
+const LoyaltyCardsPage     = lazy(() => import("./Dashboard/Pages/LoyaltyCardsPage"));
+const LayoutPage           = lazy(() => import("./Dashboard/Pages/LayoutPage"));
+const ReservationsPage     = lazy(() => import("./Dashboard/Pages/ReservationsPage"));
+const CassaPage            = lazy(() => import("./Dashboard/Pages/CassaPage"));
+const AnalyticsPage        = lazy(() => import("./Dashboard/Pages/AnalyticsPage"));
+const WaiterAnalyticsPage  = lazy(() => import("./Dashboard/Pages/WaiterAnalyticsPage"));
+
+// Client — lazy loaded
+const VenueLandingPage     = lazy(() => import("./Client/Pages/VenueLandingPage"));
+const ClientCategoriesPage = lazy(() => import("./Client/Pages/ClientCategoriesPage"));
+const ClientProductsPage   = lazy(() => import("./Client/Pages/ProductsPage"));
+const ClientProductPage    = lazy(() => import("./Client/Pages/ClientProductPage"));
+const CartPage             = lazy(() => import("./Client/Pages/CartPage"));
+const HistoryOrdersPage    = lazy(() => import("./Client/Pages/HistoryOrdersPage"));
+const OrderStatusPage      = lazy(() => import("./Client/Pages/OrderStatusPage"));
+const PaymentPage          = lazy(() => import("./Client/Pages/PaymentPage"));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-neutral-50">
+    <div className="w-8 h-8 border-4 border-primary-400 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
 const WaiterRoutes = () => (
   <LoginProvider>
     <DataProvider dashboard={false} waiters={true}>
       <NotificationProvider>
-        <Routes>
-          <Route path={"/Categories"} element={<ClientCategoriesPage/>}/>
-          <Route path={"/Products/:idCategory"} element={<ClientProductsPage/>}/>
-          <Route path={"/cart"} element={<CartPage waiter={true}/>}/>
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path={"/Categories"} element={<ClientCategoriesPage />} />
+            <Route path={"/Products/:idCategory"} element={<ClientProductsPage />} />
+            <Route path={"/cart"} element={<CartPage waiter={true} />} />
+          </Routes>
+        </Suspense>
       </NotificationProvider>
     </DataProvider>
   </LoginProvider>
-)
+);
 
 const ClientRoutes = () => (
-    <DataProvider dashboard={false}>
-      <NotificationProvider>
+  <DataProvider dashboard={false}>
+    <NotificationProvider>
+      <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path={"Categories"} element={<ClientCategoriesPage/>}/>
-          <Route path={"Products/:idCategory"} element={<ClientProductsPage/>}/>
-          <Route path={"Product/:idProduct"} element={<ClientProductPage/>}/>
-          <Route path={"Allergens"} element={<ClientCategoriesPage/>}/>
-          <Route path={"/cart"} element={<CartPage waiter={false}/>}/>
-          <Route path="/checkout" element={<GroupOrderWaitingPage />} />
+          <Route index element={<VenueLandingPage />} />
+          <Route path={"Categories"} element={<ClientCategoriesPage />} />
+          <Route path={"Products/:idCategory"} element={<ClientProductsPage />} />
+          <Route path={"Product/:idProduct"} element={<ClientProductPage />} />
+          <Route path={"Allergens"} element={<ClientCategoriesPage />} />
+          <Route path={"/cart"} element={<CartPage waiter={false} />} />
           <Route path="/history" element={<HistoryOrdersPage />} />
+          <Route path="/order-status/:comandId" element={<OrderStatusPage />} />
+          <Route path="/payment/:comandId" element={<PaymentPage />} />
         </Routes>
-      </NotificationProvider>
-    </DataProvider>
-)
+      </Suspense>
+    </NotificationProvider>
+  </DataProvider>
+);
 
 const DashboardRoutes = () => (
-    <LoginProvider>
-      <HistoryProvider>
-        <DataProvider dashboard={true}>
-          <NotificationProvider>
+  <LoginProvider>
+    <HistoryProvider>
+      <DataProvider dashboard={true}>
+        <NotificationProvider>
+          <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path={"/"} element={<Layout/>}>
-                <Route path={"QRCode"} element={<QRCodePage />}/>
-                <Route path={"Profile"} element={<ProfilePage />}/>
-                <Route path={"Home"} element={<HomePage />}/>
-                <Route path={"Menu"} element={<MenuPage />}/>
-                <Route path={"AddProduct"} element={<ProductPage isNew={true} />}/>
-                <Route path={"AddCategory"} element={<CategoryPage isNew={true} />}/>
-                <Route path={"AddIngredient"} element={<IngredientPage isNew={true}/>}/>
-                <Route path={"Product/:idProduct"} element={<ProductPage isNew={false} />}/>
-                <Route path={"Category/:idCategory"} element={<CategoryPage isNew={false} />}/>
-                <Route path={"Ingredient/:idIngredient"} element={<IngredientPage isNew={false}/>}/>
-                <Route path={"Ingredients"} element={<IngredientsPage/>}/>
-                <Route path={"Categories"} element={<CategoriesPage/>}/>
-                <Route path={"Waiters"} element={<WaitersPage/>}/>
-                <Route path={"Documents"} element={<DocumentsPage/>}/>
-                <Route path={"Cards"} element={<LoyaltyCardsPage/>}/>
-                <Route path={"Layout"} element={<LayoutPage/>}/>
-                {/*<Route path={"Tables"} element={<TablesPage/>}/>*/}
-                <Route path={"Tables"} element={<TablesPageTest/>}/>
-                <Route path={"Orders"} element={<OrderPage/>}/>
-                <Route path={"AddTable"}/>
+              <Route path={"/"} element={<Layout />}>
+                <Route path={"QRCode"} element={<QRCodePage />} />
+                <Route path={"Profile"} element={<ProfilePage />} />
+                <Route path={"Home"} element={<HomePage />} />
+                <Route path={"Menu"} element={<MenuPage />} />
+                <Route path={"AddProduct"} element={<ProductPage isNew={true} />} />
+                <Route path={"AddCategory"} element={<CategoryPage isNew={true} />} />
+                <Route path={"AddIngredient"} element={<IngredientPage isNew={true} />} />
+                <Route path={"Product/:idProduct"} element={<ProductPage isNew={false} />} />
+                <Route path={"Category/:idCategory"} element={<CategoryPage isNew={false} />} />
+                <Route path={"Ingredient/:idIngredient"} element={<IngredientPage isNew={false} />} />
+                <Route path={"Ingredients"} element={<IngredientsPage />} />
+                <Route path={"Categories"} element={<CategoriesPage />} />
+                <Route path={"Waiters"} element={<WaitersPage />} />
+                <Route path={"Documents"} element={<DocumentsPage />} />
+                <Route path={"Cards"} element={<LoyaltyCardsPage />} />
+                <Route path={"Layout"} element={<LayoutPage />} />
+                <Route path={"Tables"} element={<TablesPageTest />} />
+                <Route path={"Orders"} element={<OrderPage />} />
+                <Route path={"Reservations"} element={<ReservationsPage />} />
+                <Route path={"Cassa"} element={<CassaPage />} />
+                <Route path={"Analytics"} element={<AnalyticsPage />} />
+                <Route path={"WaiterAnalytics"} element={<WaiterAnalyticsPage />} />
               </Route>
             </Routes>
-          </NotificationProvider>
-        </DataProvider>
-      </HistoryProvider>
-    </LoginProvider>
-)
+          </Suspense>
+        </NotificationProvider>
+      </DataProvider>
+    </HistoryProvider>
+  </LoginProvider>
+);
 
 function App() {
   return (
     <BrowserRouter>
-      <ThemeProvider>
+      <CookieConsentProvider>
         <NotificationProvider>
           <UtilitiesProvider>
             <Routes>
-              <Route path={"/login"} element={<LoginProvider><LoginPage/></LoginProvider>} />
-              <Route path={"/cardStatus"} element={<CardStatusPage/>} />
-              <Route path={"/signup"} element={<SignupPage/>} />
-              {/*<Route path={"/confirmAccount/:id/:code"} element={<Conf/>} />*/}
+              <Route path={"/login"} element={<LoginProvider><LoginPage /></LoginProvider>} />
+              <Route path={"/cardStatus"} element={<CardStatusPage />} />
+              <Route path={"/signup"} element={<SignupPage />} />
+              <Route path={"/privacy"} element={<Suspense fallback={<PageLoader />}><PrivacyPolicyPage /></Suspense>} />
+              <Route path={"/cookie-policy"} element={<Suspense fallback={<PageLoader />}><CookiePolicyPage /></Suspense>} />
               <Route path={"/:localname/Dashboard/*"} element={<DashboardRoutes />} />
               <Route path={"/Waiters/:localname/*"} element={<WaiterRoutes />} />
               <Route path={"/:localname/*"} element={<ClientRoutes />} />
@@ -122,9 +156,11 @@ function App() {
               <Route path={"/confirmByAdmin"} element={<WaiterAccountPendingAdminApproval />} />
               <Route path={"/emailNotConfirmed/:id/:code"} element={<EmailNotConfirmedPage />} />
             </Routes>
+            <CookieBanner />
+            <PWAInstallPrompt />
           </UtilitiesProvider>
         </NotificationProvider>
-      </ThemeProvider>
+      </CookieConsentProvider>
     </BrowserRouter>
   );
 }

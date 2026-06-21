@@ -8,7 +8,8 @@ import {
     IngredientDto,
     ListToExport,
     LoginResponse,
-    ProductDto, Response, SignupWaiter, StyleDto, TableDto, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto,
+    PaymentDto, PaymentIntentResponse,
+    ProductDto, ReservationDto, Response, SignupWaiter, StyleDto, TableDto, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto,
 } from "../types";
 import {deleteCookie, getCookie} from "./Utilities";
 import {apiCall, ApiCallResult, clientApiCall} from "./helper";
@@ -22,6 +23,7 @@ const ADD_TABLE = "/api/tables/add"
 const UPDATE_INGREDIENT = "/api/ingredients/update"
 const UPDATE_CATEGORY = "/api/categories/updateCategory";
 const CHANGE_ORDER_CATEGORY = "/api/categories/changeOrder";
+const CHANGE_ORDER_PRODUCT = "/api/products/changeOrder";
 const UPDATE_TABLES = "/api/tables/updateTablesPosition"
 const UPDATE_SINGLE_TABLE = "/api/tables/updateTable"
 const UPDATE_PRODUCT = "/api/products/updateProduct"
@@ -55,8 +57,9 @@ const GET_ORDERS_BY_TABLE = (tableId: number) => "/api/comands/table/" + tableId
 const GET_COMPLETED_ORDERS = (date: string) => "/api/comands/getCompleted/" + date
 const GET_DELETED_ORDERS = (date: string) => "/api/comands/getDeleted/" + date
 const SEND_WAITER_COMAND = "/api/orders/insertWaiter"
-const SEND_COMAND = ""
-const GET_HISOTRY_ORDERS_CLIENT = ""
+const SEND_CLIENT_COMAND = "/api/public/orders/insert"
+const GET_CLIENT_ORDER = (comandId: string) => "/api/public/orders/" + comandId
+const GET_CLIENT_ORDER_HISTORY = (tableId: number, localname: string) => "/api/public/orders/table/" + tableId + "?localname=" + localname
 const CHANGE_COMAND_STATUS = "/api/orders/changeStatus"
 const GET_ALL = (idOrLocalname: string | number) =>  "/api/public/client/getAll/" + idOrLocalname
 const GET_ALL_DASHBOARD = "/api/dashboard/getAll"
@@ -84,6 +87,19 @@ const DELETE_FOLDER = (id: number) => "/api/filemanager/folders/delete/" + id
 const ADD_FOLDER = (name: string) => "/api/filemanager/folders/add/" + name
 const RENAME_FOLDER = (id: number, name: string) => "/api/filemanager/folders/rename/" + id + "/" + name
 const GET_ALL_FOLDERS = "/api/filemanager/folders/getall"
+const GET_RESERVATIONS = "/api/reservations"
+const GET_RESERVATIONS_RANGE = (from: string, to: string) => `/api/reservations/range?from=${from}&to=${to}`
+const UPDATE_RESERVATION_STATUS = (id: number) => `/api/reservations/${id}/status`
+const DELETE_RESERVATION = (id: number) => `/api/reservations/${id}`
+const CREATE_RESERVATION_PUBLIC = (localname: string) => `/api/public/reservations/${localname}`
+const CREATE_PAYMENT_INTENT_PUBLIC = (localname: string) => `/api/public/payments/intent/${localname}`
+const SEND_TAKEAWAY_ORDER = (localname: string) => `/api/public/orders/takeaway/${localname}`
+const GET_PAYMENTS = "/api/payments"
+const GET_PAYMENTS_TODAY_TOTAL = "/api/payments/today-total"
+const GET_ESL_CONFIGS = "/api/esl/configs"
+const SAVE_ESL_CONFIG = "/api/esl/configs"
+const DELETE_ESL_CONFIG = (tableId: number) => `/api/esl/configs/${tableId}`
+const PUSH_ESL_TAG = (tableId: number) => `/api/esl/push/${tableId}`
 
 export const UPDATE_ENDPOINT = (idOrLocalname: string | number, name: boolean) => name ? "/api/public/updates?localname=" + idOrLocalname : "/api/public/updates?idAgency=" + idOrLocalname
 export const UPDATE_ENDPOINT_DASHBOARD = "/api/auth/admin"
@@ -283,6 +299,18 @@ export const sendWaiterComandApi = async (addComandWaiter: AddComandWaiter) => {
     return apiCall<Response<string>>({method: POST, fixed: true, data: addComandWaiter, url: SEND_WAITER_COMAND})
 }
 
+export const sendClientOrderApi = async (tableId: number, orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[] }[] }[]) => {
+    return clientApiCall<string>({ method: POST, fixed: true, webflux: false, url: SEND_CLIENT_COMAND, data: { tableId, orders } })
+}
+
+export const getClientOrderApi = async (comandId: string) => {
+    return clientApiCall<import('../ComandType').Comand>({ method: GET, fixed: true, webflux: true, url: GET_CLIENT_ORDER(comandId) })
+}
+
+export const getClientOrderHistoryApi = async (tableId: number, localname: string) => {
+    return clientApiCall<import('../ComandType').Comand[]>({ method: GET, fixed: true, webflux: true, url: GET_CLIENT_ORDER_HISTORY(tableId, localname) })
+}
+
 export const updateStyleApi = async (formData: FormData)=> {
     return apiCall<Response<StyleDto>>({method: POST, fixed: true, isFormData: true, data: formData, url: UPDATE_STYLE})
 }
@@ -315,6 +343,14 @@ export const changeOrderCategoriesApi = async(ordered: IdWithOrder[]) => {
         list: ordered
     }
     return apiCall<Response<boolean>>({method: POST, fixed: true, url: CHANGE_ORDER_CATEGORY, data: data})
+}
+
+export const changeOrderProductsApi = async(ordered: IdWithOrder[]) => {
+    const data = {
+        type: "ChangeOrder",
+        list: ordered
+    }
+    return apiCall<Response<boolean>>({method: POST, fixed: true, url: CHANGE_ORDER_PRODUCT, data: data})
 }
 
 // cards
@@ -389,6 +425,71 @@ export const renameFolderApi = async(id: number, name: string) => {
 
 export const getFoldersApi = async() => {
     return apiCall<Response<FolderDto[]>>({method: GET, fixed: true, url: GET_ALL_FOLDERS})
+}
+
+// reservations
+export const getReservationsApi = async () => {
+    return apiCall<ReservationDto[]>({ method: GET, fixed: true, url: GET_RESERVATIONS })
+}
+
+export const getReservationsRangeApi = async (from: string, to: string) => {
+    return apiCall<ReservationDto[]>({ method: GET, fixed: true, url: GET_RESERVATIONS_RANGE(from, to) })
+}
+
+export const updateReservationStatusApi = async (id: number, status: string) => {
+    return apiCall<ReservationDto>({ method: 'PUT', fixed: true, url: UPDATE_RESERVATION_STATUS(id), data: { status } })
+}
+
+export const deleteReservationApi = async (id: number) => {
+    return apiCall<boolean>({ method: 'DELETE', fixed: true, url: DELETE_RESERVATION(id) })
+}
+
+// takeaway
+export const sendTakeawayOrderApi = async (
+    localname: string,
+    data: { customerName: string; customerPhone: string; pickupTime?: string; orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[] }[] }[] }
+) => {
+    return clientApiCall<string>({ method: POST, fixed: true, url: SEND_TAKEAWAY_ORDER(localname), data })
+}
+
+// payments
+export const createPaymentIntentPublicApi = async (
+    localname: string,
+    data: { comandId?: string; idTable?: number; amountCents: number; currency?: string }
+) => {
+    return clientApiCall<PaymentIntentResponse>({ method: POST, fixed: true, url: CREATE_PAYMENT_INTENT_PUBLIC(localname), data })
+}
+
+export const getPaymentsApi = async () => {
+    return apiCall<PaymentDto[]>({ method: GET, fixed: true, url: GET_PAYMENTS })
+}
+
+export const getPaymentsTodayTotalApi = async () => {
+    return apiCall<{ amountCents: number }>({ method: GET, fixed: true, url: GET_PAYMENTS_TODAY_TOTAL })
+}
+
+// esl
+export const getEslConfigsApi = async () => {
+    return apiCall<import('../types').EslConfigDto[]>({ method: GET, fixed: true, url: GET_ESL_CONFIGS })
+}
+
+export const saveEslConfigApi = async (tableId: number, eslTagMac: string, eslApUrl: string) => {
+    return apiCall<import('../types').EslConfigDto>({ method: POST, fixed: true, url: SAVE_ESL_CONFIG, data: { tableId, eslTagMac, eslApUrl } })
+}
+
+export const deleteEslConfigApi = async (tableId: number) => {
+    return apiCall<void>({ method: 'DELETE', fixed: true, url: DELETE_ESL_CONFIG(tableId) })
+}
+
+export const pushEslTagApi = async (tableId: number) => {
+    return apiCall<{ success: boolean }>({ method: POST, fixed: true, url: PUSH_ESL_TAG(tableId) })
+}
+
+export const createReservationPublicApi = async (
+    localname: string,
+    data: { customerName: string; customerPhone: string; customerEmail?: string; partySize: number; reservationDate: string; reservationTime: string; specialRequests?: string }
+) => {
+    return clientApiCall<number>({ method: POST, fixed: true, url: CREATE_RESERVATION_PUBLIC(localname), data })
 }
 
 export const setAvailableCategoryApi = async (idCategory: number, value: boolean) => {

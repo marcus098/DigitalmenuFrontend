@@ -34,7 +34,7 @@ export const apiCall = async <T>(apiCallInterface: ApiCallInterface): Promise<Ap
     if (!apiCallInterface.fixed) {
         const numbers = parseInt(process.env.REACT_APP_BACKEND_NUMBER || "", 10);
         if (numbers > 0) {
-            const ports: string[] = (process.env.REACT_APP_BACKEND_PORTS || "").split("|").filter(port => port !== "");
+            const ports: string[] = (process.env.REACT_APP_BACKEND_PORTS || "").split("|").filter((port: string) => port !== "");
 
             const selectedRandom = Math.floor(Math.random() * numbers);
 
@@ -112,11 +112,8 @@ export const clientApiCall = async <T>(
             url: localApiUrl + apiCallInterface.url,
             data: apiCallInterface.data,
         };
-        console.log(config)
         const response = await clientInstance(config);
-        console.log(response)
         const apiResponse = response.data as T;
-        console.log(apiResponse)
         return {
             success: response.status < 400,
             status: response.status,

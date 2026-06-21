@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import {sendWaiterComandApi} from "../../Utilities/api";
-import {AddComandOrder, AddComandWaiter, ProductCard} from "../../types";
-import {convertCartToAddComandWaiterOrder, getCartMap, saveCart} from "../../Utilities/Utilities";
+import {AddComandWaiter, ProductCard} from "../../types";
+import {convertCartToAddComandWaiterOrder, saveCart} from "../../Utilities/Utilities";
 import {useNotification} from "../../Context/NotificationContext";
 import {useParams} from "react-router-dom";
+import {useData} from "../../Context/DataContext";
 
 interface CartPopupWaiter {
     cart: ProductCard[]
@@ -25,6 +26,8 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     const [time, setTime] = useState<string>("");
     const { addNotification } = useNotification()
     const { localname } = useParams()
+    const { tablesMap } = useData()
+    const tables = Array.from(tablesMap.values())
 
     const resetForm = () => {
         setSelected(0);
@@ -37,10 +40,9 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     };
 
     const handleConfirm = async () => {
-        // todo ripulire metodo eliminando duplicazioni
         let order: AddComandWaiter = convertCartToAddComandWaiterOrder(cart)
-        if (selected === 1) { // todo recuperare hash del tavolo se presente
-            if(tableNumber <= 0){// todo mostrare la select dei tavoli invece di inserirlo a mano
+        if (selected === 1) {
+            if (tableNumber <= 0) {
                 addNotification({message: "Il tavolo è vuoto", type: "error"})
             } else{
                 order.comandWaiterType = "TABLE"
@@ -90,7 +92,6 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             }else{
                 addNotification({message: "Errore", type: "error"})
             }
-            console.log(response)
         }
     };
 
@@ -119,15 +120,20 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             {selected === 1 && (
                 <div className="bg-white rounded-2xl shadow-lg p-6 w-[90%] max-w-md">
                     <h2 className="text-xl font-semibold mb-4 text-center">
-                        Inserisci il numero del tavolo
+                        Seleziona il tavolo
                     </h2>
-                    <input
-                        type="text"
-                        placeholder="Numero tavolo"
-                        className="border rounded-lg px-4 py-2 w-full mb-4"
+                    <select
+                        className="border rounded-lg px-4 py-2 w-full mb-4 bg-white"
                         value={tableNumber}
                         onChange={(e) => setTableNumber(Number(e.target.value))}
-                    />
+                    >
+                        <option value={-1}>-- Scegli tavolo --</option>
+                        {tables.map(t => (
+                            <option key={t.id} value={t.id}>
+                                {t.name}{t.busy ? " (occupato)" : ""}
+                            </option>
+                        ))}
+                    </select>
                     <div className="flex justify-between">
                         <button
                             onClick={resetForm}

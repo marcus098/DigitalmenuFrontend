@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useData } from "../../Context/DataContext";
 import { useParams } from "react-router-dom";
-import { FaArrowLeft, FaSave, FaPlus, FaTrashAlt } from "react-icons/fa";
-import { CameraIcon } from '@heroicons/react/24/solid';
+import { ArrowLeft, Save, Plus, Trash2, Camera } from "lucide-react";
 
 import { useHistory } from "../../Context/HistoryContext";
 import { AddProduct, UpdateProduct, OptionInProduct } from "../../types";
@@ -361,18 +360,18 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <div>
                     <button onClick={() => handleNavigation(`/${localname}/Dashboard/Menu`)} className="flex items-center gap-2 text-gray-500 hover:text-primary font-semibold transition-colors">
-                        <FaArrowLeft /><span>Torna al Menu</span>
+                        <ArrowLeft /><span>Torna al Menu</span>
                     </button>
                     <h1 className="text-3xl font-bold text-gray-800 mt-1">{isNew ? "Nuovo Prodotto" : `Modifica: ${name}`}</h1>
                 </div>
                 <div className="flex items-center gap-2 w-full md:w-auto">
                     {isNew ? (
                         <>
-                            <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><FaSave className="mr-2" />Salva e Chiudi</button>
-                            <button onClick={() => handleSave(true)} className="btn-secondary w-full md:w-auto flex items-center justify-center"><FaPlus className="mr-2" />Salva e Aggiungi</button>
+                            <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><Save className="mr-2" />Salva e Chiudi</button>
+                            <button onClick={() => handleSave(true)} className="btn-secondary w-full md:w-auto flex items-center justify-center"><Plus className="mr-2" />Salva e Aggiungi</button>
                         </>
                     ) : (
-                        <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><FaSave className="mr-2" />Salva Modifiche</button>
+                        <button onClick={() => handleSave(false)} className="btn-primary w-full md:w-auto flex items-center justify-center"><Save className="mr-2" />Salva Modifiche</button>
                     )}
                 </div>
             </div>
@@ -425,10 +424,10 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                                             <input type="radio" id={`default-${index}`} name="default-option" checked={option.isDefault} onChange={() => changeDefaultOption(index)} className="h-4 w-4 text-primary focus:ring-primary"/>
                                             <label htmlFor={`default-${index}`} className="text-sm text-gray-600">Default</label>
                                         </div>
-                                        <button onClick={() => deleteOption(index)} className="text-red-400 hover:text-red-600 p-2 rounded-full"><FaTrashAlt/></button>
+                                        <button onClick={() => deleteOption(index)} className="text-red-400 hover:text-red-600 p-2 rounded-full"><Trash2/></button>
                                     </div>
                                 ))}
-                                {options.length < 3 && <button onClick={addOption} className="btn-secondary text-sm"><FaPlus className="mr-2"/>Aggiungi Opzione</button>}
+                                {options.length < 3 && <button onClick={addOption} className="btn-secondary text-sm"><Plus className="mr-2"/>Aggiungi Opzione</button>}
                             </div>
                         )}
                     </div>
@@ -453,7 +452,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                         <div onClick={() => document.getElementById("imageUploadInput")?.click()}
                              className="w-full aspect-video bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer border-2 border-dashed border-gray-300 hover:border-primary transition-colors group">
                             {image ? <img src={file ? image : process.env.REACT_APP_BUCKET_URL + image} alt="Anteprima" className="w-full h-full object-cover" />
-                                : <div className="text-center text-gray-500"><CameraIcon className="w-12 h-12 mx-auto text-gray-400 group-hover:text-primary"/><p className="mt-2 text-sm font-semibold">Carica Immagine</p></div>}
+                                : <div className="text-center text-gray-500"><Camera className="w-12 h-12 mx-auto text-gray-400 group-hover:text-primary"/><p className="mt-2 text-sm font-semibold">Carica Immagine</p></div>}
                         </div>
                     </div>
                     <div className="bg-white p-6 rounded-xl shadow-lg">

@@ -1,0 +1,77 @@
+name: Uptime monitor
+
+on:
+  schedule:
+    # Every 5 minutes. GitHub may delay scheduled runs under load —
+    # for stricter SLAs use UptimeRobot, Better Uptime, or Uptime Kuma.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  ping:
+    name: Ping production endpoints
+    runs-on: ubuntu-latest
+    if: ${{ vars.UPTIME_URLS != '' }}
+    steps:
+      - name: Check endpoints
+        id: check
+        env:
+          # Newline-separated list of URLs to probe.
+          # Configure under Settings → Secrets and variables → Actions → Variables.
+          URLS: ${{ vars.UPTIME_URLS }}
+          EXPECTED_STATUS: ${{ vars.UPTIME_EXPECTED_STATUS || '200' }}
+          TIMEOUT_SECONDS: ${{ vars.UPTIME_TIMEOUT_SECONDS || '10' }}
+        run: |
+          set +e
+          failures=""
+          while IFS= read -r url; do
+            [ -z "$url" ] && continue
+            echo "→ $url"
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time "$TIMEOUT_SECONDS" "$url" || echo "000")
+            echo "  HTTP $code (expected $EXPECTED_STATUS)"
+            if [ "$code" != "$EXPECTED_STATUS" ]; then
+              failures="${failures}- ${url} → HTTP ${code}%0A"
+            fi
+          done <<< "$URLS"
+          if [ -n "$failures" ]; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            echo "details=${failures}" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Open issue on failure
+        if: failure() && steps.check.outputs.failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🔴 Uptime check failed';
+            const body = `One or more production endpoints are down.\n\n${'${{ steps.check.outputs.details }}'.replace(/%0A/g, '\n')}\n\nWorkflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'uptime',
+              per_page: 1,
+            });
+
+            if (open.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['uptime', 'incident'],
+              });
+            }

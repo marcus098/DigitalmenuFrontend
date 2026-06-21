@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useData } from "../../Context/DataContext";
 import { useNavigate, useParams } from "react-router-dom";
-import { FaArrowLeft, FaSave, FaPlus } from "react-icons/fa";
-import { CameraIcon } from '@heroicons/react/24/solid';
+import { ArrowLeft, Save, Plus, Camera } from "lucide-react";
 
 import { useHistory } from "../../Context/HistoryContext";
 import { AddCategory, UpdateCategory, LongInteger } from "../../types";
@@ -112,7 +111,7 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew }) => {
                 <div>
                     <button onClick={() => handleNavigation(`/${localname}/Dashboard/Categories`)}
                             className="flex items-center gap-2 text-gray-500 hover:text-primary font-semibold transition-colors">
-                        <FaArrowLeft/>
+                        <ArrowLeft/>
                         <span>Torna a Categorie</span>
                     </button>
                     <h1 className="text-3xl font-bold text-gray-800 mt-1">
@@ -126,13 +125,13 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew }) => {
                             {/* Aggiunto 'flex items-center' e 'md:w-auto' */}
                             <button onClick={() => handleSubmit(false)}
                                     className="btn-primary w-full md:w-auto flex items-center justify-center">
-                                <FaSave className="mr-2"/>
+                                <Save className="mr-2"/>
                                 <span>Salva e Chiudi</span>
                             </button>
                             {/* Aggiunto 'flex items-center' e 'md:w-auto' */}
                             <button onClick={() => handleSubmit(true)}
                                     className="btn-secondary w-full md:w-auto flex items-center justify-center">
-                                <FaPlus className="mr-2"/>
+                                <Plus className="mr-2"/>
                                 <span>Salva e Continua</span>
                             </button>
                         </>
@@ -140,7 +139,7 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew }) => {
                         // Aggiunto 'flex items-center' e 'md:w-auto'
                         <button onClick={() => handleSubmit(false)}
                                 className="btn-primary w-full md:w-auto flex items-center justify-center">
-                            <FaSave className="mr-2"/>
+                            <Save className="mr-2"/>
                             <span>Salva Modifiche</span>
                         </button>
                     )}
@@ -181,7 +180,7 @@ const CategoryPage: React.FC<CategoryPageProps> = ({ isNew }) => {
                                 <img src={file ? image : process.env.REACT_APP_BUCKET_URL + image} alt="Anteprima categoria" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="text-center text-gray-500">
-                                    <CameraIcon className="w-12 h-12 mx-auto text-gray-400 group-hover:text-primary transition-colors" />
+                                    <Camera className="w-12 h-12 mx-auto text-gray-400 group-hover:text-primary transition-colors" />
                                     <p className="mt-2 text-sm font-semibold">Carica Immagine</p>
                                 </div>
                             )}

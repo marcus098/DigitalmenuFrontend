@@ -1,9 +1,8 @@
 import React, {useEffect, useRef, useState} from 'react';
-import { FolderPlusIcon, DocumentPlusIcon, FolderIcon } from '@heroicons/react/24/outline';
+import { FolderPlus, FilePlus, Folder, ChevronDown } from "lucide-react";
 import {FolderCard} from "../../Components/Dashboard/FolderCard";
 import {FileCard} from "../../Components/Dashboard/FileCard";
 import {NewFolderModal} from "../../Components/Dashboard/NewFolderModal";
-import {ChevronDownIcon} from "@heroicons/react/24/solid";
 import CustomLoading from "../../Components/CustomLoading";
 import {
     addFileApi, addFolderApi, deleteFileApi, deleteFolderApi, downloadFileApi,
@@ -184,7 +183,10 @@ const DocumentsPage: React.FC = () => {
                     newList.push(f)
                 }
             }
-            // todo se sto eliminando la cartella attuale devo visualizzarne un'altra
+            if (currentFolderId === id) {
+                window.location.hash = '';
+                setCurrentFolderId(null);
+            }
             addNotification({message: "Cartella eliminata!", type: "success"})
             initialLoading()
         }else{
@@ -323,7 +325,7 @@ const DocumentsPage: React.FC = () => {
                             <button onClick={() => setIsFolderDropdownOpen(!isFolderDropdownOpen)}
                                     className="btn-secondary w-full flex items-center justify-between">
                             <span className="font-semibold">{currentFolderName}</span>
-                                <ChevronDownIcon className={`w-5 h-5 transition-transform ${isFolderDropdownOpen ? 'rotate-180' : ''}`} />
+                                <ChevronDown className={`w-5 h-5 transition-transform ${isFolderDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
                             {isFolderDropdownOpen && (
                                 <div className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-lg border z-20">
@@ -348,9 +350,9 @@ const DocumentsPage: React.FC = () => {
                         <p className="text-sm font-semibold text-gray-500 hidden lg:block">Stai visualizzando: <span className="text-primary">{currentFolderName}</span></p>
 
                         <div className="flex items-center gap-2 w-full md:w-auto">
-                            <button onClick={() => setIsNewFolderModalOpen(true)} className="btn-secondary w-full md:w-auto flex items-center justify-center"><FolderPlusIcon className="w-5 h-5 mr-2"/>Nuova Cartella</button>
+                            <button onClick={() => setIsNewFolderModalOpen(true)} className="btn-secondary w-full md:w-auto flex items-center justify-center"><FolderPlus className="w-5 h-5 mr-2"/>Nuova Cartella</button>
                             <input type="file" id="file-upload" className="hidden" multiple onChange={e => handleFileUpload(e.target.files!)} />
-                            <button onClick={() => document.getElementById('file-upload')?.click()} className="btn-primary w-full md:w-auto flex items-center justify-center"><DocumentPlusIcon className="w-5 h-5 mr-2"/>Carica File</button>
+                            <button onClick={() => document.getElementById('file-upload')?.click()} className="btn-primary w-full md:w-auto flex items-center justify-center"><FilePlus className="w-5 h-5 mr-2"/>Carica File</button>
                         </div>
                     </div>
 

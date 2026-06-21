@@ -1,7 +1,7 @@
 // src/Components/ProductCard.tsx
 import React from "react";
-import { FaEdit, FaTrashAlt } from "react-icons/fa";
-import { DraggableProvided } from "react-beautiful-dnd";
+import { Pencil, Trash2 } from "lucide-react";
+import { DraggableProvided } from "@hello-pangea/dnd";
 import {IS_ADMIN, ProductDto} from "../types";
 import { useData } from "../Context/DataContext";
 import { useHistory } from "../Context/HistoryContext";
@@ -10,7 +10,7 @@ import PillToggle from "./Dashboard/PillToggle";
 import {useLoginContext} from "../Context/LoginContext";
 
 interface ProductCardProps {
-    provided: DraggableProvided; // Tipo corretto da react-beautiful-dnd
+    provided: DraggableProvided;
     product: ProductDto;
     handleToggleAvailability: (productId: number, value: boolean) => void;
     deleteProduct: (element: string, id: number) => void;
@@ -71,14 +71,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         title="Modifica"
                         onClick={() => navigateWithHistory((`/${localname}/Dashboard/product/${product.id}`) + (window.location.hash.replace('#', '').trim() !== "" ? window.location.hash : ""))}
                     >
-                        <FaEdit size={18} />
+                        <Pencil size={18} />
                     </button>
                     {checkVariable(IS_ADMIN) && <button
                         className="p-3 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition"
                         title="Elimina"
                         onClick={() => deleteProduct(product.name, product.id)}
                     >
-                        <FaTrashAlt size={18} />
+                        <Trash2 size={18} />
                     </button>}
                 </div>
             </div>

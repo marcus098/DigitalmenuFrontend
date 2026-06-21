@@ -1,39 +1,28 @@
 // src/Components/ProductCustomizationDrawer.tsx
 
-import React, {useState, useEffect, useContext, useMemo} from 'react';
-import { ProductDto, IngredientDto, ProductCard } from "../types"; // Assicurati di avere tutti i tipi
+import React, { useState, useEffect, useMemo } from 'react';
+import { ProductDto, IngredientDto, ProductCard } from "../types";
 import { useData } from "../Context/DataContext";
-import { ThemeContext } from "../Context/ThemeContext";
 import { addProductToCart } from "../Utilities/Utilities";
 import { useNotification } from "../Context/NotificationContext";
-import {XMarkIcon, PlusIcon, MinusIcon, ChevronDownIcon} from '@heroicons/react/24/solid';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X, Plus, Minus, ChevronDown, Search, ShieldAlert } from 'lucide-react'; // Aggiunto ShieldAlert
 
-// --- Componente interno per la riga di un ingrediente ---
-const IngredientRow: React.FC<{
-    name: string;
-    price?: number;
-    isSelected: boolean;
-    onToggle: () => void;
-}> = ({ name, price, isSelected, onToggle }) => (
-    <div onClick={onToggle} className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors">
-        <label htmlFor={`ing-${name}`} className="font-medium text-gray-700 cursor-pointer">{name}</label>
+// ... Componente IngredientRow (invariato)
+const IngredientRow: React.FC<{ name: string; price?: number; isSelected: boolean; onToggle: () => void; }> = ({ name, price, isSelected, onToggle }) => (
+    <label className="flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-zinc-100 transition-colors has-[:checked]:bg-amber-50">
+        <span className="font-medium text-zinc-800">{name}</span>
         <div className="flex items-center">
-            {price !== undefined && price > 0 && (
-                <span className="text-sm text-gray-500 mr-3">+ €{price.toFixed(2)}</span>
-            )}
-            <input
-                id={`ing-${name}`}
-                type="checkbox"
-                checked={isSelected}
-                readOnly
-                className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary pointer-events-none"
-            />
+            {price !== undefined && price > 0 && <span className="text-sm text-zinc-500 mr-3">+ €{price.toFixed(2)}</span>}
+            <input type="checkbox" checked={isSelected} onChange={onToggle} className="sr-only" />
+            <div className={`w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center ${isSelected ? 'bg-amber-500 border-amber-500' : 'border-zinc-300 bg-white'}`}>
+                {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+            </div>
         </div>
-    </div>
+    </label>
 );
 
 
-// --- Componente Principale del Drawer ---
 interface ProductCustomizationDrawerProps {
     isOpen: boolean;
     onClose: () => void;
@@ -42,19 +31,18 @@ interface ProductCustomizationDrawerProps {
 }
 
 const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({ isOpen, onClose, dish, waiter }) => {
-    // STATI
+    // STATI E LOGICA
     const [selectedIngredients, setSelectedIngredients] = useState<number[]>([]);
-    const [note, setNote] = useState<string>('');
+    const [note, setNote] = useState('');
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
-    const [totalPrice, setTotalPrice] = useState<number>(0);
-    const [isExtrasOpen, setIsExtrasOpen] = useState(false);
+    const [totalPrice, setTotalPrice] = useState(0);
+    const [isExtrasOpen, setIsExtrasOpen] = useState(true);
     const [extraSearchTerm, setExtraSearchTerm] = useState('');
-
-    const { ingredientsMap } = useData();
+    const { ingredientsMap, allergensMap } = useData(); // Aggiunto allergensMap
     const { addNotification } = useNotification();
 
-    // EFFETTO PER INIZIALIZZARE LO STATO QUANDO IL PRODOTTO CAMBIA
+    // ... useEffect e funzioni (invariate) ...
     useEffect(() => {
         if (dish) {
             const defaultOpt = dish.options.find(o => o.isDefault) || dish.options[0];
@@ -62,196 +50,147 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
             setNote('');
             setQuantity(1);
             setSelectedOption(defaultOpt?.name || null);
+            setIsExtrasOpen(true);
         }
     }, [dish]);
-
-    // EFFETTO PER CALCOLARE IL PREZZO TOTALE IN TEMPO REALE
     useEffect(() => {
         if (!dish || !selectedOption) { setTotalPrice(0); return; }
-
         let singleUnitPrice = dish.options.find(o => o.name === selectedOption)?.price || 0;
         const baseIngredients = dish.ingredients || [];
-
         selectedIngredients.forEach(ingId => {
-            if (!baseIngredients.includes(ingId)) {
-                singleUnitPrice += ingredientsMap.get(ingId)?.price || 0;
-            }
+            if (!baseIngredients.includes(ingId)) singleUnitPrice += ingredientsMap.get(ingId)?.price || 0;
         });
         setTotalPrice(singleUnitPrice * quantity);
     }, [dish, selectedOption, selectedIngredients, quantity, ingredientsMap]);
-
-    const includedIngredients = dish?.ingredients.map(id => ingredientsMap.get(id)).filter((i): i is IngredientDto => !!i) || [];
-    const allExtraIngredients = Array.from(ingredientsMap.values()).filter(i => i.addable && i.available && !dish?.ingredients.includes(i.id));
-
-    // === NUOVA LOGICA PER FILTRARE LE AGGIUNTE EXTRA IN BASE ALLA RICERCA ===
-    const filteredExtraIngredients = useMemo(() => {
-        if (!extraSearchTerm) {
-            return allExtraIngredients;
-        }
-        return allExtraIngredients.filter(ing =>
-            ing.name.toLowerCase().includes(extraSearchTerm.toLowerCase())
-        );
-    }, [allExtraIngredients, extraSearchTerm]);
-
-    const selectedExtrasCount = selectedIngredients.filter(id => allExtraIngredients.some(extra => extra.id === id)).length;
-
-    // FUNZIONE PER AGGIUNGERE/RIMUOVERE INGREDIENTI
-    const handleToggleIngredient = (ingredientId: number) => {
-        setSelectedIngredients(prev =>
-            prev.includes(ingredientId)
-                ? prev.filter(id => id !== ingredientId)
-                : [...prev, ingredientId]
-        );
-    };
-
-    // FUNZIONE PER CAMBIARE OPZIONE (es. Regular/Maxi)
-    const changeOption = (optionName: string) => {
-        setSelectedOption(optionName);
-    };
-
-    // FUNZIONE FINALE PER AGGIUNGERE AL CARRELLO
+    const handleToggleIngredient = (id: number) => setSelectedIngredients(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
+    const changeOption = (name: string) => setSelectedOption(name);
     const handleAddToCart = () => {
         if (!dish || !selectedOption) return;
-
-        // Calcola in modo pulito gli ingredienti aggiunti e rimossi
-        const baseIngredients = dish.ingredients || [];
-        const ingredientsPlus = selectedIngredients.filter(id => !baseIngredients.includes(id));
-        const ingredientsMinus = baseIngredients.filter(id => !selectedIngredients.includes(id));
-
-        // Calcola il prezzo unitario (il prezzo totale già calcolato diviso per la quantità)
-        const unitPrice = totalPrice / quantity;
-
-        const productCart: ProductCard = {
-            id: dish.id,
-            quantity: quantity,
-            optionName: selectedOption,
-            ingredientsPlus: ingredientsPlus,
-            ingredientsMinus: ingredientsMinus,
-            price: unitPrice,
-            note: note,
-        };
-
-        const flag = waiter ? addProductToCart(productCart, "waiter") : addProductToCart(productCart);
-        if (flag) {
-            addNotification({ message: "Prodotto aggiunto al carrello!", type: "success" });
-            onClose(); // Chiudiamo il drawer dopo l'aggiunta
+        const base = dish.ingredients || [];
+        const productCart: ProductCard = { id: dish.id, quantity, optionName: selectedOption, price: totalPrice / quantity, note, ingredientsPlus: selectedIngredients.filter(id => !base.includes(id)), ingredientsMinus: base.filter(id => !selectedIngredients.includes(id)) };
+        if (addProductToCart(productCart, waiter ? "waiter" : undefined)) {
+            addNotification({ message: "Prodotto aggiunto!", type: "success" });
+            onClose();
         } else {
-            addNotification({ message: "Errore nell'aggiunta al carrello.", type: "error" });
+            addNotification({ message: "Errore.", type: "error" });
         }
     };
 
+    // --- 1. NUOVO: Calcolo e memorizzazione degli allergeni del prodotto ---
+    const productAllergens = useMemo(() => {
+        if (!dish) return [];
+        const allergenIds = new Set<number>();
+        dish.ingredients.forEach(ingId => {
+            const ingredient = ingredientsMap.get(ingId);
+            ingredient?.allergens?.forEach(allergenId => allergenIds.add(allergenId));
+        });
+        return Array.from(allergenIds).map(id => allergensMap.get(id)).filter(Boolean) as {id: number, name: string, icon: string}[];
+    }, [dish, ingredientsMap, allergensMap]);
 
-    if (!isOpen || !dish) return null;
-
-    // Filtriamo gli ingredienti per la visualizzazione
-    const extraIngredients = Array.from(ingredientsMap.values()).filter(i => i.addable && i.available && !dish.ingredients.includes(i.id));
+    const includedIngredients = useMemo(() => dish?.ingredients.map(id => ingredientsMap.get(id)).filter(Boolean) as IngredientDto[] || [], [dish, ingredientsMap]);
+    const allExtraIngredients = useMemo(() => Array.from(ingredientsMap.values()).filter(i => i.addable && i.available && !dish?.ingredients.includes(i.id)), [dish, ingredientsMap]);
+    const filteredExtraIngredients = useMemo(() => allExtraIngredients.filter(ing => ing.name.toLowerCase().includes(extraSearchTerm.toLowerCase())), [allExtraIngredients, extraSearchTerm]);
+    const selectedExtrasCount = selectedIngredients.filter(id => !dish?.ingredients.includes(id)).length;
 
     return (
-        <div className={`fixed inset-0 bg-black/60 z-50 transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={onClose}>
-            <div onClick={e => e.stopPropagation()}
-                 className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl transition-transform duration-300 ease-in-out flex flex-col`}
-                 style={{ maxHeight: '90vh' }}>
+        <>
+            {isOpen && dish && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-0 md:p-6">
+                    <motion.div initial={{ y: "100%" }} animate={{ y: "0%" }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 40 }} onClick={e => e.stopPropagation()} className="bg-white w-full max-h-[90vh] flex flex-col rounded-t-2xl md:rounded-2xl md:max-w-3xl md:h-auto md:max-h-[85vh]">
 
-                <div className="p-4 border-b border-gray-200 shrink-0 relative">
-                    <img src={dish.image ? process.env.REACT_APP_BUCKET_URL + dish.image : '/placeholder.png'} alt={dish.name} className="w-full h-40 object-cover rounded-xl mb-4"/>
-                    <h2 className="text-2xl font-bold text-gray-800">{dish.name}</h2>
-                    <button onClick={onClose} className="absolute top-4 right-4 bg-gray-200/70 p-2 rounded-full text-gray-600 hover:bg-gray-300 backdrop-blur-sm"><XMarkIcon className="w-6 h-6"/></button>
-                </div>
-
-                <div className="p-6 space-y-6 overflow-y-auto">
-                    {dish.options && dish.options.length > 1 && dish.options[0].name !== 'default' && (
-                        <div>
-                            <h3 className="font-semibold text-lg text-gray-700 mb-2">Scegli un'opzione</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {dish.options.map(option => (
-                                    <button key={option.name} onClick={() => changeOption(option.name)}
-                                            className={`px-4 py-2 text-sm font-bold rounded-full border-2 transition-colors ${selectedOption === option.name ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-200'}`}>
-                                        {option.name} (€ {option.price.toFixed(2)})
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="p-4 border-b border-zinc-200 shrink-0 relative text-center">
+                            <div className="w-10 h-1.5 bg-zinc-300 rounded-full mx-auto mb-3"></div>
+                            <h2 className="text-xl font-bold text-zinc-800">{dish.name}</h2>
+                            <button onClick={onClose} className="absolute top-4 right-4 bg-zinc-100 p-2 rounded-full text-zinc-600 hover:bg-zinc-200"><X className="w-5 h-5"/></button>
                         </div>
-                    )}
 
-                    <div>
-                        <h3 className="font-semibold text-lg text-gray-700 mb-2">Personalizza ingredienti</h3>
-                        <div className="bg-slate-50 rounded-lg border divide-y divide-gray-200">
-                            {includedIngredients.map(ingredient => (
-                                <IngredientRow
-                                    key={`incl-${ingredient.id}`}
-                                    name={ingredient.name}
-                                    isSelected={selectedIngredients.includes(ingredient.id)}
-                                    onToggle={() => handleToggleIngredient(ingredient.id)}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    {allExtraIngredients.length > 0 && (
-                        <div>
-                            {/* Header Cliccabile dell'Accordion */}
-                            <button
-                                onClick={() => setIsExtrasOpen(!isExtrasOpen)}
-                                className="w-full flex justify-between items-center text-left p-3 bg-slate-100 rounded-lg border hover:bg-slate-200 transition-colors"
-                            >
-                                <div >
-                                    <h3 className="font-semibold text-lg text-gray-700">Aggiunte extra</h3>
-                                    {selectedExtrasCount > 0 && (
-                                        <span className="text-sm font-bold text-primary">{selectedExtrasCount} selezionat{selectedExtrasCount > 1 ? 'e' : 'a'}</span>
-                                    )}
-                                </div>
-                                <ChevronDownIcon className={`w-6 h-6 text-gray-500 transition-transform ${isExtrasOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {/* Contenuto a Scomparsa */}
-                            {isExtrasOpen && (
-                                <div className="mt-2 p-4 border rounded-b-lg bg-slate-50/50">
-                                    {/* Barra di Ricerca */}
-                                    <input
-                                        type="text"
-                                        value={extraSearchTerm}
-                                        onChange={e => setExtraSearchTerm(e.target.value)}
-                                        className="input-style w-full mb-2"
-                                        placeholder="Cerca aggiunta..."
-                                    />
-                                    {/* Lista filtrata */}
-                                    <div className="max-h-48 overflow-y-auto divide-y divide-gray-200">
-                                        {filteredExtraIngredients.map(ingredient => (
-                                            <IngredientRow
-                                                key={`extra-${ingredient.id}`}
-                                                name={ingredient.name}
-                                                price={ingredient.price}
-                                                isSelected={selectedIngredients.includes(ingredient.id)}
-                                                onToggle={() => handleToggleIngredient(ingredient.id)}
-                                            />
+                        <div className="p-6 space-y-6 overflow-y-auto">
+                            {/* --- 2. NUOVO: Visualizzazione degli allergeni come "pills" --- */}
+                            {productAllergens.length > 0 && (
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <h4 className="font-semibold text-red-800 flex items-center gap-2 mb-2">
+                                        <ShieldAlert size={18} />
+                                        <span>Contiene Allergeni</span>
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {productAllergens.map(allergen => (
+                                            <div key={allergen.id} className="flex items-center gap-1.5 text-xs font-semibold bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                                                <img src={allergen.icon} alt={allergen.name} className="w-4 h-4" />
+                                                <span>{allergen.name}</span>
+                                            </div>
                                         ))}
-                                        {filteredExtraIngredients.length === 0 && (
-                                            <p className="text-center text-sm text-gray-500 p-4">Nessuna aggiunta trovata.</p>
-                                        )}
                                     </div>
                                 </div>
                             )}
+
+                            {/* --- 3. GIÀ PRESENTE: Sezione per la scelta delle opzioni --- */}
+                            {dish.options && dish.options.length > 1 && dish.options[0].name !== 'default' && (
+                                <div>
+                                    <h3 className="font-semibold text-lg text-zinc-800 mb-3">Scegli un'opzione</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {dish.options.map(opt => (
+                                            <button key={opt.name} onClick={() => changeOption(opt.name)} className={`px-4 py-2 text-sm font-bold rounded-full border-2 transition-colors ${selectedOption === opt.name ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-zinc-700 border-zinc-200'}`}>
+                                                {opt.name} (€{opt.price.toFixed(2)})
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Ingredienti Inclusi */}
+                            <div>
+                                <h3 className="font-semibold text-lg text-zinc-800 mb-2">Ingredienti inclusi</h3>
+                                <div className="rounded-lg border divide-y divide-zinc-200">
+                                    {includedIngredients.map(ing => <IngredientRow key={`incl-${ing.id}`} name={ing.name} isSelected={selectedIngredients.includes(ing.id)} onToggle={() => handleToggleIngredient(ing.id)} />)}
+                                </div>
+                            </div>
+
+                            {/* --- 4. GIÀ PRESENTE: Sezione per gli ingredienti extra --- */}
+                            {allExtraIngredients.length > 0 && (
+                                <div>
+                                    <button onClick={() => setIsExtrasOpen(!isExtrasOpen)} className="w-full flex justify-between items-center text-left">
+                                        <h3 className="font-semibold text-lg text-zinc-800">Aggiunte extra</h3>
+                                        <div className="flex items-center gap-2">
+                                            {selectedExtrasCount > 0 && <span className="text-sm font-bold text-amber-500">{selectedExtrasCount} selezionat{selectedExtrasCount > 1 ? 'e' : 'a'}</span>}
+                                            <ChevronDown className={`w-5 h-5 text-zinc-500 transition-transform ${isExtrasOpen ? 'rotate-180' : ''}`} />
+                                        </div>
+                                    </button>
+                                    {isExtrasOpen && (
+                                        <div className="mt-2">
+                                            <div className="relative mb-2">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+                                                <input type="text" value={extraSearchTerm} onChange={e => setExtraSearchTerm(e.target.value)} className="input-style w-full pl-10" placeholder="Cerca aggiunta..."/>
+                                            </div>
+                                            <div className="max-h-48 overflow-y-auto border rounded-lg divide-y divide-zinc-200">
+                                                {filteredExtraIngredients.length > 0 ? filteredExtraIngredients.map(ing => <IngredientRow key={`extra-${ing.id}`} name={ing.name} price={ing.price} isSelected={selectedIngredients.includes(ing.id)} onToggle={() => handleToggleIngredient(ing.id)} />) : <p className="text-center text-sm text-zinc-500 p-4">Nessuna aggiunta trovata.</p>}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Note Speciali */}
+                            <div>
+                                <label htmlFor="notes" className="font-semibold text-lg text-zinc-800">Note speciali</label>
+                                <textarea id="notes" value={note} onChange={e => setNote(e.target.value)} className="input-style mt-2 w-full" rows={2} placeholder="Es. ben cotto, senza sale..."/>
+                            </div>
                         </div>
-                    )}
 
-                    <div>
-                        <label htmlFor="notes" className="font-semibold text-lg text-gray-700">Note speciali</label>
-                        <textarea id="notes" value={note} onChange={e => setNote(e.target.value)} className="input-style mt-2 w-full" rows={2} placeholder="Es. ben cotto, senza sale..."/>
-                    </div>
-                </div>
-
-                <div className="p-4 border-t border-gray-200 bg-white flex justify-between items-center shrink-0">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="bg-gray-200 w-10 h-10 rounded-full font-bold text-lg hover:bg-gray-300 transition-colors">-</button>
-                        <span className="text-xl font-bold w-8 text-center">{quantity}</span>
-                        <button onClick={() => setQuantity(q => q + 1)} className="bg-gray-200 w-10 h-10 rounded-full font-bold text-lg hover:bg-gray-300 transition-colors">+</button>
-                    </div>
-                    <button onClick={handleAddToCart} className="btn-primary flex-grow ml-4">
-                        Aggiungi - € {totalPrice.toFixed(2)}
-                    </button>
-                </div>
-            </div>
-        </div>
+                        {/* Footer con azioni */}
+                        <div className="p-4 mt-auto border-t border-zinc-200 bg-white/80 backdrop-blur-sm flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="bg-zinc-100 w-11 h-11 rounded-full font-bold text-xl hover:bg-zinc-200 transition-colors active:scale-95 flex items-center justify-center"><Minus size={20}/></button>
+                                <span className="text-xl font-bold w-8 text-center">{quantity}</span>
+                                <button onClick={() => setQuantity(q => q + 1)} className="bg-zinc-100 w-11 h-11 rounded-full font-bold text-xl hover:bg-zinc-200 transition-colors active:scale-95 flex items-center justify-center"><Plus size={20}/></button>
+                            </div>
+                            <button onClick={handleAddToCart} className="btn-primary flex-grow ml-4 text-base">
+                                Aggiungi {quantity > 1 ? `${quantity} pz.` : ''} - €{totalPrice.toFixed(2)}
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </>
     );
 };
 

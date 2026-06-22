@@ -38,6 +38,9 @@
 # Personal scratch / session notes
 continue.md
 
+# Local secret-bootstrap script (contains real values — never commit)
+scripts/setup-github-secrets.ps1
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

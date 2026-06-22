@@ -1,0 +1,105 @@
+# RestaurantFlow — Caddy reverse proxy
+# Caddy fetches Let's Encrypt certificates automatically on first hit.
+# Place at /etc/caddy/Caddyfile and `systemctl reload caddy`.
+#
+# Replace example.com with your real domain.
+# Replace admin@example.com with a real address that receives renewal failures.
+
+{
+    email admin@example.com
+
+    # Tighten Caddy's own admin API to localhost (default is already 127.0.0.1)
+    admin localhost:2019
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Frontend (React SPA served by nginx in container, bound to 127.0.0.1:3000)
+# ──────────────────────────────────────────────────────────────────────────────
+app.example.com {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3000
+
+    # nginx already sets CSP/X-Frame/etc inside the container; Caddy adds HSTS.
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/app.log {
+            roll_size 50mb
+            roll_keep 7
+        }
+        format json
+    }
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Backend REST (Spring Boot servlet on 127.0.0.1:8085)
+# ──────────────────────────────────────────────────────────────────────────────
+api.example.com {
+    encode zstd gzip
+
+    @cors_preflight method OPTIONS
+    handle @cors_preflight {
+        header Access-Control-Allow-Origin "https://app.example.com"
+        header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        header Access-Control-Allow-Headers "Content-Type, Authorization"
+        header Access-Control-Max-Age "86400"
+        respond 204
+    }
+
+    reverse_proxy 127.0.0.1:8085 {
+        # Stripe webhooks need raw body up to ~5 MB.
+        flush_interval -1
+    }
+
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        -Server
+    }
+
+    log {
+        output file /var/log/caddy/api.log {
+            roll_size 50mb
+            roll_keep 7
+        }
+        format json
+    }
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Webflux reactive (SSE — Server-Sent Events on 127.0.0.1:8081)
+# ──────────────────────────────────────────────────────────────────────────────
+reactive.example.com {
+    reverse_proxy 127.0.0.1:8081 {
+        # SSE: never buffer, never set Content-Length, keep alive forever.
+        flush_interval -1
+        transport http {
+            response_header_timeout 24h
+            read_timeout 24h
+        }
+    }
+
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        -Server
+    }
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# WebSocket (Rust server on 127.0.0.1:8083, when wired up)
+# Caddy auto-detects Upgrade: websocket and proxies natively.
+# ──────────────────────────────────────────────────────────────────────────────
+ws.example.com {
+    reverse_proxy 127.0.0.1:8083 {
+        transport http {
+            read_timeout 24h
+        }
+    }
+
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        -Server
+    }
+}

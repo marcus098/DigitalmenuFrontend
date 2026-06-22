@@ -17,14 +17,17 @@ const PrivacyPolicyPage: React.FC = () => {
 
             <h2>1. Titolare del trattamento</h2>
             <p>
-                Il Titolare del trattamento è{' '}
-                <span className="placeholder">[Ragione sociale, P.IVA, sede legale]</span>,
+                Il Titolare del trattamento è <strong>Boukhama Fatima</strong>, titolare dell'impresa
+                individuale operante con il nome commerciale <strong>AxiomGroup</strong>, con sede in
+                Via Fabio Filzi, 37 — 25128 Brescia (BS), C.F. BKHFTM99P65F258O, P.IVA 04717560983,
                 contattabile all'indirizzo email{' '}
-                <span className="placeholder">[privacy@axiomgroup.it]</span>.
+                <a href="mailto:commerciale@axiomgroup.it">commerciale@axiomgroup.it</a>.
             </p>
             <p>
-                Responsabile della protezione dei dati (DPO), se nominato:{' '}
-                <span className="placeholder">[Nome, contatto]</span>.
+                Non è stato nominato un Responsabile della protezione dei dati (DPO/RPD) in quanto
+                il trattamento non rientra nei casi previsti dall'art. 37 GDPR (autorità pubblica,
+                monitoraggio sistematico su larga scala, trattamento su larga scala di categorie
+                particolari di dati).
             </p>
 
             <h2>2. Categorie di dati trattati</h2>
@@ -141,7 +144,7 @@ const PrivacyPolicyPage: React.FC = () => {
             </ul>
             <p>
                 Le richieste vanno inviate a{' '}
-                <span className="placeholder">[privacy@axiomgroup.it]</span>.
+                <a href="mailto:commerciale@axiomgroup.it">commerciale@axiomgroup.it</a>.
                 Risponderemo entro 30 giorni.
             </p>
             <p>

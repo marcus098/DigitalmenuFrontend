@@ -1,14 +1,14 @@
-# ── Ports exposed to host ──────────────────────────────────────────────────────
-# frontend  → http://localhost:3000
-# backend   → http://localhost:8085
-# webflux   → http://localhost:8081
-# ws        → ws://localhost:8083  (Rust WebSocket server)
-# postgres  → localhost:5432
-# mongodb   → localhost:27017
-# kafka     → localhost:9092  (advertised as kafka:9092, only for Docker-internal use)
-# storage   → Backblaze B2 (external S3-compatible service)
 # ──────────────────────────────────────────────────────────────────────────────
-# SECRETS: every credential is read from .env at the root of this repo.
+# RestaurantFlow stack
+#
+# PRODUCTION hardening applied:
+#   • App services (frontend/backend/webflux/ws) bind to 127.0.0.1 only.
+#     Caddy on the host terminates TLS and reverse-proxies to localhost.
+#   • Stateful services (postgres/mongo/kafka) are NOT exposed to the host.
+#     They're reachable only across the Docker network via service name.
+#   • Override BIND_ADDR=0.0.0.0 in .env for local dev access if needed.
+#
+# SECRETS: every credential is read from .env (next to this file).
 # Copy .env.compose.example → .env and fill in values. NEVER commit .env.
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -29,8 +29,11 @@ services:
         REACT_APP_BUCKET_URL: ${BUCKET_URL}
         REACT_APP_IMAGE_URL_START: ${BUCKET_NAME}
         REACT_APP_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+        REACT_APP_SENTRY_DSN: ${SENTRY_DSN:-}
+        REACT_APP_SENTRY_ENV: production
+        REACT_APP_SENTRY_RELEASE: ${SENTRY_RELEASE:-}
     ports:
-      - "3000:80"
+      - "${BIND_ADDR:-127.0.0.1}:3000:80"
     depends_on:
       - backend
       - webflux
@@ -42,7 +45,7 @@ services:
       context: ../DigitalmenuBackend
       dockerfile: Dockerfile
     ports:
-      - "8085:8085"
+      - "${BIND_ADDR:-127.0.0.1}:8085:8085"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
@@ -72,7 +75,7 @@ services:
       context: ../DigitalmenuBackend
       dockerfile: Dockerfile.webflux
     ports:
-      - "8081:8081"
+      - "${BIND_ADDR:-127.0.0.1}:8081:8081"
     environment:
       SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_R2DBC_USERNAME: ${POSTGRES_USER}
@@ -96,7 +99,7 @@ services:
   #     context: ../DigitalmenuWS
   #     dockerfile: Dockerfile
   #   ports:
-  #     - "8083:8083"
+  #     - "${BIND_ADDR:-127.0.0.1}:8083:8083"
   #   environment:
   #     RUST_LOG: info
   #     JWT_SECRET: ${JWT_SECRET}
@@ -106,11 +109,11 @@ services:
   #       condition: service_started
   #   restart: unless-stopped
 
-  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  # ── PostgreSQL (internal-only) ──────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -124,22 +127,20 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ── MongoDB ──────────────────────────────────────────────────────────────────
+  # ── MongoDB (internal-only) ─────────────────────────────────────────────────
   mongodb:
     image: mongo:7-jammy
-    ports:
-      - "27017:27017"
+    expose:
+      - "27017"
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped
 
-  # ── Kafka (KRaft mode, no Zookeeper) ────────────────────────────────────────
-  # Advertised as kafka:9092 — reachable only from inside Docker.
-  # To connect from the host you need a second EXTERNAL listener on a different port.
+  # ── Kafka KRaft (internal-only) ─────────────────────────────────────────────
   kafka:
     image: bitnami/kafka:latest
-    ports:
-      - "9092:9092"
+    expose:
+      - "9092"
     environment:
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
@@ -151,6 +152,30 @@ services:
       - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - kafka_data:/bitnami/kafka
+    restart: unless-stopped
+
+  # ── Nightly Postgres backup → S3/Backblaze B2 ───────────────────────────────
+  # Runs pg_dump on cron, uploads compressed dump to B2 bucket with retention.
+  # Restore: aws s3 cp s3://bucket/.../dump.sql.gz - | gunzip | psql
+  postgres-backup:
+    image: eeshugerman/postgres-backup-s3:16
+    environment:
+      SCHEDULE: ${BACKUP_SCHEDULE:-@daily}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
+      S3_REGION: ${BACKUP_S3_REGION:-${BUCKET_S3_REGION}}
+      S3_ACCESS_KEY_ID: ${BACKUP_S3_ACCESSKEY:-${BUCKET_S3_ACCESSKEY}}
+      S3_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRETKEY:-${BUCKET_S3_SECRETKEY}}
+      S3_BUCKET: ${BACKUP_S3_BUCKET}
+      S3_PREFIX: ${BACKUP_S3_PREFIX:-postgres-backups}
+      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-${BUCKET_S3_ENDPOINT}}
+      POSTGRES_HOST: postgres
+      POSTGRES_DATABASE: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

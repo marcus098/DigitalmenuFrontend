@@ -162,7 +162,8 @@ const CookiePolicyPage: React.FC = () => {
             <h2>5. Titolare del trattamento</h2>
             <p>
                 Il titolare del trattamento dei dati raccolti tramite cookie è{' '}
-                <span className="placeholder">[Ragione sociale, P.IVA, sede legale]</span>.
+                <strong>Boukhama Fatima</strong> (nome commerciale <strong>AxiomGroup</strong>),
+                Via Fabio Filzi, 37 — 25128 Brescia (BS), C.F. BKHFTM99P65F258O, P.IVA 04717560983.
                 Per maggiori informazioni consulta la nostra{' '}
                 <a href="/privacy">informativa sulla privacy</a>.
             </p>

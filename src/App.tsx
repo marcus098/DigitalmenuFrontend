@@ -10,6 +10,7 @@ import { CookieConsentProvider } from "./Context/CookieConsentContext";
 import CookieBanner from "./Components/CookieConsent/CookieBanner";
 import PWAInstallPrompt from "./Components/PWAInstallPrompt";
 import Layout from "./Dashboard/Layout";
+import MenuThemeProvider from "./Components/Client/MenuThemeProvider";
 
 // Pagine sempre necessarie (piccole, fuori da route lazy)
 import LoginPage from "./GeneralPages/LoginPage";
@@ -65,13 +66,15 @@ const WaiterRoutes = () => (
   <LoginProvider>
     <DataProvider dashboard={false} waiters={true}>
       <NotificationProvider>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path={"/Categories"} element={<ClientCategoriesPage />} />
-            <Route path={"/Products/:idCategory"} element={<ClientProductsPage />} />
-            <Route path={"/cart"} element={<CartPage waiter={true} />} />
-          </Routes>
-        </Suspense>
+        <MenuThemeProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path={"/Categories"} element={<ClientCategoriesPage />} />
+              <Route path={"/Products/:idCategory"} element={<ClientProductsPage />} />
+              <Route path={"/cart"} element={<CartPage waiter={true} />} />
+            </Routes>
+          </Suspense>
+        </MenuThemeProvider>
       </NotificationProvider>
     </DataProvider>
   </LoginProvider>
@@ -80,19 +83,21 @@ const WaiterRoutes = () => (
 const ClientRoutes = () => (
   <DataProvider dashboard={false}>
     <NotificationProvider>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route index element={<VenueLandingPage />} />
-          <Route path={"Categories"} element={<ClientCategoriesPage />} />
-          <Route path={"Products/:idCategory"} element={<ClientProductsPage />} />
-          <Route path={"Product/:idProduct"} element={<ClientProductPage />} />
-          <Route path={"Allergens"} element={<ClientCategoriesPage />} />
-          <Route path={"/cart"} element={<CartPage waiter={false} />} />
-          <Route path="/history" element={<HistoryOrdersPage />} />
-          <Route path="/order-status/:comandId" element={<OrderStatusPage />} />
-          <Route path="/payment/:comandId" element={<PaymentPage />} />
-        </Routes>
-      </Suspense>
+      <MenuThemeProvider>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route index element={<VenueLandingPage />} />
+            <Route path={"Categories"} element={<ClientCategoriesPage />} />
+            <Route path={"Products/:idCategory"} element={<ClientProductsPage />} />
+            <Route path={"Product/:idProduct"} element={<ClientProductPage />} />
+            <Route path={"Allergens"} element={<ClientCategoriesPage />} />
+            <Route path={"/cart"} element={<CartPage waiter={false} />} />
+            <Route path="/history" element={<HistoryOrdersPage />} />
+            <Route path="/order-status/:comandId" element={<OrderStatusPage />} />
+            <Route path="/payment/:comandId" element={<PaymentPage />} />
+          </Routes>
+        </Suspense>
+      </MenuThemeProvider>
     </NotificationProvider>
   </DataProvider>
 );

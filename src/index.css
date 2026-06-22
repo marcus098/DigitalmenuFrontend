@@ -103,19 +103,24 @@ code {
   @apply block text-sm font-semibold text-gray-700;
 }
 
-/* ─── Dark cart / product page ──────────────────────── */
+/* ─── Font tokens override (menu-scoped) ──────────────── */
+/* Inside MenuThemeProvider these tokens are set; outside they fall back. */
+.font-cormorant { font-family: var(--menu-font-display, "Cormorant Garamond", Georgia, serif); }
+.font-nunito    { font-family: var(--menu-font-body, Nunito, ui-sans-serif, sans-serif); }
+
+/* ─── Themed input (consumed by client menu pages) ──── */
+/* Tokens come from MenuThemeProvider — works for all 4 templates (dark or light). */
 .dark-input {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #ede8da;
+  background: var(--menu-input-bg, rgba(255,255,255,0.06));
+  border: 1px solid var(--menu-input-border, rgba(255,255,255,0.1));
+  color: var(--menu-input-text, #ede8da);
   border-radius: 12px;
   padding: 10px 14px;
-  font-family: 'Nunito', sans-serif;
+  font-family: var(--menu-font-body, 'Nunito', sans-serif);
   font-size: 0.875rem;
   outline: none;
   transition: border-color 0.2s;
   width: 100%;
 }
-.dark-input::placeholder { color: #5a5048; }
-.dark-input:focus { border-color: var(--c-accent, #f97316); }
-.dark-input[type="time"] { color-scheme: dark; }
+.dark-input::placeholder { color: var(--menu-input-placeholder, #5a5048); }
+.dark-input:focus { border-color: var(--menu-accent, var(--c-accent, #f97316)); }

@@ -28,17 +28,17 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {
             className="relative overflow-hidden cursor-pointer"
             style={{
                 aspectRatio: '3 / 4',
-                borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 'var(--menu-radius)',
+                border: '1px solid var(--menu-border)',
+                background: 'var(--menu-card)',
             }}
             whileHover={{
                 scale: 1.025,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.55)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.35)',
             }}
             whileTap={{ scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 300, damping: 22 }}
         >
-            {/* Image or gradient fallback */}
             {imageUrl ? (
                 <motion.img
                     src={imageUrl}
@@ -56,46 +56,42 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {
                 <div className="absolute inset-0" style={{ background: fallbackGradient }} />
             )}
 
-            {/* Dark overlay */}
+            {/* Readability scrim — image-backed cards always need contrast for the label */}
             <div
                 className="absolute inset-0"
                 style={{
                     background:
-                        'linear-gradient(to top, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.08) 100%)',
+                        'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.05) 100%)',
                 }}
             />
 
-            {/* Shimmer on hover */}
             <motion.div
                 className="absolute inset-0"
-                style={{
-                    background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 60%)',
-                }}
+                style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 60%)' }}
                 initial={{ opacity: 0 }}
                 whileHover={{ opacity: 1 }}
                 transition={{ duration: 0.25 }}
             />
 
-            {/* Fallback letter */}
             {!imageUrl && (
                 <div
-                    className="absolute inset-0 flex items-center justify-center font-cormorant font-bold"
+                    className="absolute inset-0 flex items-center justify-center font-bold"
                     style={{
+                        fontFamily: 'var(--menu-font-display)',
                         fontSize: 'clamp(3rem, 8vw, 5rem)',
-                        color: 'rgba(255,255,255,0.12)',
+                        color: 'rgba(255,255,255,0.18)',
                     }}
                 >
                     {category.name.charAt(0).toUpperCase()}
                 </div>
             )}
 
-            {/* Category name */}
             <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
                 <h2
-                    className="font-cormorant font-semibold leading-tight"
+                    className="font-semibold leading-tight"
                     style={{
-                        color: '#ede8da',
+                        color: '#ffffff',
+                        fontFamily: 'var(--menu-font-display)',
                         fontSize: 'clamp(1.15rem, 3.5vw, 1.5rem)',
                         textShadow: '0 2px 8px rgba(0,0,0,0.6)',
                     }}
@@ -104,20 +100,19 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {
                 </h2>
                 {category.description && (
                     <p
-                        className="font-nunito mt-0.5 line-clamp-1"
-                        style={{ color: 'rgba(237,232,218,0.55)', fontSize: '0.7rem' }}
+                        className="mt-0.5 line-clamp-1"
+                        style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--menu-font-body)', fontSize: '0.7rem' }}
                     >
                         {category.description}
                     </p>
                 )}
             </div>
 
-            {/* Accent bar on hover */}
             <motion.div
                 className="absolute bottom-0 left-0 right-0"
                 style={{
                     height: 2,
-                    background: 'var(--c-accent, #f97316)',
+                    background: 'var(--menu-accent)',
                     originX: 0,
                 }}
                 initial={{ scaleX: 0, opacity: 0 }}

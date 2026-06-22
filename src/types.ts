@@ -267,7 +267,7 @@ export interface StyleDto{
     showWhyUs?: boolean,
     showBooking?: boolean,
     showTicker?: boolean,
-    landingTemplate?: 'default' | 'minimal' | 'luxury',
+    landingTemplate?: 'default' | 'minimal' | 'luxury' | 'strafame',
 }
 
 export interface ImageDto{

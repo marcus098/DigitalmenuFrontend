@@ -34,12 +34,11 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
             className="flex items-start gap-4"
             style={{
                 padding: '16px',
-                borderRadius: '16px',
-                background: '#1e1b15',
-                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 'var(--menu-radius)',
+                background: 'var(--menu-card)',
+                border: '1px solid var(--menu-border)',
             }}
         >
-            {/* Image */}
             <div
                 className="flex-shrink-0 overflow-hidden"
                 style={{ width: 72, height: 72, borderRadius: 10 }}
@@ -52,10 +51,12 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                     />
                 ) : (
                     <div
-                        className="w-full h-full flex items-center justify-center font-cormorant font-bold text-2xl"
+                        className="w-full h-full flex items-center justify-center font-bold text-2xl"
                         style={{
-                            background: 'linear-gradient(135deg, #2d2820 0%, #3d3428 100%)',
-                            color: 'rgba(237,232,218,0.2)',
+                            background: 'var(--menu-surface)',
+                            color: 'var(--menu-muted)',
+                            fontFamily: 'var(--menu-font-display)',
+                            opacity: 0.4,
                         }}
                     >
                         {(product?.name || 'P').charAt(0)}
@@ -63,31 +64,29 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                 )}
             </div>
 
-            {/* Info */}
             <div className="flex-1 min-w-0">
                 <p
-                    className="font-cormorant font-semibold leading-snug"
-                    style={{ color: '#ede8da', fontSize: '1.05rem' }}
+                    className="font-semibold leading-snug"
+                    style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.05rem' }}
                 >
                     {product?.name}
                 </p>
                 <p
-                    className="font-nunito font-semibold mt-0.5"
-                    style={{ color: 'var(--c-accent, #f97316)', fontSize: '0.82rem' }}
+                    className="font-semibold mt-0.5"
+                    style={{ color: 'var(--menu-accent)', fontFamily: 'var(--menu-font-body)', fontSize: '0.82rem' }}
                 >
                     €{item.price.toFixed(2)} cad.
                 </p>
 
-                {/* Customizations */}
                 <div className="mt-1 space-y-0.5">
                     {item.optionName !== 'default' && (
-                        <p className="font-nunito text-xs" style={{ color: '#8a7d6a' }}>
+                        <p className="text-xs" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
                             Opzione:{' '}
-                            <span style={{ color: '#ede8da' }}>{item.optionName}</span>
+                            <span style={{ color: 'var(--menu-text)' }}>{item.optionName}</span>
                         </p>
                     )}
                     {item.ingredientsPlus.length > 0 && (
-                        <p className="font-nunito text-xs" style={{ color: '#4ade80' }}>
+                        <p className="text-xs" style={{ color: '#4ade80', fontFamily: 'var(--menu-font-body)' }}>
                             +{' '}
                             {item.ingredientsPlus
                                 .map(id => ingredientsMap.get(id)?.name)
@@ -95,7 +94,7 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                         </p>
                     )}
                     {item.ingredientsMinus.length > 0 && (
-                        <p className="font-nunito text-xs" style={{ color: '#f87171' }}>
+                        <p className="text-xs" style={{ color: '#f87171', fontFamily: 'var(--menu-font-body)' }}>
                             −{' '}
                             {item.ingredientsMinus
                                 .map(id => ingredientsMap.get(id)?.name)
@@ -103,20 +102,18 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                         </p>
                     )}
                     {item.note && (
-                        <p className="font-nunito text-xs italic" style={{ color: '#8a7d6a' }}>
+                        <p className="text-xs italic" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
                             "{item.note}"
                         </p>
                     )}
                 </div>
             </div>
 
-            {/* Controls */}
             <div className="flex-shrink-0 flex flex-col items-end gap-3">
-                {/* Quantity */}
                 <div
                     className="flex items-center gap-2"
                     style={{
-                        background: 'rgba(255,255,255,0.06)',
+                        background: 'var(--menu-input-bg)',
                         borderRadius: 99,
                         padding: '4px 10px',
                     }}
@@ -125,13 +122,13 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                         onClick={() => onQuantityChange(item.quantity - 1)}
                         whileTap={{ scale: 0.85 }}
                         className="flex items-center justify-center"
-                        style={{ color: '#8a7d6a', width: 20, height: 20 }}
+                        style={{ color: 'var(--menu-muted)', width: 20, height: 20 }}
                     >
                         <Minus className="w-3.5 h-3.5" />
                     </motion.button>
                     <span
-                        className="font-nunito font-bold tabular-nums"
-                        style={{ color: '#ede8da', minWidth: 18, textAlign: 'center', fontSize: '0.9rem' }}
+                        className="font-bold tabular-nums"
+                        style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-body)', minWidth: 18, textAlign: 'center', fontSize: '0.9rem' }}
                     >
                         {item.quantity}
                     </span>
@@ -139,26 +136,24 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                         onClick={() => onQuantityChange(item.quantity + 1)}
                         whileTap={{ scale: 0.85 }}
                         className="flex items-center justify-center"
-                        style={{ color: '#8a7d6a', width: 20, height: 20 }}
+                        style={{ color: 'var(--menu-muted)', width: 20, height: 20 }}
                     >
                         <Plus className="w-3.5 h-3.5" />
                     </motion.button>
                 </div>
 
-                {/* Total */}
                 <span
-                    className="font-cormorant font-bold"
-                    style={{ color: '#ede8da', fontSize: '1.15rem' }}
+                    className="font-bold"
+                    style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.15rem' }}
                 >
                     €{totalItemPrice.toFixed(2)}
                 </span>
 
-                {/* Remove */}
                 <motion.button
                     onClick={onRemove}
                     whileHover={{ color: '#f87171' }}
                     whileTap={{ scale: 0.9 }}
-                    style={{ color: 'rgba(255,255,255,0.2)', transition: 'color 0.2s' }}
+                    style={{ color: 'var(--menu-muted)', opacity: 0.5, transition: 'color 0.2s, opacity 0.2s' }}
                 >
                     <Trash2 className="w-4 h-4" />
                 </motion.button>

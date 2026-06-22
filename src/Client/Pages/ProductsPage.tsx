@@ -13,8 +13,6 @@ import AllergenModal from '../../Components/Client/AllergenModal';
 import ProductCustomizationDrawer from '../../Components/ProductCustomizationDrawer';
 import useCartCount from '../../Utilities/useCartCount';
 
-const MENU_BG = '#17140f';
-
 const ClientProductsPage: React.FC = () => {
     const [selectedDish, setSelectedDish] = useState<ProductDto | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -25,13 +23,6 @@ const ClientProductsPage: React.FC = () => {
     const { idCategory, localname } = useParams();
     const navigate = useNavigate();
 
-    /* fix flash of white on navigation */
-    useEffect(() => {
-        document.body.style.backgroundColor = MENU_BG;
-        return () => { document.body.style.backgroundColor = ''; };
-    }, []);
-
-    /* trim to handle empty/whitespace primary from default StyleDto */
     const primaryColor = styles?.primary?.trim() || '#f97316';
 
     const currentCategoryId = Number(idCategory);
@@ -50,10 +41,9 @@ const ClientProductsPage: React.FC = () => {
     if (loading) return <CustomLoading />;
 
     return (
-        <div style={{ background: MENU_BG, minHeight: '100vh' }}>
+        <div style={{ background: 'var(--menu-bg)', minHeight: '100vh' }}>
             <div className="max-w-4xl mx-auto" style={{ minHeight: '100vh' }}>
 
-                {/* ── Main header (sticky top-0) ── */}
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || localname || ''}
                     onAllergenClick={() => setIsAllergenModalOpen(true)}
@@ -62,7 +52,6 @@ const ClientProductsPage: React.FC = () => {
                     primaryColor={primaryColor}
                 />
 
-                {/* ── Category nav (sticky below header) ── */}
                 <CategoryNavBar
                     categories={Array.from(categoriesMap.values())}
                     activeCategoryId={currentCategoryId}
@@ -73,18 +62,14 @@ const ClientProductsPage: React.FC = () => {
                     primaryColor={primaryColor}
                 />
 
-                {/* ── Page content ── */}
                 <main className="px-4 md:px-6 pt-7 pb-12">
 
-                    {/* Category title */}
-                    <div
-                        className="mb-6 menu-fade-up"
-                        style={{ animationDelay: '0.05s' }}
-                    >
+                    <div className="mb-6 menu-fade-up" style={{ animationDelay: '0.05s' }}>
                         <h1
-                            className="font-cormorant font-semibold leading-none"
+                            className="font-semibold leading-none"
                             style={{
-                                color: '#ede8da',
+                                color: 'var(--menu-text)',
+                                fontFamily: 'var(--menu-font-display)',
                                 fontSize: 'clamp(2rem, 7vw, 3rem)',
                             }}
                         >
@@ -92,8 +77,8 @@ const ClientProductsPage: React.FC = () => {
                         </h1>
                         {visibleProducts.length > 0 && (
                             <p
-                                className="font-nunito mt-1.5"
-                                style={{ color: '#8a7d6a', fontSize: '0.8rem' }}
+                                className="mt-1.5"
+                                style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.8rem' }}
                             >
                                 {visibleProducts.length}{' '}
                                 {visibleProducts.length === 1 ? 'piatto disponibile' : 'piatti disponibili'}
@@ -101,28 +86,20 @@ const ClientProductsPage: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Divider */}
-                    <div
-                        className="mb-6"
-                        style={{ height: 1, background: 'rgba(255,255,255,0.06)' }}
-                    />
+                    <div className="mb-6" style={{ height: 1, background: 'var(--menu-border)' }} />
 
-                    {/* Products */}
                     {visibleProducts.length === 0 ? (
-                        <div
-                            className="flex flex-col items-center justify-center py-20 menu-fade-in"
-                            style={{ animationDelay: '0.1s' }}
-                        >
+                        <div className="flex flex-col items-center justify-center py-20 menu-fade-in" style={{ animationDelay: '0.1s' }}>
                             <p
-                                className="font-cormorant italic"
-                                style={{ color: '#8a7d6a', fontSize: '1.5rem' }}
+                                className="italic"
+                                style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-display)', fontSize: '1.5rem' }}
                             >
                                 Nessun piatto disponibile
                             </p>
                             {selectedAllergens.length > 0 && (
                                 <p
-                                    className="font-nunito mt-2"
-                                    style={{ color: '#5a5048', fontSize: '0.82rem' }}
+                                    className="mt-2"
+                                    style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.82rem', opacity: 0.7 }}
                                 >
                                     Prova a rimuovere i filtri allergeni.
                                 </p>

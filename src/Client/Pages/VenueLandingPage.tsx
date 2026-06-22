@@ -5,6 +5,7 @@ import { resolveImageUrl } from '../../Utilities/Utilities';
 import CustomLoading from '../../Components/CustomLoading';
 import { createReservationPublicApi } from '../../Utilities/api';
 import { CategoryDto, FeatureCard } from '../../types';
+import { MapPin, Clock, MessageCircle, Phone } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ primary, primaryRgb, localnam
 
     const base = dark
         ? 'w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 outline-none focus:border-white/30 focus:ring-2 focus:ring-white/10 transition-all'
-        : 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm placeholder-gray-400 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition-all';
+        : 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-200 transition-all';
 
     if (done) return (
         <div className="text-center py-14">
@@ -416,7 +417,7 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                     </div>
                     <div className="border-t border-gray-900 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-600">
                         <p>© {new Date().getFullYear()} {name} — Tutti i diritti riservati.</p>
-                        <p>Powered by <span style={{ color: primary }}>RestaurantFlow</span></p>
+                        <p>Powered by <span style={{ color: primary }}>AxiomGroup</span></p>
                     </div>
                 </div>
             </footer>
@@ -619,7 +620,7 @@ const MinimalTemplate: React.FC<TemplateProps> = ({
                         {address && <span className="text-xs">📍 {address}</span>}
                         {phone   && <span className="text-xs">📞 {phone}</span>}
                     </div>
-                    <p className="text-xs text-gray-600">Powered by <span style={{ color: primary }}>RestaurantFlow</span></p>
+                    <p className="text-xs text-gray-600">Powered by <span style={{ color: primary }}>AxiomGroup</span></p>
                 </div>
             </footer>
         </div>
@@ -856,7 +857,385 @@ const LuxuryTemplate: React.FC<TemplateProps> = ({
                             {phone   && <span>📞 {phone}</span>}
                             {hours   && <span>⏰ {hours}</span>}
                         </div>
-                        <p className="text-xs text-gray-700">Powered by <span style={{ color: primary }}>RestaurantFlow</span></p>
+                        <p className="text-xs text-gray-700">Powered by <span style={{ color: primary }}>AxiomGroup</span></p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    );
+};
+
+// ─── Template: STRAFAME ───────────────────────────────────────────────────────
+
+const StrafameTemplate: React.FC<TemplateProps> = ({
+    primary, primaryRgb, name, heroImg, logoImg, description, hours, whatsapp, tiktokUrl,
+    categories, features, sectionMenuTitle, sectionBookingTitle, sectionWhyTitle,
+    showWhyUs, showBooking, showTicker, localname, address, phone, instagramUrl, facebookUrl,
+    goToMenu, goToTakeaway, scrollTo,
+}) => {
+    const [mobileOpen, setMobileOpen] = useState(false);
+
+    const tickerItems = categories.length > 0
+        ? [...categories, ...categories].map(c => c.name)
+        : ['Antipasti','Primi','Secondi','Dolci','Bevande','Antipasti','Primi','Secondi','Dolci','Bevande'];
+
+    const specials = categories.slice(0, 3);
+
+    return (
+        <div className="min-h-screen overflow-x-hidden bg-white text-[#0e0e0e] font-sans">
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Oswald:wght@300;400;500;600;700&family=Barlow:wght@400;500;600;700&display=swap" />
+            <style>{`
+                .sf-hand { font-family: 'Permanent Marker', cursive; }
+                .sf-display { font-family: 'Oswald', sans-serif; }
+                .sf-body { font-family: 'Barlow', sans-serif; }
+                @keyframes sfFadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes sfMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+                @keyframes sfFloat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.01); } }
+                .sf-fade-up { animation: sfFadeUp 0.65s ease-out forwards; opacity: 0; }
+                .sf-fade-1 { animation-delay: 0.1s; }
+                .sf-fade-2 { animation-delay: 0.25s; }
+                .sf-fade-3 { animation-delay: 0.4s; }
+                .sf-fade-4 { animation-delay: 0.55s; }
+                .sf-hero-title { animation: sfFloat 6s ease-in-out infinite; }
+                .sf-marquee-track { display: inline-block; white-space: nowrap; animation: sfMarquee 22s linear infinite; }
+                .sf-slant { clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%); }
+                .sf-slant-bottom { clip-path: polygon(0 0, 100% 6%, 100% 100%, 0 100%); }
+                .sf-nav-link { position: relative; }
+                .sf-nav-link::after { content:''; position:absolute; bottom:-3px; left:0; width:0; height:2px; background:${primary}; transition: width 0.3s ease; }
+                .sf-nav-link:hover::after { width:100%; }
+            `}</style>
+
+            {/* Navbar */}
+            <nav className="fixed w-full z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-[72px]">
+                        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2.5 group">
+                            {logoImg ? (
+                                <img src={logoImg} alt={name} className="w-9 h-9 rounded-full object-cover shadow-md group-hover:scale-110 transition-transform" />
+                            ) : (
+                                <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:scale-110 transition-transform" style={{ backgroundColor: primary }}>
+                                    {name.charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                            <span className="sf-hand text-[1.9rem] leading-none" style={{ color: primary, textShadow: '1px 1px 0 rgba(0,0,0,0.08)' }}>{name}</span>
+                        </button>
+
+                        <div className="hidden md:flex items-center gap-8">
+                            {[['Home', () => window.scrollTo({ top: 0, behavior: 'smooth' })], specials.length > 0 && ['Speciali', () => scrollTo('specials')], ['Menu', () => scrollTo('categories')], showBooking && ['Prenota', () => scrollTo('prenota')]].filter(Boolean).map((item: any) => (
+                                <button key={item[0]} onClick={item[1]} className="sf-nav-link sf-display text-gray-500 hover:text-[#0e0e0e] font-semibold uppercase text-sm tracking-wider transition-colors">{item[0]}</button>
+                            ))}
+                            <button onClick={goToMenu} className="sf-display bg-[#0e0e0e] text-white px-6 py-2.5 rounded-full font-bold tracking-wider text-sm transition-all duration-300 hover:scale-105" onMouseEnter={e => (e.currentTarget.style.backgroundColor = primary)} onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#0e0e0e')}>
+                                Ordina Ora
+                            </button>
+                        </div>
+
+                        <button onClick={() => setMobileOpen(v => !v)} className="md:hidden text-[#0e0e0e]">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                {mobileOpen ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {mobileOpen && (
+                    <div className="md:hidden bg-white border-t border-gray-100 px-4 pt-3 pb-5 space-y-1">
+                        {[['Home', () => window.scrollTo({ top: 0, behavior: 'smooth' })], specials.length > 0 && ['Speciali', () => scrollTo('specials')], ['Menu', () => scrollTo('categories')], showBooking && ['Prenota', () => scrollTo('prenota')]].filter(Boolean).map((item: any) => (
+                            <button key={item[0]} onClick={() => { item[1](); setMobileOpen(false); }} className="sf-display block w-full text-left py-3 font-bold uppercase text-sm text-gray-700 border-b border-gray-50">{item[0]}</button>
+                        ))}
+                        <button onClick={goToMenu} className="sf-display block w-full mt-3 py-3 text-white font-bold uppercase rounded-xl" style={{ backgroundColor: primary }}>Ordina Ora</button>
+                    </div>
+                )}
+            </nav>
+
+            {/* Hero */}
+            <section className="sf-slant relative min-h-[95vh] flex items-center justify-center overflow-hidden bg-[#0e0e0e]">
+                {heroImg && (
+                    <div className="absolute inset-0 z-0">
+                        <img src={heroImg} alt={name} className="w-full h-full object-cover opacity-50" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent to-transparent" />
+                    </div>
+                )}
+                <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: `rgba(${primaryRgb},0.1)` }} />
+
+                <div className="relative z-10 text-center px-4 max-w-5xl mx-auto mt-20">
+                    {categories.length > 0 && (
+                        <div className="sf-fade-up sf-fade-1 inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold tracking-[0.25em] uppercase mb-8 border" style={{ backgroundColor: `rgba(${primaryRgb},0.08)`, borderColor: `rgba(${primaryRgb},0.25)`, color: primary }}>
+                            {categories.slice(0, 4).map(c => c.name).join(' · ')}
+                        </div>
+                    )}
+
+                    <h1 className="sf-hand sf-hero-title sf-fade-up sf-fade-2 text-7xl md:text-[9rem] lg:text-[11rem] text-white leading-none mb-2" style={{ textShadow: `4px 4px 0 rgba(${primaryRgb},0.3), 0 0 60px rgba(${primaryRgb},0.1)` }}>
+                        {name}
+                    </h1>
+
+                    {description && (
+                        <p className="sf-display sf-fade-up sf-fade-3 text-xl md:text-3xl text-gray-300 mb-3 font-light uppercase tracking-[0.12em]">
+                            {description}
+                        </p>
+                    )}
+
+                    {(address || hours) && (
+                        <p className="sf-fade-up sf-fade-3 text-gray-500 text-sm mb-10 tracking-widest">
+                            {address && <span>{address}</span>}
+                            {address && hours && <span> &nbsp;·&nbsp; </span>}
+                            {hours && <span>{hours}</span>}
+                        </p>
+                    )}
+
+                    <div className="sf-fade-up sf-fade-4 flex flex-col sm:flex-row gap-4 justify-center">
+                        <button onClick={goToMenu} className="sf-display text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider transition-all duration-300 hover:scale-105 hover:brightness-110" style={{ backgroundColor: primary, boxShadow: `0 0 30px rgba(${primaryRgb},0.4)` }}>
+                            Ordina Ora
+                        </button>
+                        {showBooking && (
+                            <button onClick={() => scrollTo('prenota')} className="sf-display bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-[#0e0e0e] hover:border-white transition-all duration-300">
+                                Prenota Tavolo
+                            </button>
+                        )}
+                        <button onClick={goToTakeaway} className="sf-display bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-[#0e0e0e] hover:border-white transition-all duration-300">
+                            Asporto
+                        </button>
+                    </div>
+                </div>
+
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
+                    <div className="w-5 h-8 rounded-full border-2 border-white/30 flex items-start justify-center p-1">
+                        <div className="w-1 h-2 rounded-full bg-white/60 animate-bounce" />
+                    </div>
+                </div>
+            </section>
+
+            {/* Ticker */}
+            {showTicker && (
+                <div className="py-3 overflow-hidden relative z-10" style={{ backgroundColor: primary }}>
+                    <div className="overflow-hidden whitespace-nowrap">
+                        <div className="sf-marquee-track sf-display text-white font-bold text-sm uppercase tracking-[0.2em]">
+                            {tickerItems.map((item, i) => (
+                                <span key={i} className="inline-flex items-center gap-4">
+                                    <span className="opacity-50">✦</span>
+                                    {item}
+                                    <span>&nbsp;</span>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Why Us */}
+            {showWhyUs && (
+                <section className="py-20 bg-white">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        {sectionWhyTitle && (
+                            <h2 className="sf-display text-center text-3xl md:text-4xl font-bold text-[#0e0e0e] uppercase mb-10">
+                                {sectionWhyTitle}
+                            </h2>
+                        )}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                            {features.map((f, i) => (
+                                <div key={i} className="p-6 rounded-2xl hover:bg-gray-50 transition-colors group cursor-default">
+                                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform inline-block">{f.icon}</div>
+                                    <div className="sf-display font-bold text-lg uppercase">{f.title}</div>
+                                    <div className="text-gray-400 text-sm mt-1">{f.sub}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Speciali (first 3 categories as hero cards) */}
+            {specials.length > 0 && (
+                <section id="specials" className="sf-slant-bottom py-20 bg-[#0e0e0e] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: `rgba(${primaryRgb},0.1)` }} />
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                        <div className="mb-14">
+                            <p className="sf-hand text-2xl mb-2" style={{ color: primary }}>Da non perdere</p>
+                            <h2 className="sf-display text-4xl md:text-6xl font-bold text-white uppercase">
+                                I Nostri <span style={{ color: primary }}>Speciali</span>
+                            </h2>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {specials.map(cat => {
+                                const img = cat.image ? `${process.env.REACT_APP_BUCKET_URL}${cat.image}` : '';
+                                return (
+                                    <button key={cat.id} onClick={() => window.location.assign(`/${localname}/Products/${cat.id}`)} className="relative rounded-3xl overflow-hidden group h-80 cursor-pointer text-left">
+                                        {img ? (
+                                            <img src={img} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                        ) : (
+                                            <div className="w-full h-full" style={{ background: `linear-gradient(135deg, rgba(${primaryRgb},0.4), rgba(${primaryRgb},0.1))` }} />
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                                        <div className="absolute bottom-0 left-0 p-6">
+                                            <span className="inline-block text-white text-[0.65rem] font-extrabold uppercase tracking-[0.08em] px-2 py-0.5 rounded-sm mb-2" style={{ backgroundColor: primary }}>Signature</span>
+                                            <h3 className="sf-hand text-3xl text-white leading-tight">{cat.name}</h3>
+                                            {cat.description && <p className="text-gray-300 text-sm mt-1 line-clamp-2">{cat.description}</p>}
+                                            <div className="mt-3">
+                                                <span className="inline-block px-4 py-1.5 rounded-full border text-xs font-bold transition-all" style={{ color: primary, borderColor: primary }}>
+                                                    Sfoglia →
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Menu */}
+            {categories.length > 0 && (
+                <section id="categories" className="py-24 bg-gray-50">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center mb-14">
+                            <p className="sf-hand text-2xl mb-1" style={{ color: primary }}>Cosa mangi stasera?</p>
+                            <h2 className="sf-display text-5xl md:text-6xl font-bold text-[#0e0e0e] uppercase">
+                                {sectionMenuTitle || 'Il Nostro'} <span style={{ color: primary }}>{sectionMenuTitle ? '' : 'Menu'}</span>
+                            </h2>
+                            <p className="text-gray-400 mt-3 max-w-xl mx-auto">Ingredienti freschi, porzioni abbondanti, gusti che ricordi.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {categories.map(cat => {
+                                const img = cat.image ? `${process.env.REACT_APP_BUCKET_URL}${cat.image}` : '';
+                                return (
+                                    <button key={cat.id} onClick={() => window.location.assign(`/${localname}/Products/${cat.id}`)} className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-100 group transition-all duration-300 hover:-translate-y-2 hover:shadow-xl text-left">
+                                        <div className="relative h-52 overflow-hidden">
+                                            {img ? (
+                                                <img src={img} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                            ) : (
+                                                <div className="w-full h-full" style={{ background: `linear-gradient(135deg, rgba(${primaryRgb},0.3), rgba(${primaryRgb},0.05))` }} />
+                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
+                                        <div className="p-5 flex flex-col flex-1">
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>Categoria</span>
+                                            <h3 className="sf-display font-bold text-xl text-gray-900 leading-tight mt-0.5">{cat.name}</h3>
+                                            {cat.description && <p className="text-gray-400 text-sm leading-relaxed mt-2 flex-1 line-clamp-2">{cat.description}</p>}
+                                            <div className="mt-5 w-full py-3 bg-[#0e0e0e] text-white sf-display font-bold uppercase text-sm tracking-wider rounded-xl flex items-center justify-center gap-2 transition-colors group-hover:bg-[color:var(--sf-hover)]" style={{ ['--sf-hover' as any]: primary }}>
+                                                Sfoglia →
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Booking + Info */}
+            {(showBooking || address || phone || whatsapp) && (
+                <section id="prenota" className="py-24 bg-[#0e0e0e] relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[130px] pointer-events-none -translate-y-1/3 translate-x-1/3" style={{ backgroundColor: primary, opacity: 0.07 }} />
+                    <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none translate-y-1/2 -translate-x-1/3" style={{ backgroundColor: primary, opacity: 0.05 }} />
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                            <div className="text-white">
+                                <p className="sf-hand text-3xl mb-3" style={{ color: primary }}>Vieni a trovarci</p>
+                                <h2 className="sf-display text-5xl md:text-6xl font-bold mb-10 leading-[1.1] uppercase">
+                                    {sectionBookingTitle ? <>{sectionBookingTitle}</> : (
+                                        <>Prenota il tuo<br />tavolo da<br /><span style={{ color: primary }}>{name}</span></>
+                                    )}
+                                </h2>
+
+                                <div className="space-y-5">
+                                    {address && (
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border" style={{ color: primary, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                                                <MapPin className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="sf-display font-bold uppercase tracking-wide text-xs mb-0.5 text-white">Dove siamo</h4>
+                                                <div className="text-sm text-gray-400">{address}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {hours && (
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border" style={{ color: primary, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                                                <Clock className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="sf-display font-bold uppercase tracking-wide text-xs mb-0.5 text-white">Orari</h4>
+                                                <div className="text-sm text-gray-400">{hours}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {whatsapp && (
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border" style={{ color: primary, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                                                <MessageCircle className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="sf-display font-bold uppercase tracking-wide text-xs mb-0.5 text-white">WhatsApp</h4>
+                                                <a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-white transition-colors">{whatsapp}</a>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {phone && (
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border" style={{ color: primary, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                                                <Phone className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="sf-display font-bold uppercase tracking-wide text-xs mb-0.5 text-white">Telefono</h4>
+                                                <a href={`tel:${phone}`} className="text-sm text-gray-400 hover:text-white transition-colors">{phone}</a>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {showBooking && (
+                                <div className="bg-white rounded-3xl overflow-hidden" style={{ boxShadow: `0 0 80px rgba(${primaryRgb},0.12)` }}>
+                                    <div className="h-1.5" style={{ background: `linear-gradient(to right, ${primary}, ${primary}99, ${primary})` }} />
+                                    <div className="p-8 md:p-10">
+                                        <h3 className="sf-display font-bold text-2xl text-[#0e0e0e] mb-7 uppercase tracking-wide">Richiesta Prenotazione</h3>
+                                        <BookingForm primary={primary} primaryRgb={primaryRgb} localname={localname} />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Footer */}
+            <footer className="bg-[#080808] text-white py-14 border-t border-gray-900">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid md:grid-cols-3 gap-10 mb-10">
+                        <div>
+                            <span className="sf-hand text-4xl block mb-3" style={{ color: primary }}>{name}</span>
+                            {description && <p className="text-gray-500 text-sm leading-relaxed max-w-xs">{description}</p>}
+                        </div>
+                        <div>
+                            <h4 className="sf-display font-bold uppercase text-sm tracking-widest text-gray-400 mb-4">Naviga</h4>
+                            <ul className="space-y-2">
+                                {[['Home', () => window.scrollTo({ top: 0, behavior: 'smooth' })], specials.length > 0 && ['Speciali', () => scrollTo('specials')], ['Menu', () => scrollTo('categories')], showBooking && ['Prenota', () => scrollTo('prenota')]].filter(Boolean).map((item: any) => (
+                                    <li key={item[0]}>
+                                        <button onClick={item[1]} className="text-gray-500 transition-colors text-sm hover:text-white" onMouseEnter={e => (e.currentTarget.style.color = primary)} onMouseLeave={e => (e.currentTarget.style.color = '')}>{item[0]}</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="sf-display font-bold uppercase text-sm tracking-widest text-gray-400 mb-4">Seguici</h4>
+                            {(instagramUrl?.length > 5 || facebookUrl?.length > 5 || tiktokUrl?.length > 5) && (
+                                <div className="flex gap-3">
+                                    {instagramUrl?.length > 5 && <SocialBtn dark href={instagramUrl} primary={primary} label="Instagram"><IgIcon /></SocialBtn>}
+                                    {facebookUrl?.length > 5 && <SocialBtn dark href={facebookUrl} primary={primary} label="Facebook"><FbIcon /></SocialBtn>}
+                                    {tiktokUrl?.length > 5 && <SocialBtn dark href={tiktokUrl} primary={primary} label="TikTok"><TkIcon /></SocialBtn>}
+                                </div>
+                            )}
+                            {address && <p className="text-gray-600 text-xs mt-5">{address}</p>}
+                            {phone && <p className="text-gray-600 text-xs mt-1">{phone}</p>}
+                        </div>
+                    </div>
+                    <div className="border-t border-gray-900 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-600">
+                        <p>© {new Date().getFullYear()} {name} — Tutti i diritti riservati.</p>
+                        <p>Powered by <span style={{ color: primary }}>AxiomGroup</span></p>
                     </div>
                 </div>
             </footer>
@@ -919,8 +1298,9 @@ const VenueLandingPage: React.FC = () => {
         goToMenu, goToTakeaway, scrollTo, navigate,
     };
 
-    if (template === 'minimal') return <MinimalTemplate {...props} />;
-    if (template === 'luxury')  return <LuxuryTemplate  {...props} />;
+    if (template === 'minimal')  return <MinimalTemplate  {...props} />;
+    if (template === 'luxury')   return <LuxuryTemplate   {...props} />;
+    if (template === 'strafame') return <StrafameTemplate {...props} />;
     return <DefaultTemplate {...props} />;
 };
 

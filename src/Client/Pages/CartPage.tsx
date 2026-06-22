@@ -20,7 +20,6 @@ interface CartPageProps {
     waiter: boolean;
 }
 
-const MENU_BG = '#17140f';
 
 const pageVariants = {
     hidden: { opacity: 0 },
@@ -54,11 +53,6 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
 
     const primaryColor = styles?.primary?.trim() || '#f97316';
     const isTakeaway = !waiter && !localStorage.getItem('rf_table_id');
-
-    useEffect(() => {
-        document.body.style.backgroundColor = MENU_BG;
-        return () => { document.body.style.backgroundColor = ''; };
-    }, []);
 
     useEffect(() => {
         const storageKey = waiter ? 'waiter' : undefined;
@@ -147,9 +141,7 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
     if (loading) return <CustomLoading />;
 
     return (
-        <div style={{ background: MENU_BG, minHeight: '100vh' }}>
-            <style>{`:root { --c-accent: ${primaryColor}; }`}</style>
-
+        <div style={{ background: 'var(--menu-bg)', minHeight: '100vh' }}>
             <div className="max-w-4xl mx-auto" style={{ minHeight: '100vh' }}>
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || localname || ''}
@@ -165,26 +157,23 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                     initial="hidden"
                     animate="show"
                 >
-                    {/* Back button */}
                     <motion.button
                         variants={slideUp}
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 font-nunito text-sm font-medium mb-6"
-                        style={{ color: '#8a7d6a', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                        className="flex items-center gap-2 text-sm font-medium mb-6"
+                        style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                         whileHover={{ x: -3 } as any}
-                        onHoverStart={e => { (e.target as any).style.color = '#ede8da'; }}
-                        onHoverEnd={e => { (e.target as any).style.color = '#8a7d6a'; }}
                     >
                         <ArrowLeft className="w-4 h-4" />
                         Continua a ordinare
                     </motion.button>
 
-                    {/* Title */}
                     <motion.h1
                         variants={slideUp}
-                        className="font-cormorant font-semibold mb-1"
+                        className="font-semibold mb-1"
                         style={{
-                            color: '#ede8da',
+                            color: 'var(--menu-text)',
+                            fontFamily: 'var(--menu-font-display)',
                             fontSize: 'clamp(2rem, 6vw, 2.8rem)',
                             lineHeight: 1.1,
                         }}
@@ -195,18 +184,17 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                     {cart.length > 0 && (
                         <motion.p
                             variants={slideUp}
-                            className="font-nunito mb-6"
-                            style={{ color: '#8a7d6a', fontSize: '0.82rem' }}
+                            className="mb-6"
+                            style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.82rem' }}
                         >
                             {cart.length} {cart.length === 1 ? 'prodotto' : 'prodotti'} selezionati
                         </motion.p>
                     )}
 
-                    {/* Divider */}
                     <motion.div
                         variants={slideUp}
                         className="mb-6"
-                        style={{ height: 1, background: 'rgba(255,255,255,0.06)' }}
+                        style={{ height: 1, background: 'var(--menu-border)' }}
                     />
 
                     {cart.length === 0 ? (
@@ -220,18 +208,18 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                             >
                                 <ShoppingBasket
                                     className="w-20 h-20 mx-auto mb-5"
-                                    style={{ color: 'rgba(138,125,106,0.4)' }}
+                                    style={{ color: 'var(--menu-muted)', opacity: 0.4 }}
                                 />
                             </motion.div>
                             <h2
-                                className="font-cormorant font-semibold"
-                                style={{ color: '#ede8da', fontSize: '1.6rem' }}
+                                className="font-semibold"
+                                style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.6rem' }}
                             >
                                 Il carrello è vuoto
                             </h2>
                             <p
-                                className="font-nunito mt-2"
-                                style={{ color: '#8a7d6a', fontSize: '0.85rem' }}
+                                className="mt-2"
+                                style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.85rem' }}
                             >
                                 Aggiungi qualcosa di delizioso dal menù!
                             </p>
@@ -254,7 +242,7 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                             <motion.div
                                 variants={slideUp}
                                 className="mt-8 pt-6"
-                                style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+                                style={{ borderTop: '1px solid var(--menu-border)' }}
                             >
                                 {/* Takeaway form */}
                                 {isTakeaway && (
@@ -263,15 +251,15 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                         animate={{ opacity: 1, y: 0 }}
                                         className="mb-6 p-4 rounded-2xl"
                                         style={{
-                                            background: 'rgba(201,168,76,0.07)',
-                                            border: '1px solid rgba(201,168,76,0.2)',
+                                            background: 'var(--menu-surface)',
+                                            border: '1px solid var(--menu-border)',
                                         }}
                                     >
                                         <p
-                                            className="font-nunito text-xs font-bold uppercase tracking-widest mb-3"
-                                            style={{ color: '#c9a84c' }}
+                                            className="text-xs font-bold uppercase tracking-widest mb-3"
+                                            style={{ color: 'var(--menu-accent)', fontFamily: 'var(--menu-font-body)' }}
                                         >
-                                            🛍 Asporto — Dati di contatto
+                                            Asporto — Dati di contatto
                                         </p>
                                         <div className="space-y-2">
                                             <input
@@ -305,30 +293,30 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                     </motion.div>
                                 )}
 
-                                {/* Totals */}
                                 <div className="space-y-3 mb-6">
-                                    <div className="flex justify-between font-nunito" style={{ color: '#8a7d6a' }}>
+                                    <div className="flex justify-between" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
                                         <span>Subtotale</span>
                                         <span>€{total.toFixed(2)}</span>
                                     </div>
                                     <div
-                                        className="flex justify-between font-cormorant font-bold"
-                                        style={{ color: '#ede8da', fontSize: '1.5rem' }}
+                                        className="flex justify-between font-bold"
+                                        style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.5rem' }}
                                     >
                                         <span>Totale</span>
                                         <span>€{total.toFixed(2)}</span>
                                     </div>
                                 </div>
 
-                                {/* Confirm button */}
                                 <ShimmerButton
                                     onClick={handleOrder}
                                     disabled={isSubmitting}
-                                    className="w-full py-4 rounded-2xl text-white"
+                                    className="w-full py-4 rounded-2xl"
                                     style={{
-                                        background: `linear-gradient(135deg, ${primaryColor} 0%, #ea580c 100%)`,
+                                        background: primaryColor,
+                                        color: 'var(--menu-accent-text)',
                                         boxShadow: `0 8px 24px ${primaryColor}44`,
                                         fontSize: '1rem',
+                                        fontFamily: 'var(--menu-font-body)',
                                     }}
                                 >
                                     <CheckCircle className="w-5 h-5" />

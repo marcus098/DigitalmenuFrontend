@@ -73,6 +73,25 @@ const TEMPLATES = [
             </div>
         ),
     },
+    {
+        key: 'strafame',
+        label: 'Strafame',
+        desc: 'Street-food energico. Logo hand-written, hero dark con titolo enorme, ticker neon e card "Speciali". Personalità forte.',
+        preview: (primary: string) => (
+            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col">
+                <div className="h-12 bg-[#0e0e0e] flex items-center justify-center relative">
+                    <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, ${primary}33 0%, transparent 70%)` }} />
+                    <div className="relative z-10 italic font-bold tracking-tight text-white text-xs" style={{ fontFamily: 'cursive', textShadow: `1px 1px 0 ${primary}` }}>Strafame</div>
+                </div>
+                <div className="h-2.5" style={{ backgroundColor: primary }} />
+                <div className="flex gap-1 px-2 pt-1.5 pb-1.5 flex-1 bg-white">
+                    <div className="flex-1 h-full rounded bg-gray-100 border border-gray-200" />
+                    <div className="flex-1 h-full rounded bg-gray-100 border border-gray-200" />
+                    <div className="flex-1 h-full rounded bg-gray-100 border border-gray-200" />
+                </div>
+            </div>
+        ),
+    },
 ] as const;
 
 // ─── Reusable sub-components ──────────────────────────────────────────────────

@@ -214,6 +214,89 @@ export function saveCart(productCard: ProductCard[], name: string | undefined){
     }
 }
 
+// ── Group Order / Table Session ─────────────────────────────────────────────
+const TABLE_SESSION_KEY = "rf_table_session";
+const CLIENT_SESSION_KEY = "rf_client_session";
+const TABLE_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+interface StoredTableSession {
+    sessionId: string;
+    tableId: number;
+    localname: string;
+    joinedAt: number;
+}
+
+const generateUuid = (): string => {
+    const cryptoObj: Crypto | undefined = typeof window !== "undefined" ? window.crypto : undefined;
+    if (cryptoObj && typeof cryptoObj.randomUUID === "function") {
+        return cryptoObj.randomUUID();
+    }
+    // Fallback RFC4122-ish v4
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+};
+
+export const getOrCreateClientSessionId = (): string => {
+    try {
+        const existing = localStorage.getItem(CLIENT_SESSION_KEY);
+        if (existing && existing.trim().length > 0) return existing;
+        const fresh = generateUuid();
+        localStorage.setItem(CLIENT_SESSION_KEY, fresh);
+        return fresh;
+    } catch {
+        return generateUuid();
+    }
+};
+
+export const saveTableSession = (sessionId: string, tableId: number, localname: string): void => {
+    try {
+        const payload: StoredTableSession = { sessionId, tableId, localname, joinedAt: Date.now() };
+        localStorage.setItem(TABLE_SESSION_KEY, JSON.stringify(payload));
+    } catch {
+        /* noop */
+    }
+};
+
+export const getTableSession = (): StoredTableSession | null => {
+    try {
+        const raw = localStorage.getItem(TABLE_SESSION_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as StoredTableSession;
+        if (!parsed || typeof parsed.sessionId !== "string" || typeof parsed.joinedAt !== "number") return null;
+        if (Date.now() - parsed.joinedAt > TABLE_SESSION_MAX_AGE_MS) {
+            localStorage.removeItem(TABLE_SESSION_KEY);
+            return null;
+        }
+        return parsed;
+    } catch {
+        return null;
+    }
+};
+
+export const clearTableSession = (): void => {
+    try {
+        localStorage.removeItem(TABLE_SESSION_KEY);
+    } catch {
+        /* noop */
+    }
+};
+
+export const cartToAddComandOrders = (cart: ProductCard[]) => {
+    return cart.map((item) => ({
+        products: [{
+            idProduct: item.id,
+            productOption: item.optionName,
+            note: item.note ?? '',
+            quantity: item.quantity,
+            ingredientsMinus: item.ingredientsMinus,
+            ingredientsPlus: item.ingredientsPlus,
+        }],
+    }));
+};
+
 export function formatDateTime(isoString: string): string {
     const date = new Date(isoString);
 

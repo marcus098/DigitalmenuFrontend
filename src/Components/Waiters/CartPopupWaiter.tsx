@@ -20,6 +20,7 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
 
     const [selected, setSelected] = useState<number>(0);
     const [tableNumber, setTableNumber] = useState<number>(-1);
+    const [seats, setSeats] = useState<number>(1);
     const [customerName, setCustomerName] = useState<string>("");
     const [phone, setPhone] = useState<string>("");
     const [address, setAddress] = useState<string>("");
@@ -28,10 +29,12 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     const { localname } = useParams()
     const { tablesMap } = useData()
     const tables = Array.from(tablesMap.values())
+    const selectedTable = tables.find(t => t.id === tableNumber)
 
     const resetForm = () => {
         setSelected(0);
         setTableNumber(-1);
+        setSeats(1);
         setCustomerName("");
         setPhone("");
         setAddress("");
@@ -47,6 +50,7 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             } else{
                 order.comandWaiterType = "TABLE"
                 order.idTable = tableNumber
+                order.seats = seats > 0 ? seats : 1
                 const response = await sendWaiterComandApi(order)
                 if(response.success){
                     saveCart([], "waiter")
@@ -134,6 +138,18 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                             </option>
                         ))}
                     </select>
+                    {selectedTable && !selectedTable.busy && (
+                        <div className="mb-4">
+                            <label className="block text-sm text-gray-600 mb-1">Numero coperti</label>
+                            <input
+                                type="number"
+                                min={1}
+                                className="border rounded-lg px-4 py-2 w-full"
+                                value={seats}
+                                onChange={(e) => setSeats(Math.max(1, Number(e.target.value)))}
+                            />
+                        </div>
+                    )}
                     <div className="flex justify-between">
                         <button
                             onClick={resetForm}

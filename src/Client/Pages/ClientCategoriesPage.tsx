@@ -8,7 +8,8 @@ import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
 import ClientCategoriesList from '../../Components/Client/ClientCategoriesList';
 import AllergenModal from '../../Components/Client/AllergenModal';
 import useCartCount from '../../Utilities/useCartCount';
-import { resolveImageUrl } from '../../Utilities/Utilities';
+import { clearTableSession, getTableSession, resolveImageUrl } from '../../Utilities/Utilities';
+import { lookupTableSessionApi } from '../../Utilities/api';
 
 const ClientCategoriesPage: React.FC = () => {
     const { loading, categoriesMap, waiters, setSelectedAllergens, styles } = useData();
@@ -17,20 +18,76 @@ const ClientCategoriesPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
+    const [tableGateState, setTableGateState] = useState<'idle' | 'checking' | 'closed' | 'ok'>('idle');
 
     const primaryColor = styles?.primary?.trim() || '#f97316';
 
     useEffect(() => {
         const tableId = searchParams.get('table');
         if (tableId) localStorage.setItem('rf_table_id', tableId);
-    }, [searchParams]);
+
+        if (!tableId || !localname || waiters) {
+            setTableGateState('ok');
+            return;
+        }
+
+        let cancelled = false;
+        setTableGateState('checking');
+        (async () => {
+            const result = await lookupTableSessionApi(Number(tableId), localname);
+            if (cancelled) return;
+            if (!result.success || !result.data) {
+                setTableGateState('ok');
+                return;
+            }
+            const lookup = result.data;
+            if (!lookup.busy) {
+                clearTableSession();
+                setTableGateState('closed');
+                return;
+            }
+            const stored = getTableSession();
+            const matches = stored && lookup.sessionId && stored.sessionId === lookup.sessionId && stored.tableId === Number(tableId);
+            if (matches) {
+                localStorage.setItem('rf_table_id', tableId);
+                setTableGateState('ok');
+            } else {
+                clearTableSession();
+                navigate(`/${localname}/table-access?table=${tableId}`, { replace: true });
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [searchParams, localname, waiters, navigate]);
 
     const handleCategorySelect = (categoryId: number) => {
         const waitersUrl = waiters ? 'waiters/' : '';
         navigate(`/${waitersUrl}${localname}/products/${categoryId}`);
     };
 
-    if (loading) return <CustomLoading />;
+    if (loading || tableGateState === 'checking') return <CustomLoading />;
+
+    if (tableGateState === 'closed') {
+        return (
+            <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--menu-bg)' }}>
+                <div className="max-w-sm w-full text-center p-6 rounded-2xl" style={{ background: 'var(--menu-surface)', border: '1px solid var(--menu-border)' }}>
+                    <h1 className="font-semibold mb-2" style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.4rem' }}>
+                        Tavolo non aperto
+                    </h1>
+                    <p className="text-sm mb-5" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
+                        Chiama il cameriere per ricevere la password e iniziare a ordinare.
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-sm font-semibold"
+                        style={{ background: primaryColor, color: 'var(--menu-accent-text)', fontFamily: 'var(--menu-font-body)' }}
+                    >
+                        Riprova
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{ background: 'var(--menu-bg)', minHeight: '100vh' }}>

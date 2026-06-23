@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useNotification } from '../../Context/NotificationContext';
 import { useData } from '../../Context/DataContext';
-import { getCartMap, saveCart, emptyCart, CART_UPDATED_EVENT } from '../../Utilities/Utilities';
-import { sendClientOrderApi, sendTakeawayOrderApi } from '../../Utilities/api';
+import { getCartMap, saveCart, emptyCart, CART_UPDATED_EVENT, getTableSession, getOrCreateClientSessionId, cartToAddComandOrders } from '../../Utilities/Utilities';
+import { sendClientOrderApi, sendTakeawayOrderApi, setReadyApi } from '../../Utilities/api';
 import { ProductCard } from '../../types';
 
 import CustomLoading from '../../Components/CustomLoading';
@@ -52,7 +52,9 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
     const cartCount = useCartCount(waiter ? 'waiter' : undefined);
 
     const primaryColor = styles?.primary?.trim() || '#f97316';
-    const isTakeaway = !waiter && !localStorage.getItem('rf_table_id');
+    const tableSession = !waiter ? getTableSession() : null;
+    const isGroupSession = !waiter && !!tableSession;
+    const isTakeaway = !waiter && !isGroupSession && !localStorage.getItem('rf_table_id');
 
     useEffect(() => {
         const storageKey = waiter ? 'waiter' : undefined;
@@ -82,16 +84,25 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
     const handleOrder = async () => {
         if (waiter) { setIsOrderModalOpen(true); return; }
 
-        const orders = cart.map(item => ({
-            products: [{
-                idProduct: item.id,
-                productOption: item.optionName,
-                note: item.note ?? '',
-                quantity: item.quantity,
-                ingredientsMinus: item.ingredientsMinus,
-                ingredientsPlus: item.ingredientsPlus,
-            }],
-        }));
+        const orders = cartToAddComandOrders(cart);
+
+        // Group session: mark me as ready instead of submitting directly.
+        if (isGroupSession && tableSession) {
+            if (cart.length === 0) {
+                addNotification({ message: 'Aggiungi qualcosa al carrello prima di segnarti pronto.', type: 'error' });
+                return;
+            }
+            setIsSubmitting(true);
+            const clientSessionId = getOrCreateClientSessionId();
+            const result = await setReadyApi(tableSession.sessionId, clientSessionId, orders);
+            setIsSubmitting(false);
+            if (result.success && result.data) {
+                navigate(`/${localname}/table-session`);
+            } else {
+                addNotification({ message: "Errore nell'invio del 'pronto'. Riprova.", type: 'error' });
+            }
+            return;
+        }
 
         if (isTakeaway) {
             if (!takeawayForm.name.trim() || !takeawayForm.phone.trim()) {
@@ -322,6 +333,8 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                     <CheckCircle className="w-5 h-5" />
                                     {isSubmitting
                                         ? 'Invio in corso...'
+                                        : isGroupSession
+                                        ? 'Sono pronto'
                                         : isTakeaway
                                         ? 'Invia Ordine Asporto'
                                         : 'Conferma Ordine'}

@@ -4,9 +4,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
 import AllergenModal from '../../Components/Client/AllergenModal';
 import useCartCount from '../../Utilities/useCartCount';
-import { getClientOrderHistoryApi } from '../../Utilities/api';
+import { getClientOrderApi, getClientOrderHistoryApi, getTableSessionStateApi } from '../../Utilities/api';
 import { Comand } from '../../ComandType';
 import { Clock, Wallet, ArrowLeft, History, PlusCircle, MinusCircle } from 'lucide-react';
+import { getOrCreateClientSessionId, getTableSession } from '../../Utilities/Utilities';
+import { TableSessionComandLite } from '../../types';
 
 const STATUS_LABEL: Record<string, string> = {
     AWAIT: 'In attesa',
@@ -78,6 +80,10 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
 
 const HistoryOrdersPage: React.FC = () => {
     const [comande, setComande] = useState<Comand[]>([]);
+    const [comandClientMap, setComandClientMap] = useState<Map<string, string>>(new Map());
+    const [labelMap, setLabelMap] = useState<Map<string, string>>(new Map());
+    const [isSessionMode, setIsSessionMode] = useState<boolean>(false);
+    const [onlyMine, setOnlyMine] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
 
@@ -85,8 +91,40 @@ const HistoryOrdersPage: React.FC = () => {
     const { localname } = useParams();
     const navigate = useNavigate();
     const cartCount = useCartCount();
+    const myClientSessionId = getOrCreateClientSessionId();
 
     useEffect(() => {
+        const stored = getTableSession();
+        if (stored) {
+            setIsSessionMode(true);
+            (async () => {
+                const stateResult = await getTableSessionStateApi(stored.sessionId, myClientSessionId);
+                if (!stateResult.success || !stateResult.data) {
+                    setIsLoading(false);
+                    return;
+                }
+                const sState = stateResult.data;
+                const newLabelMap = new Map<string, string>();
+                sState.clients.forEach(c => newLabelMap.set(c.clientSessionId, c.label));
+                setLabelMap(newLabelMap);
+
+                const newCcMap = new Map<string, string>();
+                sState.comands.forEach((c: TableSessionComandLite) => newCcMap.set(c.comandId, c.clientSessionId));
+                setComandClientMap(newCcMap);
+
+                const fetched = await Promise.all(
+                    sState.comands.map(c => getClientOrderApi(c.comandId))
+                );
+                const list: Comand[] = [];
+                for (const r of fetched) {
+                    if (r.success && r.data) list.push(r.data);
+                }
+                setComande(list.filter(c => c.status !== 'DELETED'));
+                setIsLoading(false);
+            })();
+            return;
+        }
+
         const rawTableId = localStorage.getItem('rf_table_id');
         if (!rawTableId || !localname) {
             setIsLoading(false);
@@ -99,7 +137,11 @@ const HistoryOrdersPage: React.FC = () => {
             }
             setIsLoading(false);
         });
-    }, [localname]);
+    }, [localname, myClientSessionId]);
+
+    const visibleComande = isSessionMode && onlyMine
+        ? comande.filter(c => c.id && comandClientMap.get(c.id) === myClientSessionId)
+        : comande;
 
     return (
         <div className="bg-gray-50">
@@ -118,15 +160,32 @@ const HistoryOrdersPage: React.FC = () => {
                     </button>
                     <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-900 mb-6 tracking-tight">Cronologia Ordini</h1>
 
+                    {isSessionMode && (
+                        <div className="mb-5 inline-flex rounded-full p-1 bg-zinc-100">
+                            <button
+                                onClick={() => setOnlyMine(false)}
+                                className={`px-4 py-1.5 rounded-full text-xs font-semibold ${!onlyMine ? 'bg-primary text-white' : 'text-zinc-700'}`}
+                            >
+                                Tutti
+                            </button>
+                            <button
+                                onClick={() => setOnlyMine(true)}
+                                className={`px-4 py-1.5 rounded-full text-xs font-semibold ${onlyMine ? 'bg-primary text-white' : 'text-zinc-700'}`}
+                            >
+                                Solo i miei
+                            </button>
+                        </div>
+                    )}
+
                     {isLoading ? (
                         <p className="text-zinc-500">Caricamento cronologia...</p>
-                    ) : !localStorage.getItem('rf_table_id') ? (
+                    ) : !isSessionMode && !localStorage.getItem('rf_table_id') ? (
                         <div className="text-center py-16">
                             <History className="w-20 h-20 mx-auto text-zinc-300" />
                             <h2 className="mt-4 text-xl font-semibold text-zinc-700">Nessun tavolo associato</h2>
                             <p className="mt-2 text-zinc-500">Scansiona il QR code del tuo tavolo per vedere gli ordini.</p>
                         </div>
-                    ) : comande.length === 0 ? (
+                    ) : visibleComande.length === 0 ? (
                         <div className="text-center py-16">
                             <History className="w-20 h-20 mx-auto text-zinc-300" />
                             <h2 className="mt-4 text-xl font-semibold text-zinc-700">Nessun ordine trovato</h2>
@@ -134,9 +193,20 @@ const HistoryOrdersPage: React.FC = () => {
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            {comande.map(comanda => (
-                                <ComandaCard key={comanda.id} comanda={comanda} />
-                            ))}
+                            {visibleComande.map(comanda => {
+                                const clientId = comanda.id ? comandClientMap.get(comanda.id) : undefined;
+                                const label = clientId ? labelMap.get(clientId) : undefined;
+                                return (
+                                    <div key={comanda.id}>
+                                        {isSessionMode && label && (
+                                            <p className="text-xs font-bold uppercase tracking-widest mb-2 text-zinc-500">
+                                                {label}{clientId === myClientSessionId ? ' (tu)' : ''}
+                                            </p>
+                                        )}
+                                        <ComandaCard comanda={comanda} />
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </main>

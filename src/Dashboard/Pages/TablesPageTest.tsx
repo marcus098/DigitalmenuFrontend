@@ -15,6 +15,7 @@ import {AddTable, UpdateTableRow, UpdateTables} from "../../types";
 import {all} from "axios";
 import CustomLoading from "../../Components/CustomLoading";
 import FreeBusyTableModal from "../../Components/Dashboard/FreeBusyTableModal";
+import GroupSessionModal from "../../Components/Dashboard/GroupSessionModal";
 
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -34,6 +35,7 @@ const TablesPageTest: React.FC = () => {
     const [isForceDeletePopupOpen, setIsForceDeletePopupOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isBusyModalOpen, setIsBusyModalOpen] = useState<boolean>(false)
+    const [isGroupSessionModalOpen, setIsGroupSessionModalOpen] = useState<boolean>(false)
 
     const [showBusyMessage, setShowBusyMessage] = useState(false);
     const [tableOrders, setTableOrders] = useState<Record<OrderStatus, Item[]>>({ PENDING: [], PROGRESS: [], COMPLETED: [], CONFIRMED: [] });
@@ -282,6 +284,7 @@ const TablesPageTest: React.FC = () => {
                                 onRemove={() => handleRemoveClick(table)}
                                 onFree={(table: Table)        => {setSelectedTable(table); freeTable(Number(table.id))}}
                                 onOccupy={(table: Table)      => {setSelectedTable(table); setIsBusyModalOpen(true)}}
+                                onGroupSession={(table: Table) => {setSelectedTable(table); setIsGroupSessionModalOpen(true)}}
                             />
                         ))}
                     </ResponsiveGridLayout>
@@ -303,6 +306,13 @@ const TablesPageTest: React.FC = () => {
             {isForceDeletePopupOpen && selectedTable && <DeletePopup itemName={"free_table"} onConfirm={handleForceConfirmDelete} onCancel={() => setIsForceDeletePopupOpen(false)}/>}
             {isBusyModalOpen && selectedTable && <FreeBusyTableModal table={selectedTable} onClose={() => {setIsBusyModalOpen(false); setSelectedTable(null)}} onSave={setBusy} />}
             {showBusyMessage && selectedTable && <FreeBusyTableModal table={selectedTable} onClose={() => {setShowBusyMessage(false); setSelectedTable(null)}} onSave={forceFreeTable} />}
+            {isGroupSessionModalOpen && selectedTable && (
+                <GroupSessionModal
+                    tableId={Number(selectedTable.id)}
+                    tableName={selectedTable.name}
+                    onClose={() => { setIsGroupSessionModalOpen(false); setSelectedTable(null); }}
+                />
+            )}
             {loading && <CustomLoading isFullPage={true} isTransparent={true} />}
 
             {/* Qui puoi mettere il modale dei dettagli del tavolo (quello con gli ordini) */}

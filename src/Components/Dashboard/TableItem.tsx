@@ -1,5 +1,5 @@
 import React from 'react';
-import {FaBolt, FaChair, FaEdit, FaInfoCircle, FaLock, FaTrashAlt, FaUnlock} from 'react-icons/fa';
+import {FaBolt, FaChair, FaEdit, FaInfoCircle, FaLock, FaTrashAlt, FaUnlock, FaUsers} from 'react-icons/fa';
 import {Table} from "../../Dashboard/Pages/TablesPageTest";
 
 interface TableItemProps {
@@ -9,6 +9,7 @@ interface TableItemProps {
     onRemove: (table: Table) => void;
     onFree: (table: Table) => void;
     onOccupy: (table: Table) => void;
+    onGroupSession?: (table: Table) => void;
     isSelected: boolean
     // Props che react-grid-layout passerà automaticamente
     className?: string;
@@ -17,7 +18,7 @@ interface TableItemProps {
 }
 
 const TableItem: React.FC<TableItemProps> = React.forwardRef<HTMLDivElement, TableItemProps>(
-    ({ table, onFree, onOccupy, onInfo, onEdit, onRemove, className, style, children, ...props }, ref) => {
+    ({ table, onFree, onOccupy, onInfo, onEdit, onRemove, onGroupSession, className, style, children, ...props }, ref) => {
 
         const statusClasses = {
             Libero: 'bg-green-100 border-2 border-green-500 text-green-800',
@@ -43,6 +44,11 @@ const TableItem: React.FC<TableItemProps> = React.forwardRef<HTMLDivElement, Tab
                         <div className="non-draggable flex items-center flex-shrink-0">
                             <button onClick={() => onInfo(table)} className="p-1.5 text-gray-500 hover:text-blue-500"><FaInfoCircle size={15}/></button>
                             <button onClick={() => onEdit(table)} className="p-1.5 text-gray-500 hover:text-primary"><FaEdit size={14}/></button>
+                            {onGroupSession && (
+                                <button onClick={() => onGroupSession(table)} className="p-1.5 text-gray-500 hover:text-indigo-500" title="Sessione gruppo">
+                                    <FaUsers size={14}/>
+                                </button>
+                            )}
                             {/*<button onClick={() => onRemove(table)} className="p-1.5 text-gray-500 hover:text-red-500"><FaTrashAlt size={14}/></button>*/}
 
                             {/* ---- NUOVI BOTTONI ---- */}

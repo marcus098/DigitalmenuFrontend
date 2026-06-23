@@ -1,15 +1,18 @@
 import axios from "axios";
 import {
     AddCard,
+    AddComandOrder,
     AddComandWaiter,
     AddIngredient, AddTable,
     ApiResponse, CardDto,
     CategoryDto, FileDto, FolderDto, IdWithOrder,
     IngredientDto,
+    JoinResponse,
     ListToExport,
     LoginResponse,
+    OpenTableSessionResponse,
     PaymentDto, PaymentIntentResponse,
-    ProductDto, ReservationDto, Response, SignupWaiter, StyleDto, TableDto, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto,
+    ProductDto, ReservationDto, Response, SignupWaiter, StyleDto, TableDto, TableLookup, TableSessionState, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto, WaiterSessionState,
 } from "../types";
 import {deleteCookie, getCookie} from "./Utilities";
 import {apiCall, ApiCallResult, clientApiCall} from "./helper";
@@ -490,6 +493,67 @@ export const createReservationPublicApi = async (
     data: { customerName: string; customerPhone: string; customerEmail?: string; partySize: number; reservationDate: string; reservationTime: string; specialRequests?: string }
 ) => {
     return clientApiCall<number>({ method: POST, fixed: true, url: CREATE_RESERVATION_PUBLIC(localname), data })
+}
+
+// ── Group Order / Table Session — Public (no auth) ──────────────────────────
+const PUBLIC_SESSION_LOOKUP = (tableId: number, localname: string) =>
+    `/api/public/sessions/table/${tableId}?localname=${encodeURIComponent(localname)}`
+const PUBLIC_SESSION_JOIN = "/api/public/sessions/join"
+const PUBLIC_SESSION_STATE = (sessionId: string, clientSessionId: string) =>
+    `/api/public/sessions/${sessionId}/state?clientSessionId=${encodeURIComponent(clientSessionId)}`
+const PUBLIC_SESSION_READY = (sessionId: string) => `/api/public/sessions/${sessionId}/ready`
+const PUBLIC_SESSION_NOT_READY = (sessionId: string) => `/api/public/sessions/${sessionId}/not-ready`
+const PUBLIC_SESSION_SUBMIT = (sessionId: string) => `/api/public/sessions/${sessionId}/submit`
+
+export const lookupTableSessionApi = async (tableId: number, localname: string) => {
+    return clientApiCall<TableLookup>({ method: GET, fixed: true, url: PUBLIC_SESSION_LOOKUP(tableId, localname) })
+}
+
+export const joinTableSessionApi = async (body: { tableId: number; code: string; localname: string; clientSessionId: string }) => {
+    return clientApiCall<JoinResponse | { error: string }>({ method: POST, fixed: true, url: PUBLIC_SESSION_JOIN, data: body })
+}
+
+export const getTableSessionStateApi = async (sessionId: string, clientSessionId: string) => {
+    return clientApiCall<TableSessionState>({ method: GET, fixed: true, url: PUBLIC_SESSION_STATE(sessionId, clientSessionId) })
+}
+
+export const setReadyApi = async (sessionId: string, clientSessionId: string, draftOrder: AddComandOrder[]) => {
+    return clientApiCall<TableSessionState>({ method: POST, fixed: true, url: PUBLIC_SESSION_READY(sessionId), data: { clientSessionId, draftOrder } })
+}
+
+export const setNotReadyApi = async (sessionId: string, clientSessionId: string) => {
+    return clientApiCall<TableSessionState>({ method: POST, fixed: true, url: PUBLIC_SESSION_NOT_READY(sessionId), data: { clientSessionId } })
+}
+
+export const submitTableSessionApi = async (sessionId: string, clientSessionId: string) => {
+    return clientApiCall<TableSessionState | { error: string }>({ method: POST, fixed: true, url: PUBLIC_SESSION_SUBMIT(sessionId), data: { clientSessionId } })
+}
+
+// ── Group Order / Table Session — Waiter (JWT) ──────────────────────────────
+const WAITER_OPEN_SESSION = (tableId: number) => `/api/tables/${tableId}/session/open`
+const WAITER_CLOSE_SESSION = (tableId: number) => `/api/tables/${tableId}/session/close`
+const WAITER_UPDATE_SEATS = (tableId: number) => `/api/tables/${tableId}/session/seats`
+const WAITER_FORCE_SUBMIT = (tableId: number) => `/api/tables/${tableId}/session/force-submit`
+const WAITER_GET_SESSION = (tableId: number) => `/api/tables/${tableId}/session`
+
+export const openTableSessionApi = async (tableId: number, seats: number) => {
+    return apiCall<OpenTableSessionResponse>({ method: POST, fixed: true, url: WAITER_OPEN_SESSION(tableId), data: { seats } })
+}
+
+export const closeTableSessionApi = async (tableId: number) => {
+    return apiCall<void>({ method: POST, fixed: true, url: WAITER_CLOSE_SESSION(tableId) })
+}
+
+export const updateTableSeatsApi = async (tableId: number, seats: number) => {
+    return apiCall<WaiterSessionState>({ method: 'PATCH', fixed: true, url: WAITER_UPDATE_SEATS(tableId), data: { seats } })
+}
+
+export const forceSubmitTableSessionApi = async (tableId: number) => {
+    return apiCall<WaiterSessionState>({ method: POST, fixed: true, url: WAITER_FORCE_SUBMIT(tableId) })
+}
+
+export const getWaiterTableSessionApi = async (tableId: number) => {
+    return apiCall<WaiterSessionState>({ method: GET, fixed: true, url: WAITER_GET_SESSION(tableId) })
 }
 
 export const setAvailableCategoryApi = async (idCategory: number, value: boolean) => {

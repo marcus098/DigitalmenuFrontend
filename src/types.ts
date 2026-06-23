@@ -221,6 +221,7 @@ export interface AddComandWaiter {
     address?: string
     phone?: string
     time?: string
+    seats?: number
     comandWaiterType: "HOME" | "TABLE" | "TAKE_AWAY"
     type?: string
 }
@@ -587,6 +588,77 @@ export interface EslConfigDto {
     idAgency: number
     eslTagMac: string | null
     eslApUrl: string | null
+}
+
+// ── Group Order / Table Session ──────────────────────────────────────────────
+export interface SessionClientLite {
+    clientSessionId: string
+    label: string
+    ready: boolean
+    isYou: boolean
+    draftItemsCount: number
+}
+
+export type TableSessionStatus = "OPEN" | "SUBMITTED" | "CLOSED"
+
+export interface TableSessionComandLite {
+    clientSessionId: string
+    comandId: string
+    status: string
+}
+
+export interface TableSessionState {
+    sessionId: string
+    tableId: number
+    tableName: string
+    seats: number
+    status: TableSessionStatus
+    submittable: boolean
+    clients: SessionClientLite[]
+    comands: TableSessionComandLite[]
+}
+
+export interface TableLookup {
+    tableId: number
+    busy: boolean
+    tableName: string
+    seats?: number
+    joinable?: boolean
+    connectedCount?: number
+    sessionId?: string
+}
+
+export interface JoinResponse {
+    sessionId: string
+    tableId: number
+    seats: number
+    status: "OPEN"
+    you: SessionClientLite
+    clients: SessionClientLite[]
+}
+
+export interface WaiterSessionClient {
+    clientSessionId: string
+    label: string
+    ready: boolean
+    draftOrder: AddComandOrder[]
+}
+
+export interface WaiterSessionState {
+    sessionId: string
+    tableId: number
+    seats: number
+    accessCode: string
+    status: string
+    clients: WaiterSessionClient[]
+    comands: { clientSessionId: string; comandId: string }[]
+}
+
+export interface OpenTableSessionResponse {
+    sessionId: string
+    accessCode: string
+    seats: number
+    tableId: number
 }
 
 export const IS_ADMIN = 2;

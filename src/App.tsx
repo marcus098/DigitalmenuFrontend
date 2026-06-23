@@ -55,6 +55,9 @@ const CartPage             = lazy(() => import("./Client/Pages/CartPage"));
 const HistoryOrdersPage    = lazy(() => import("./Client/Pages/HistoryOrdersPage"));
 const OrderStatusPage      = lazy(() => import("./Client/Pages/OrderStatusPage"));
 const PaymentPage          = lazy(() => import("./Client/Pages/PaymentPage"));
+const TableAccessCodePage      = lazy(() => import("./Client/Pages/TableAccessCodePage"));
+const TableSessionWaitingPage  = lazy(() => import("./Client/Pages/TableSessionWaitingPage"));
+const TableLivePage            = lazy(() => import("./Client/Pages/TableLivePage"));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-neutral-50">
@@ -95,6 +98,9 @@ const ClientRoutes = () => (
             <Route path="/history" element={<HistoryOrdersPage />} />
             <Route path="/order-status/:comandId" element={<OrderStatusPage />} />
             <Route path="/payment/:comandId" element={<PaymentPage />} />
+            <Route path="/table-access" element={<TableAccessCodePage />} />
+            <Route path="/table-session" element={<TableSessionWaitingPage />} />
+            <Route path="/table-live" element={<TableLivePage />} />
           </Routes>
         </Suspense>
       </MenuThemeProvider>

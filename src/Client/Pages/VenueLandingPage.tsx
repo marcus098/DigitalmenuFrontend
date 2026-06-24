@@ -5,7 +5,10 @@ import { resolveImageUrl } from '../../Utilities/Utilities';
 import CustomLoading from '../../Components/CustomLoading';
 import { createReservationPublicApi } from '../../Utilities/api';
 import { CategoryDto, FeatureCard } from '../../types';
-import { MapPin, Clock, MessageCircle, Phone } from 'lucide-react';
+import {
+    MapPin, Clock, MessageCircle, Phone, ChefHat, Leaf, Zap, Smartphone,
+    CheckCircle2, ArrowRight, Loader2, UtensilsCrossed, CalendarDays, ShoppingBag,
+} from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -14,11 +17,24 @@ const hexToRgb = (hex: string): string => {
     return r ? `${parseInt(r[1], 16)}, ${parseInt(r[2], 16)}, ${parseInt(r[3], 16)}` : '251, 146, 60';
 };
 
+const FEATURE_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+    'chef-hat': ChefHat,
+    'leaf': Leaf,
+    'zap': Zap,
+    'smartphone': Smartphone,
+};
+
+const FeatureIcon: React.FC<{ icon: string; className?: string }> = ({ icon, className }) => {
+    const Cmp = FEATURE_ICON_MAP[icon];
+    if (Cmp) return <Cmp className={className} />;
+    return <span className={className}>{icon}</span>;
+};
+
 const DEFAULT_FEATURES: FeatureCard[] = [
-    { icon: '🥩', title: 'Ingredienti Freschi', sub: 'Selezionati ogni giorno' },
-    { icon: '👨‍🍳', title: 'Ricette Originali',  sub: 'Chef di esperienza' },
-    { icon: '⚡',  title: 'Veloce & Buono',     sub: 'Pronto in pochissimo' },
-    { icon: '📱', title: 'Ordina dal Tavolo',  sub: 'Scansiona il QR' },
+    { icon: 'leaf',       title: 'Ingredienti Freschi', sub: 'Selezionati ogni giorno' },
+    { icon: 'chef-hat',   title: 'Ricette Originali',   sub: 'Chef di esperienza' },
+    { icon: 'zap',        title: 'Servizio Rapido',     sub: 'Pronto in pochi minuti' },
+    { icon: 'smartphone', title: 'Ordina dal Tavolo',   sub: 'Scansiona il QR' },
 ];
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -58,8 +74,8 @@ const BookingForm: React.FC<BookingFormProps> = ({ primary, primaryRgb, localnam
 
     if (done) return (
         <div className="text-center py-14">
-            <div className="text-6xl mb-4">🎉</div>
-            <h3 className={`text-2xl font-black ${dark ? 'text-white' : 'text-gray-900'}`}>Richiesta inviata!</h3>
+            <CheckCircle2 className="w-14 h-14 mx-auto mb-4" style={{ color: primary }} strokeWidth={1.5} />
+            <h3 className={`text-2xl font-black ${dark ? 'text-white' : 'text-gray-900'}`}>Richiesta inviata</h3>
             <p className={dark ? 'text-gray-400 mt-2' : 'text-gray-500 mt-2'}>Ti contatteremo presto per confermare la prenotazione.</p>
             <button onClick={() => setDone(false)} className="mt-6 px-8 py-3 text-white font-bold rounded-xl hover:scale-105 transition-transform" style={{ backgroundColor: primary }}>
                 Nuova Prenotazione
@@ -107,18 +123,18 @@ const BookingForm: React.FC<BookingFormProps> = ({ primary, primaryRgb, localnam
                 <textarea value={form.notes} onChange={set('notes')} rows={3} className={base + ' resize-none'} placeholder="Allergie, richieste speciali…" />
             </div>
             {error && <p className="text-red-400 text-sm text-center bg-red-950/40 rounded-xl py-2 px-4">{error}</p>}
-            <button type="submit" disabled={busy} className="w-full py-4 text-white font-bold uppercase tracking-widest rounded-xl transition-all hover:scale-[1.01] disabled:opacity-60 mt-2" style={{ backgroundColor: primary, boxShadow: `0 4px 20px rgba(${primaryRgb}, 0.35)` }}>
-                {busy ? '⏳ Invio in corso…' : 'Conferma Prenotazione →'}
+            <button type="submit" disabled={busy} className="w-full py-4 text-white font-bold uppercase tracking-widest rounded-xl transition-all hover:scale-[1.01] disabled:opacity-60 mt-2 inline-flex items-center justify-center gap-2" style={{ backgroundColor: primary, boxShadow: `0 4px 20px rgba(${primaryRgb}, 0.35)` }}>
+                {busy ? (<><Loader2 className="w-4 h-4 animate-spin" /> Invio in corso…</>) : (<>Conferma Prenotazione <ArrowRight className="w-4 h-4" /></>)}
             </button>
         </form>
     );
 };
 
-interface InfoRowProps { primary: string; icon: string; label: string; value: React.ReactNode; dark?: boolean; }
+interface InfoRowProps { primary: string; icon: React.ReactNode; label: string; value: React.ReactNode; dark?: boolean; }
 
 const InfoRow: React.FC<InfoRowProps> = ({ primary, icon, label, value, dark }) => (
     <div className="flex items-start gap-4 group">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 border" style={{ color: primary, borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', backgroundColor: dark ? 'rgba(255,255,255,0.04)' : `rgba(${primary},0.06)` }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border" style={{ color: primary, borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', backgroundColor: dark ? 'rgba(255,255,255,0.04)' : `rgba(${primary},0.06)` }}>
             {icon}
         </div>
         <div>
@@ -227,7 +243,7 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                             {[['Menu','categories'],['Info','info'],showBooking && ['Prenota','prenota']].filter(Boolean).map((item: any) => (
                                 <button key={item[1]} onClick={() => scrollTo(item[1])} className={`text-sm font-semibold uppercase tracking-wider hover:opacity-70 ${scrolled ? 'text-gray-600' : 'text-white/80'}`}>{item[0]}</button>
                             ))}
-                            <button onClick={goToMenu} className="text-white text-sm font-bold uppercase tracking-wider px-5 py-2.5 rounded-full hover:scale-105 transition-all" style={{ backgroundColor: primary, boxShadow: `0 4px 15px rgba(${primaryRgb},0.35)` }}>🍽️ Ordina Ora</button>
+                            <button onClick={goToMenu} className="text-white text-sm font-bold uppercase tracking-wider px-5 py-2.5 rounded-full hover:scale-105 transition-all" style={{ backgroundColor: primary, boxShadow: `0 4px 15px rgba(${primaryRgb},0.35)` }}>Ordina Ora</button>
                         </div>
                         <button onClick={() => setMobileOpen(v => !v)} className={`md:hidden ${scrolled ? 'text-gray-800' : 'text-white'}`}>
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -241,8 +257,8 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                         {[['Menu','categories'],['Info','info'],showBooking && ['Prenota','prenota']].filter(Boolean).map((item: any) => (
                             <button key={item[1]} onClick={() => { scrollTo(item[1]); setMobileOpen(false); }} className="w-full text-left py-3 text-sm font-bold uppercase text-gray-700 border-b border-gray-50 last:border-0">{item[0]}</button>
                         ))}
-                        <button onClick={goToMenu} className="w-full mt-2 py-3 text-white text-sm font-bold uppercase rounded-xl" style={{ backgroundColor: primary }}>Sfoglia il Menu →</button>
-                        <button onClick={goToTakeaway} className="w-full py-3 text-sm font-bold uppercase rounded-xl border-2" style={{ borderColor: primary, color: primary }}>🛍️ Ordina Asporto</button>
+                        <button onClick={goToMenu} className="w-full mt-2 py-3 text-white text-sm font-bold uppercase rounded-xl" style={{ backgroundColor: primary }}>Sfoglia il Menu</button>
+                        <button onClick={goToTakeaway} className="w-full py-3 text-sm font-bold uppercase rounded-xl border-2" style={{ borderColor: primary, color: primary }}>Ordina Asporto</button>
                     </div>
                 )}
             </nav>
@@ -265,15 +281,16 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                     <h1 className="text-6xl md:text-[8rem] lg:text-[10rem] font-black text-white leading-none mb-4 fade-up fade-up-2" style={{ textShadow: `3px 3px 0 rgba(${primaryRgb},0.25), 0 0 80px rgba(${primaryRgb},0.1)` }}>{name}</h1>
                     {description && <p className="text-xl md:text-2xl text-gray-300 mb-3 font-light uppercase tracking-[0.12em] fade-up fade-up-3">{description}</p>}
                     {(address || hours) && (
-                        <p className="text-gray-500 text-sm mb-10 tracking-widest fade-up fade-up-3">
-                            {address && <span>📍 {address}</span>}
-                            {hours && <span className="ml-3">· ⏰ {hours}</span>}
+                        <p className="text-gray-500 text-sm mb-10 tracking-widest fade-up fade-up-3 inline-flex items-center justify-center gap-2 flex-wrap">
+                            {address && <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {address}</span>}
+                            {address && hours && <span className="opacity-40">·</span>}
+                            {hours && <span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {hours}</span>}
                         </p>
                     )}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap fade-up fade-up-4">
-                        <button onClick={goToMenu} className="text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:scale-105 hover:brightness-110 transition-all duration-300" style={{ backgroundColor: primary, boxShadow: `0 0 30px rgba(${primaryRgb},0.4)` }}>🍽️ Sfoglia il Menu</button>
-                        {showBooking && <button onClick={() => scrollTo('prenota')} className="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-gray-900 hover:border-white transition-all duration-300">📅 Prenota Tavolo</button>}
-                        <button onClick={goToTakeaway} className="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-gray-900 hover:border-white transition-all duration-300">🛍️ Ordina Asporto</button>
+                        <button onClick={goToMenu} className="text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:scale-105 hover:brightness-110 transition-all duration-300 inline-flex items-center justify-center gap-2" style={{ backgroundColor: primary, boxShadow: `0 0 30px rgba(${primaryRgb},0.4)` }}><UtensilsCrossed className="w-5 h-5" /> Sfoglia il Menu</button>
+                        {showBooking && <button onClick={() => scrollTo('prenota')} className="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-gray-900 hover:border-white transition-all duration-300 inline-flex items-center justify-center gap-2"><CalendarDays className="w-5 h-5" /> Prenota Tavolo</button>}
+                        <button onClick={goToTakeaway} className="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-gray-900 hover:border-white transition-all duration-300 inline-flex items-center justify-center gap-2"><ShoppingBag className="w-5 h-5" /> Ordina Asporto</button>
                     </div>
                 </div>
                 <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center opacity-50">
@@ -287,7 +304,7 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                     <div className="whitespace-nowrap marquee-run inline-flex gap-8">
                         {tickerItems.map((item, i) => (
                             <span key={i} className="text-white font-bold text-xs uppercase tracking-[0.2em] inline-flex items-center gap-3">
-                                <span className="opacity-60">✦</span> {item}
+                                <span className="opacity-60">·</span> {item}
                             </span>
                         ))}
                     </div>
@@ -302,7 +319,9 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                             {features.map((f, i) => (
                                 <div key={i} className="p-6 rounded-2xl group hover:bg-gray-50 transition-colors cursor-default">
-                                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform inline-block">{f.icon}</div>
+                                    <div className="mb-3 inline-flex items-center justify-center w-12 h-12 rounded-xl group-hover:scale-110 transition-transform" style={{ color: primary, backgroundColor: `rgba(${primaryRgb},0.08)` }}>
+                                        <FeatureIcon icon={f.icon} className="w-6 h-6" />
+                                    </div>
                                     <div className="font-bold text-sm text-gray-900 uppercase tracking-wide">{f.title}</div>
                                     <div className="text-gray-400 text-xs mt-1">{f.sub}</div>
                                 </div>
@@ -352,10 +371,10 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                             <p className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: primary }}>Vieni a trovarci</p>
                             <h2 className="text-4xl md:text-5xl font-black uppercase mb-10 text-white">Info & <span style={{ color: primary }}>Contatti</span></h2>
                             <div className="space-y-6">
-                                {address && <InfoRow dark primary={primary} icon="📍" label="Dove siamo" value={address} />}
-                                {hours   && <InfoRow dark primary={primary} icon="⏰" label="Orari" value={hours} />}
-                                {phone   && <InfoRow dark primary={primary} icon="📞" label="Telefono" value={<a href={`tel:${phone}`} className="hover:text-white transition-colors">{phone}</a>} />}
-                                {whatsapp && <InfoRow dark primary={primary} icon="💬" label="WhatsApp" value={<a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{whatsapp}</a>} />}
+                                {address && <InfoRow dark primary={primary} icon={<MapPin className="w-5 h-5" />} label="Dove siamo" value={address} />}
+                                {hours   && <InfoRow dark primary={primary} icon={<Clock className="w-5 h-5" />} label="Orari" value={hours} />}
+                                {phone   && <InfoRow dark primary={primary} icon={<Phone className="w-5 h-5" />} label="Telefono" value={<a href={`tel:${phone}`} className="hover:text-white transition-colors">{phone}</a>} />}
+                                {whatsapp && <InfoRow dark primary={primary} icon={<MessageCircle className="w-5 h-5" />} label="WhatsApp" value={<a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{whatsapp}</a>} />}
                             </div>
                         </div>
                         <div className="flex flex-col gap-6 lg:pt-20">
@@ -410,9 +429,9 @@ const DefaultTemplate: React.FC<TemplateProps> = ({
                         </div>
                         <div>
                             <h4 className="font-bold uppercase text-xs tracking-widest text-gray-500 mb-4">Contatti</h4>
-                            {address && <p className="text-gray-500 text-xs mt-1">📍 {address}</p>}
-                            {phone   && <p className="text-gray-500 text-xs mt-1">📞 {phone}</p>}
-                            {whatsapp && <p className="text-gray-500 text-xs mt-1">💬 {whatsapp}</p>}
+                            {address && <p className="text-gray-500 text-xs mt-1 inline-flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> {address}</p>}
+                            {phone   && <p className="text-gray-500 text-xs mt-1 inline-flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> {phone}</p>}
+                            {whatsapp && <p className="text-gray-500 text-xs mt-1 inline-flex items-center gap-2"><MessageCircle className="w-3.5 h-3.5" /> {whatsapp}</p>}
                         </div>
                     </div>
                     <div className="border-t border-gray-900 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-600">
@@ -494,15 +513,16 @@ const MinimalTemplate: React.FC<TemplateProps> = ({
                     <h1 className="text-5xl md:text-8xl font-black text-gray-900 leading-none mb-4">{name}</h1>
                     {description && <p className="text-gray-500 text-lg md:text-xl mt-3 max-w-xl mx-auto">{description}</p>}
                     {(address || hours) && (
-                        <p className="text-gray-400 text-sm mt-4">
-                            {address && <span>📍 {address}</span>}
-                            {hours && <span className="ml-3">· ⏰ {hours}</span>}
+                        <p className="text-gray-400 text-sm mt-4 inline-flex items-center justify-center gap-2 flex-wrap">
+                            {address && <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {address}</span>}
+                            {address && hours && <span className="opacity-40">·</span>}
+                            {hours && <span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {hours}</span>}
                         </p>
                     )}
                     <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-                        <button onClick={goToMenu} className="px-8 py-3.5 text-white font-bold rounded-full hover:scale-105 transition-all" style={{ backgroundColor: primary }}>🍽️ Sfoglia il Menu</button>
-                        {showBooking && <button onClick={() => scrollTo('prenota')} className="px-8 py-3.5 font-bold rounded-full border-2 hover:bg-gray-100 transition-colors" style={{ borderColor: primary, color: primary }}>📅 Prenota Tavolo</button>}
-                        <button onClick={goToTakeaway} className="px-8 py-3.5 font-bold rounded-full border-2 border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors">🛍️ Asporto</button>
+                        <button onClick={goToMenu} className="px-8 py-3.5 text-white font-bold rounded-full hover:scale-105 transition-all inline-flex items-center justify-center gap-2" style={{ backgroundColor: primary }}><UtensilsCrossed className="w-4 h-4" /> Sfoglia il Menu</button>
+                        {showBooking && <button onClick={() => scrollTo('prenota')} className="px-8 py-3.5 font-bold rounded-full border-2 hover:bg-gray-100 transition-colors inline-flex items-center justify-center gap-2" style={{ borderColor: primary, color: primary }}><CalendarDays className="w-4 h-4" /> Prenota Tavolo</button>}
+                        <button onClick={goToTakeaway} className="px-8 py-3.5 font-bold rounded-full border-2 border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors inline-flex items-center justify-center gap-2"><ShoppingBag className="w-4 h-4" /> Asporto</button>
                     </div>
                 </div>
             </section>
@@ -528,7 +548,9 @@ const MinimalTemplate: React.FC<TemplateProps> = ({
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {features.map((f, i) => (
                                 <div key={i} className="p-5 rounded-2xl bg-gray-50 text-center hover:bg-gray-100 transition-colors">
-                                    <div className="text-3xl mb-2">{f.icon}</div>
+                                    <div className="mb-2 inline-flex items-center justify-center" style={{ color: primary }}>
+                                        <FeatureIcon icon={f.icon} className="w-7 h-7" />
+                                    </div>
                                     <div className="font-bold text-sm text-gray-800">{f.title}</div>
                                     <div className="text-gray-400 text-xs mt-1">{f.sub}</div>
                                 </div>
@@ -575,10 +597,10 @@ const MinimalTemplate: React.FC<TemplateProps> = ({
                         <div>
                             <h2 className="text-3xl font-black text-gray-900 mb-8">Info & Contatti</h2>
                             <div className="space-y-5">
-                                {address  && <InfoRow primary={primary} icon="📍" label="Dove siamo" value={address} />}
-                                {hours    && <InfoRow primary={primary} icon="⏰" label="Orari" value={hours} />}
-                                {phone    && <InfoRow primary={primary} icon="📞" label="Telefono" value={<a href={`tel:${phone}`} className="hover:underline">{phone}</a>} />}
-                                {whatsapp && <InfoRow primary={primary} icon="💬" label="WhatsApp" value={<a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{whatsapp}</a>} />}
+                                {address  && <InfoRow primary={primary} icon={<MapPin className="w-5 h-5" />} label="Dove siamo" value={address} />}
+                                {hours    && <InfoRow primary={primary} icon={<Clock className="w-5 h-5" />} label="Orari" value={hours} />}
+                                {phone    && <InfoRow primary={primary} icon={<Phone className="w-5 h-5" />} label="Telefono" value={<a href={`tel:${phone}`} className="hover:underline">{phone}</a>} />}
+                                {whatsapp && <InfoRow primary={primary} icon={<MessageCircle className="w-5 h-5" />} label="WhatsApp" value={<a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{whatsapp}</a>} />}
                             </div>
                         </div>
                         <div>
@@ -617,8 +639,8 @@ const MinimalTemplate: React.FC<TemplateProps> = ({
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
                     <span className="font-black text-2xl" style={{ color: primary }}>{name}</span>
                     <div className="flex gap-6 text-gray-500">
-                        {address && <span className="text-xs">📍 {address}</span>}
-                        {phone   && <span className="text-xs">📞 {phone}</span>}
+                        {address && <span className="text-xs inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {address}</span>}
+                        {phone   && <span className="text-xs inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {phone}</span>}
                     </div>
                     <p className="text-xs text-gray-600">Powered by <span style={{ color: primary }}>AxiomGroup</span></p>
                 </div>
@@ -710,8 +732,8 @@ const LuxuryTemplate: React.FC<TemplateProps> = ({
                         {description && <p className="text-gray-400 mt-6 text-xl font-light leading-relaxed max-w-xl lux-up lux-up-3">{description}</p>}
                         <div className="flex flex-wrap gap-4 mt-10 lux-up lux-up-3">
                             <button onClick={goToMenu} className="px-10 py-4 font-bold uppercase tracking-[0.1em] text-black transition-all hover:scale-105" style={{ backgroundColor: primary }}>Sfoglia il Menu →</button>
-                            {showBooking && <button onClick={() => scrollTo('prenota')} className="px-10 py-4 font-bold uppercase tracking-[0.1em] text-white border border-white/20 hover:border-white/60 transition-all">📅 Prenota</button>}
-                            <button onClick={goToTakeaway} className="px-10 py-4 font-bold uppercase tracking-[0.1em] text-white border border-white/20 hover:border-white/60 transition-all">🛍️ Asporto</button>
+                            {showBooking && <button onClick={() => scrollTo('prenota')} className="px-10 py-4 font-bold uppercase tracking-[0.1em] text-white border border-white/20 hover:border-white/60 transition-all inline-flex items-center gap-2"><CalendarDays className="w-4 h-4" /> Prenota</button>}
+                            <button onClick={goToTakeaway} className="px-10 py-4 font-bold uppercase tracking-[0.1em] text-white border border-white/20 hover:border-white/60 transition-all inline-flex items-center gap-2"><ShoppingBag className="w-4 h-4" /> Asporto</button>
                         </div>
                     </div>
                 </div>
@@ -736,7 +758,9 @@ const LuxuryTemplate: React.FC<TemplateProps> = ({
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5">
                             {features.map((f, i) => (
                                 <div key={i} className="p-8 text-center bg-[#0a0a0a] hover:bg-[#111] transition-colors">
-                                    <div className="text-4xl mb-4">{f.icon}</div>
+                                    <div className="mb-4 inline-flex items-center justify-center" style={{ color: primary }}>
+                                        <FeatureIcon icon={f.icon} className="w-7 h-7" />
+                                    </div>
                                     <div className="font-bold text-sm text-white uppercase tracking-wide">{f.title}</div>
                                     <div className="text-gray-600 text-xs mt-2">{f.sub}</div>
                                 </div>
@@ -803,10 +827,10 @@ const LuxuryTemplate: React.FC<TemplateProps> = ({
                             </div>
                             <h2 className="text-5xl font-black text-white mb-10">Info & <span style={{ color: primary }}>Contatti</span></h2>
                             <div className="space-y-6">
-                                {address  && <InfoRow dark primary={primary} icon="📍" label="Indirizzo" value={address} />}
-                                {hours    && <InfoRow dark primary={primary} icon="⏰" label="Orari" value={hours} />}
-                                {phone    && <InfoRow dark primary={primary} icon="📞" label="Telefono" value={<a href={`tel:${phone}`} className="hover:text-white transition-colors">{phone}</a>} />}
-                                {whatsapp && <InfoRow dark primary={primary} icon="💬" label="WhatsApp" value={<a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{whatsapp}</a>} />}
+                                {address  && <InfoRow dark primary={primary} icon={<MapPin className="w-5 h-5" />} label="Indirizzo" value={address} />}
+                                {hours    && <InfoRow dark primary={primary} icon={<Clock className="w-5 h-5" />} label="Orari" value={hours} />}
+                                {phone    && <InfoRow dark primary={primary} icon={<Phone className="w-5 h-5" />} label="Telefono" value={<a href={`tel:${phone}`} className="hover:text-white transition-colors">{phone}</a>} />}
+                                {whatsapp && <InfoRow dark primary={primary} icon={<MessageCircle className="w-5 h-5" />} label="WhatsApp" value={<a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{whatsapp}</a>} />}
                             </div>
                         </div>
                         <div className="lg:pt-24">
@@ -853,9 +877,9 @@ const LuxuryTemplate: React.FC<TemplateProps> = ({
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <span className="font-black text-3xl tracking-tight" style={{ color: primary }}>{name}</span>
                         <div className="flex flex-wrap gap-6 text-xs text-gray-600">
-                            {address && <span>📍 {address}</span>}
-                            {phone   && <span>📞 {phone}</span>}
-                            {hours   && <span>⏰ {hours}</span>}
+                            {address && <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {address}</span>}
+                            {phone   && <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {phone}</span>}
+                            {hours   && <span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {hours}</span>}
                         </div>
                         <p className="text-xs text-gray-700">Powered by <span style={{ color: primary }}>AxiomGroup</span></p>
                     </div>
@@ -1011,7 +1035,7 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
                         <div className="sf-marquee-track sf-display text-white font-bold text-sm uppercase tracking-[0.2em]">
                             {tickerItems.map((item, i) => (
                                 <span key={i} className="inline-flex items-center gap-4">
-                                    <span className="opacity-50">✦</span>
+                                    <span className="opacity-50">·</span>
                                     {item}
                                     <span>&nbsp;</span>
                                 </span>
@@ -1033,7 +1057,9 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                             {features.map((f, i) => (
                                 <div key={i} className="p-6 rounded-2xl hover:bg-gray-50 transition-colors group cursor-default">
-                                    <div className="text-4xl mb-3 group-hover:scale-110 transition-transform inline-block">{f.icon}</div>
+                                    <div className="mb-3 inline-flex items-center justify-center w-14 h-14 rounded-2xl group-hover:scale-110 transition-transform" style={{ color: primary, backgroundColor: `rgba(${primaryRgb},0.08)` }}>
+                                        <FeatureIcon icon={f.icon} className="w-7 h-7" />
+                                    </div>
                                     <div className="sf-display font-bold text-lg uppercase">{f.title}</div>
                                     <div className="text-gray-400 text-sm mt-1">{f.sub}</div>
                                 </div>

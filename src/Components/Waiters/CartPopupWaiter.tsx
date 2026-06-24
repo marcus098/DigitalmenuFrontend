@@ -102,8 +102,11 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             {selected === 0 && (
-                <div className="bg-white rounded-2xl shadow-lg p-6 w-[90%] max-w-md">
-                    <h2 className="text-xl font-semibold mb-4 text-center">
+                <div
+                    className="rounded-2xl shadow-lg p-6 w-[90%] max-w-md"
+                    style={{ background: 'var(--menu-card)' }}
+                >
+                    <h2 className="text-xl font-semibold mb-4 text-center" style={{ color: 'var(--menu-text)' }}>
                         Scegli il tipo di ordine
                     </h2>
                     <div className="grid grid-cols-1 gap-4">
@@ -111,10 +114,11 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                             <div
                                 key={option.value}
                                 onClick={() => setSelected(option.id)}
-                                className="flex items-center justify-center border rounded-xl p-4 cursor-pointer hover:bg-gray-100 transition"
+                                className="menu-clickable-row flex items-center justify-center rounded-xl p-4 cursor-pointer transition"
+                                style={{ border: '1px solid var(--menu-border)' }}
                             >
-                                <div className="w-12 h-12 bg-gray-300 rounded-full mr-4" />
-                                <span className="text-lg font-medium">{option.label}</span>
+                                <div className="w-12 h-12 rounded-full mr-4" style={{ background: 'var(--menu-surface)' }} />
+                                <span className="text-lg font-medium" style={{ color: 'var(--menu-text)' }}>{option.label}</span>
                             </div>
                         ))}
                     </div>
@@ -122,12 +126,15 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             )}
 
             {selected === 1 && (
-                <div className="bg-white rounded-2xl shadow-lg p-6 w-[90%] max-w-md">
-                    <h2 className="text-xl font-semibold mb-4 text-center">
+                <div
+                    className="rounded-2xl shadow-lg p-6 w-[90%] max-w-md"
+                    style={{ background: 'var(--menu-card)' }}
+                >
+                    <h2 className="text-xl font-semibold mb-4 text-center" style={{ color: 'var(--menu-text)' }}>
                         Seleziona il tavolo
                     </h2>
                     <select
-                        className="border rounded-lg px-4 py-2 w-full mb-4 bg-white"
+                        className="dark-input rounded-lg px-4 py-2 w-full mb-4"
                         value={tableNumber}
                         onChange={(e) => setTableNumber(Number(e.target.value))}
                     >
@@ -140,11 +147,11 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                     </select>
                     {selectedTable && !selectedTable.busy && (
                         <div className="mb-4">
-                            <label className="block text-sm text-gray-600 mb-1">Numero coperti</label>
+                            <label className="block text-sm mb-1" style={{ color: 'var(--menu-muted)' }}>Numero coperti</label>
                             <input
                                 type="number"
                                 min={1}
-                                className="border rounded-lg px-4 py-2 w-full"
+                                className="dark-input rounded-lg px-4 py-2 w-full"
                                 value={seats}
                                 onChange={(e) => setSeats(Math.max(1, Number(e.target.value)))}
                             />
@@ -153,13 +160,15 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                     <div className="flex justify-between">
                         <button
                             onClick={resetForm}
-                            className="text-sm text-gray-500 hover:underline"
+                            className="text-sm hover:underline"
+                            style={{ color: 'var(--menu-muted)' }}
                         >
                             Indietro
                         </button>
                         <button
                             onClick={handleConfirm}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+                            className="px-4 py-2 rounded-lg font-semibold hover:opacity-90"
+                            style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
                         >
                             Conferma
                         </button>
@@ -168,21 +177,24 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             )}
 
             {(selected === 2 || selected === 3) && (
-                <div className="bg-white rounded-2xl shadow-lg p-6 w-[90%] max-w-md">
-                    <h2 className="text-xl font-semibold mb-4 text-center">
+                <div
+                    className="rounded-2xl shadow-lg p-6 w-[90%] max-w-md"
+                    style={{ background: 'var(--menu-card)' }}
+                >
+                    <h2 className="text-xl font-semibold mb-4 text-center" style={{ color: 'var(--menu-text)' }}>
                         Inserisci i dati del cliente
                     </h2>
                     <input
                         type="text"
                         placeholder="Nome"
-                        className="border rounded-lg px-4 py-2 w-full mb-3"
+                        className="dark-input rounded-lg px-4 py-2 w-full mb-3"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                     />
                     <input
                         type="text"
                         placeholder="Telefono"
-                        className="border rounded-lg px-4 py-2 w-full mb-3"
+                        className="dark-input rounded-lg px-4 py-2 w-full mb-3"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                     />
@@ -190,7 +202,7 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                         <input
                             type="text"
                             placeholder="Indirizzo"
-                            className="border rounded-lg px-4 py-2 w-full mb-3"
+                            className="dark-input rounded-lg px-4 py-2 w-full mb-3"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
                         />
@@ -198,20 +210,22 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                     <input
                         type="time"
                         placeholder="Orario"
-                        className="border rounded-lg px-4 py-2 w-full mb-4"
+                        className="dark-input rounded-lg px-4 py-2 w-full mb-4"
                         value={time}
                         onChange={(e) => setTime(e.target.value)}
                     />
                     <div className="flex justify-between">
                         <button
                             onClick={resetForm}
-                            className="text-sm text-gray-500 hover:underline"
+                            className="text-sm hover:underline"
+                            style={{ color: 'var(--menu-muted)' }}
                         >
                             Indietro
                         </button>
                         <button
                             onClick={handleConfirm}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+                            className="px-4 py-2 rounded-lg font-semibold hover:opacity-90"
+                            style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
                         >
                             Conferma
                         </button>

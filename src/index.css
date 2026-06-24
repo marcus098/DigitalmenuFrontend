@@ -124,3 +124,12 @@ code {
 }
 .dark-input::placeholder { color: var(--menu-input-placeholder, #5a5048); }
 .dark-input:focus { border-color: var(--menu-accent, var(--c-accent, #f97316)); }
+
+/* ─── Themed ingredient row hover (drawer/modals) ────── */
+.menu-ingredient-row:hover { background: var(--menu-card-hover, rgba(255,255,255,0.04)); }
+.menu-ingredient-row:has(:checked) {
+  background: color-mix(in srgb, var(--menu-accent, #f97316) 12%, transparent);
+}
+
+/* Generic themed clickable row (waiter modals, etc.) */
+.menu-clickable-row:hover { background: var(--menu-card-hover, rgba(255,255,255,0.04)); }

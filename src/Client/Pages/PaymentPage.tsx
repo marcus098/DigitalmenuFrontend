@@ -67,7 +67,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ totalCents, onSuccess }) =>
             <button
                 type="submit"
                 disabled={!stripe || busy}
-                className="w-full py-4 bg-primary text-white font-bold rounded-xl text-lg tracking-wide hover:opacity-90 disabled:opacity-50 transition-opacity"
+                className="w-full py-4 font-bold rounded-xl text-lg tracking-wide hover:opacity-90 disabled:opacity-50 transition-opacity"
+                style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
             >
                 {busy ? 'Elaborazione…' : `Paga ${formatEur(totalCents)}`}
             </button>
@@ -133,8 +134,8 @@ const PaymentPage: React.FC = () => {
     if (loading) return <CustomLoading isFullPage message="" />;
 
     return (
-        <div className="bg-gray-50 min-h-screen">
-            <div className="max-w-lg mx-auto bg-white shadow-xl min-h-screen">
+        <div className="min-h-screen" style={{ background: 'var(--menu-bg)' }}>
+            <div className="max-w-lg mx-auto shadow-xl min-h-screen" style={{ background: 'var(--menu-card)' }}>
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || localname || ''}
                     onAllergenClick={() => {}}
@@ -146,12 +147,12 @@ const PaymentPage: React.FC = () => {
                     {success ? (
                         <div className="text-center py-16">
                             <CheckCircleIcon className="w-20 h-20 text-green-500 mx-auto mb-4" />
-                            <h2 className="text-2xl font-black text-gray-900">Pagamento riuscito!</h2>
-                            <p className="text-gray-500 mt-2">Grazie, il tuo conto è stato saldato.</p>
+                            <h2 className="text-2xl font-black" style={{ color: 'var(--menu-text)' }}>Pagamento riuscito!</h2>
+                            <p className="mt-2" style={{ color: 'var(--menu-muted)' }}>Grazie, il tuo conto è stato saldato.</p>
                             <button
                                 onClick={() => navigate(`/${localname}/Categories`)}
-                                className="mt-8 px-8 py-3 text-white font-bold rounded-xl hover:opacity-90"
-                                style={{ backgroundColor: primary }}
+                                className="mt-8 px-8 py-3 font-bold rounded-xl hover:opacity-90"
+                                style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
                             >
                                 Torna al Menu
                             </button>
@@ -159,10 +160,11 @@ const PaymentPage: React.FC = () => {
                     ) : error ? (
                         <div className="text-center py-16">
                             <ExclamationTriangleIcon className="w-14 h-14 text-red-400 mx-auto mb-4" />
-                            <h2 className="text-xl font-bold text-gray-700">{error}</h2>
+                            <h2 className="text-xl font-bold" style={{ color: 'var(--menu-text)' }}>{error}</h2>
                             <button
                                 onClick={() => navigate(-1)}
-                                className="mt-6 px-6 py-2 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50"
+                                className="mt-6 px-6 py-2 rounded-xl hover:opacity-90"
+                                style={{ border: '1px solid var(--menu-border)', color: 'var(--menu-muted)' }}
                             >
                                 Torna indietro
                             </button>
@@ -173,31 +175,31 @@ const PaymentPage: React.FC = () => {
                             {comand && (
                                 <div className="mb-6">
                                     <div className="flex items-center justify-between mb-1">
-                                        <h2 className="text-xl font-black text-gray-900">Riepilogo Conto</h2>
+                                        <h2 className="text-xl font-black" style={{ color: 'var(--menu-text)' }}>Riepilogo Conto</h2>
                                         <span
                                             className="text-2xl font-black"
-                                            style={{ color: primary }}
+                                            style={{ color: 'var(--menu-accent)' }}
                                         >
                                             {formatEur(totalCents)}
                                         </span>
                                     </div>
-                                    <div className="bg-gray-50 rounded-2xl p-4 space-y-1.5 mt-3">
+                                    <div className="rounded-2xl p-4 space-y-1.5 mt-3" style={{ background: 'var(--menu-surface)' }}>
                                         {comand.orders.flatMap(o => o.products).map((p, i) => (
                                             <div key={i} className="flex justify-between text-sm">
-                                                <span className="text-gray-700">
+                                                <span style={{ color: 'var(--menu-text)' }}>
                                                     {p.quantity}× {p.productName}
                                                     {p.productOption?.name && p.productOption.name !== 'Default' && (
-                                                        <span className="text-gray-400 ml-1">({p.productOption.name})</span>
+                                                        <span className="ml-1" style={{ color: 'var(--menu-muted)' }}>({p.productOption.name})</span>
                                                     )}
                                                 </span>
-                                                <span className="text-gray-600 font-medium">
+                                                <span className="font-medium" style={{ color: 'var(--menu-muted)' }}>
                                                     {formatEur((p.productOption?.price ?? 0) * p.quantity * 100)}
                                                 </span>
                                             </div>
                                         ))}
-                                        <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-bold">
+                                        <div className="pt-2 mt-2 flex justify-between font-bold" style={{ borderTop: '1px solid var(--menu-border)', color: 'var(--menu-text)' }}>
                                             <span>Totale</span>
-                                            <span style={{ color: primary }}>{formatEur(totalCents)}</span>
+                                            <span style={{ color: 'var(--menu-accent)' }}>{formatEur(totalCents)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -205,7 +207,7 @@ const PaymentPage: React.FC = () => {
 
                             {/* Stripe Elements */}
                             <div className="mb-4">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Dati di Pagamento</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-wider mb-3" style={{ color: 'var(--menu-muted)' }}>Dati di Pagamento</h3>
                                 <Elements
                                     stripe={stripePromise}
                                     options={{
@@ -220,7 +222,7 @@ const PaymentPage: React.FC = () => {
                                 </Elements>
                             </div>
 
-                            <p className="text-center text-xs text-gray-400 mt-4">
+                            <p className="text-center text-xs mt-4" style={{ color: 'var(--menu-muted)' }}>
                                 Pagamento sicuro gestito da <strong>Stripe</strong>
                             </p>
                         </>

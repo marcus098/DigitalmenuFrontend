@@ -89,8 +89,8 @@ const OrderStatusPage: React.FC = () => {
     const currentStepIndex = statusSteps.findIndex(s => s.id === status);
 
     return (
-        <div className="bg-gray-50">
-            <div className="max-w-4xl mx-auto bg-white shadow-2xl shadow-zinc-200 min-h-screen">
+        <div style={{ background: 'var(--menu-bg)' }}>
+            <div className="max-w-4xl mx-auto shadow-2xl min-h-screen" style={{ background: 'var(--menu-card)' }}>
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || localname || ""}
                     onAllergenClick={() => setIsAllergenModalOpen(true)}
@@ -101,19 +101,23 @@ const OrderStatusPage: React.FC = () => {
                 <main className="p-4 md:p-6">
                     {notFound ? (
                         <div className="text-center py-16">
-                            <p className="text-xl font-bold text-zinc-700">Ordine non trovato</p>
-                            <p className="text-zinc-500 mt-2">L'ordine potrebbe essere già completato o non esistere.</p>
-                            <button onClick={() => navigate(`/${localname}/Categories`)} className="mt-6 px-6 py-2 bg-amber-500 text-white font-bold rounded-xl hover:opacity-90">
+                            <p className="text-xl font-bold" style={{ color: 'var(--menu-text)' }}>Ordine non trovato</p>
+                            <p className="mt-2" style={{ color: 'var(--menu-muted)' }}>L'ordine potrebbe essere già completato o non esistere.</p>
+                            <button
+                                onClick={() => navigate(`/${localname}/Categories`)}
+                                className="mt-6 px-6 py-2 font-bold rounded-xl hover:opacity-90"
+                                style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
+                            >
                                 Torna al Menù
                             </button>
                         </div>
                     ) : (
-                    <div className="bg-white p-6 sm:p-8 rounded-2xl">
+                    <div className="p-6 sm:p-8 rounded-2xl" style={{ background: 'var(--menu-card)' }}>
                         <div className="text-center mb-8">
-                            <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">Grazie per il tuo ordine!</h1>
-                            <p className="text-zinc-600 mt-2">Stiamo preparando tutto con cura.</p>
+                            <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--menu-text)' }}>Grazie per il tuo ordine!</h1>
+                            <p className="mt-2" style={{ color: 'var(--menu-muted)' }}>Stiamo preparando tutto con cura.</p>
                             {comandId && (
-                                <p className="mt-2 text-xs text-zinc-400 font-mono">#{comandId.split('_')[0]}</p>
+                                <p className="mt-2 text-xs font-mono" style={{ color: 'var(--menu-muted)' }}>#{comandId.split('_')[0]}</p>
                             )}
                         </div>
 
@@ -125,16 +129,26 @@ const OrderStatusPage: React.FC = () => {
                                 return (
                                     <div key={step.id} className="flex items-start gap-4">
                                         <div className="flex flex-col items-center">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isActive ? 'bg-amber-500 text-white' : 'bg-zinc-100 text-zinc-400'}`}>
+                                            <div
+                                                className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                                                style={
+                                                    isActive
+                                                        ? { background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }
+                                                        : { background: 'var(--menu-surface)', color: 'var(--menu-muted)' }
+                                                }
+                                            >
                                                 <Icon className={`w-6 h-6 ${isCurrent && step.id === 'in_preparation' ? 'animate-spin' : ''}`} />
                                             </div>
                                             {index < statusSteps.length - 1 && (
-                                                <div className={`w-0.5 h-20 mt-2 transition-colors ${index < currentStepIndex ? 'bg-amber-500' : 'bg-zinc-200'}`} />
+                                                <div
+                                                    className="w-0.5 h-20 mt-2 transition-colors"
+                                                    style={{ background: index < currentStepIndex ? 'var(--menu-accent)' : 'var(--menu-border)' }}
+                                                />
                                             )}
                                         </div>
                                         <div className="pt-1.5">
-                                            <h3 className={`font-bold text-lg ${isActive ? 'text-zinc-800' : 'text-zinc-500'}`}>{step.title}</h3>
-                                            <p className={`text-sm ${isActive ? 'text-zinc-600' : 'text-zinc-400'}`}>{step.description}</p>
+                                            <h3 className="font-bold text-lg" style={{ color: isActive ? 'var(--menu-text)' : 'var(--menu-muted)' }}>{step.title}</h3>
+                                            <p className="text-sm" style={{ color: 'var(--menu-muted)', opacity: isActive ? 1 : 0.7 }}>{step.description}</p>
                                         </div>
                                     </div>
                                 );
@@ -149,7 +163,8 @@ const OrderStatusPage: React.FC = () => {
                                 <div className="flex flex-col sm:flex-row gap-3 justify-center mt-5">
                                     <button
                                         onClick={() => navigate(`/${localname}/payment/${comandId}`)}
-                                        className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 shadow-md"
+                                        className="px-6 py-3 font-bold rounded-xl hover:opacity-90 shadow-md"
+                                        style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
                                     >
                                         💳 Paga il Conto
                                     </button>

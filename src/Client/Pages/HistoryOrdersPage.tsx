@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
     COMPLETED: 'Completato',
     DELETED: 'Annullato',
 };
+// Status colors are semantic (yellow=waiting, green=done, red=cancelled) — kept hardcoded.
 const STATUS_COLOR: Record<string, string> = {
     AWAIT: 'bg-zinc-100 text-zinc-600',
     PENDING: 'bg-yellow-100 text-yellow-700',
@@ -32,9 +33,12 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
     const statusKey = comanda.status ?? 'AWAIT';
 
     return (
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-200 shadow-lg">
-            <div className="flex justify-between items-center border-b border-zinc-200 pb-3 mb-4">
-                <div className="flex items-center gap-2 text-zinc-500">
+        <div
+            className="p-4 sm:p-5 rounded-2xl shadow-lg"
+            style={{ background: 'var(--menu-card)', border: '1px solid var(--menu-border)' }}
+        >
+            <div className="flex justify-between items-center pb-3 mb-4" style={{ borderBottom: '1px solid var(--menu-border)' }}>
+                <div className="flex items-center gap-2" style={{ color: 'var(--menu-muted)' }}>
                     <Clock className="w-5 h-5" />
                     <span className="font-semibold">{date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
@@ -42,8 +46,8 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${STATUS_COLOR[statusKey] ?? STATUS_COLOR.AWAIT}`}>
                         {STATUS_LABEL[statusKey] ?? statusKey}
                     </span>
-                    <div className="flex items-center gap-1 text-lg font-bold text-zinc-800">
-                        <Wallet className="w-4 h-4 text-zinc-400" />
+                    <div className="flex items-center gap-1 text-lg font-bold" style={{ color: 'var(--menu-text)' }}>
+                        <Wallet className="w-4 h-4" style={{ color: 'var(--menu-muted)' }} />
                         <span>€{total.toFixed(2)}</span>
                     </div>
                 </div>
@@ -52,14 +56,18 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
             <div className="space-y-3">
                 {comanda.orders.flatMap((order, oi) =>
                     order.products.map((prod, pi) => (
-                        <div key={`${oi}-${pi}`} className="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
+                        <div
+                            key={`${oi}-${pi}`}
+                            className="p-3 rounded-lg"
+                            style={{ background: 'var(--menu-surface)', border: '1px solid var(--menu-border)' }}
+                        >
                             <div className="flex justify-between items-start">
-                                <p className="font-bold text-zinc-800">
+                                <p className="font-bold" style={{ color: 'var(--menu-text)' }}>
                                     <span className="font-semibold">{prod.quantity}x</span> {prod.productName}
                                 </p>
-                                <p className="font-bold text-zinc-700">€{((prod.productOption?.price ?? 0) * prod.quantity).toFixed(2)}</p>
+                                <p className="font-bold" style={{ color: 'var(--menu-text)' }}>€{((prod.productOption?.price ?? 0) * prod.quantity).toFixed(2)}</p>
                             </div>
-                            {prod.note && <p className="text-xs text-zinc-500 mt-1 italic">"{prod.note}"</p>}
+                            {prod.note && <p className="text-xs mt-1 italic" style={{ color: 'var(--menu-muted)' }}>"{prod.note}"</p>}
                             {prod.ingredientsMinus.length > 0 && (
                                 <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
                                     <MinusCircle size={12} /> {prod.ingredientsMinus.map(i => i.name).join(', ')}
@@ -144,8 +152,8 @@ const HistoryOrdersPage: React.FC = () => {
         : comande;
 
     return (
-        <div className="bg-gray-50">
-            <div className="max-w-4xl mx-auto bg-white shadow-2xl shadow-zinc-200 min-h-screen">
+        <div style={{ background: 'var(--menu-bg)' }}>
+            <div className="max-w-4xl mx-auto shadow-2xl min-h-screen" style={{ background: 'var(--menu-bg)' }}>
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || localname || ""}
                     onAllergenClick={() => setIsAllergenModalOpen(true)}
@@ -154,23 +162,33 @@ const HistoryOrdersPage: React.FC = () => {
                 />
 
                 <main className="p-4 md:p-6">
-                    <button onClick={() => navigate(-1)} className="flex items-center space-x-2 text-zinc-600 hover:text-amber-500 mb-6 font-semibold">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex items-center space-x-2 mb-6 font-semibold hover:opacity-80"
+                        style={{ color: 'var(--menu-muted)' }}
+                    >
                         <ArrowLeft className="w-5 h-5" />
                         <span>Indietro</span>
                     </button>
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-900 mb-6 tracking-tight">Cronologia Ordini</h1>
+                    <h1 className="text-3xl md:text-4xl font-extrabold mb-6 tracking-tight" style={{ color: 'var(--menu-text)' }}>Cronologia Ordini</h1>
 
                     {isSessionMode && (
-                        <div className="mb-5 inline-flex rounded-full p-1 bg-zinc-100">
+                        <div className="mb-5 inline-flex rounded-full p-1" style={{ background: 'var(--menu-surface)' }}>
                             <button
                                 onClick={() => setOnlyMine(false)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-semibold ${!onlyMine ? 'bg-primary text-white' : 'text-zinc-700'}`}
+                                className="px-4 py-1.5 rounded-full text-xs font-semibold"
+                                style={!onlyMine
+                                    ? { background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }
+                                    : { color: 'var(--menu-text)' }}
                             >
                                 Tutti
                             </button>
                             <button
                                 onClick={() => setOnlyMine(true)}
-                                className={`px-4 py-1.5 rounded-full text-xs font-semibold ${onlyMine ? 'bg-primary text-white' : 'text-zinc-700'}`}
+                                className="px-4 py-1.5 rounded-full text-xs font-semibold"
+                                style={onlyMine
+                                    ? { background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }
+                                    : { color: 'var(--menu-text)' }}
                             >
                                 Solo i miei
                             </button>
@@ -178,18 +196,18 @@ const HistoryOrdersPage: React.FC = () => {
                     )}
 
                     {isLoading ? (
-                        <p className="text-zinc-500">Caricamento cronologia...</p>
+                        <p style={{ color: 'var(--menu-muted)' }}>Caricamento cronologia...</p>
                     ) : !isSessionMode && !localStorage.getItem('rf_table_id') ? (
                         <div className="text-center py-16">
-                            <History className="w-20 h-20 mx-auto text-zinc-300" />
-                            <h2 className="mt-4 text-xl font-semibold text-zinc-700">Nessun tavolo associato</h2>
-                            <p className="mt-2 text-zinc-500">Scansiona il QR code del tuo tavolo per vedere gli ordini.</p>
+                            <History className="w-20 h-20 mx-auto" style={{ color: 'var(--menu-muted)', opacity: 0.5 }} />
+                            <h2 className="mt-4 text-xl font-semibold" style={{ color: 'var(--menu-text)' }}>Nessun tavolo associato</h2>
+                            <p className="mt-2" style={{ color: 'var(--menu-muted)' }}>Scansiona il QR code del tuo tavolo per vedere gli ordini.</p>
                         </div>
                     ) : visibleComande.length === 0 ? (
                         <div className="text-center py-16">
-                            <History className="w-20 h-20 mx-auto text-zinc-300" />
-                            <h2 className="mt-4 text-xl font-semibold text-zinc-700">Nessun ordine trovato</h2>
-                            <p className="mt-2 text-zinc-500">Non sono ancora state inviate comande per questo tavolo.</p>
+                            <History className="w-20 h-20 mx-auto" style={{ color: 'var(--menu-muted)', opacity: 0.5 }} />
+                            <h2 className="mt-4 text-xl font-semibold" style={{ color: 'var(--menu-text)' }}>Nessun ordine trovato</h2>
+                            <p className="mt-2" style={{ color: 'var(--menu-muted)' }}>Non sono ancora state inviate comande per questo tavolo.</p>
                         </div>
                     ) : (
                         <div className="space-y-6">
@@ -199,7 +217,7 @@ const HistoryOrdersPage: React.FC = () => {
                                 return (
                                     <div key={comanda.id}>
                                         {isSessionMode && label && (
-                                            <p className="text-xs font-bold uppercase tracking-widest mb-2 text-zinc-500">
+                                            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--menu-muted)' }}>
                                                 {label}{clientId === myClientSessionId ? ' (tu)' : ''}
                                             </p>
                                         )}

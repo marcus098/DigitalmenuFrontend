@@ -28,9 +28,11 @@ const CartIcon: React.FC = () => {
         };
     }, []);
 
+    // Note: "Cronologia" uses blue as a secondary/distinct action (semantic). "Carrello" is the primary
+    // accent action so it follows the menu accent token.
     const actions = [
-        { label: 'Cronologia Ordini', icon: ClockIcon, onClick: () => navigate(`/${localname}/history`), bgColor: 'bg-blue-500' },
-        { label: 'Carrello', icon: ShoppingCartIcon, onClick: () => navigate(window.location.href.toLowerCase().includes('/waiters/') ? `/Waiters/${localname}/cart` : `/${localname}/cart`), bgColor: 'bg-orange-500' },
+        { label: 'Cronologia Ordini', icon: ClockIcon, onClick: () => navigate(`/${localname}/history`), bg: '#3b82f6', color: '#ffffff' },
+        { label: 'Carrello', icon: ShoppingCartIcon, onClick: () => navigate(window.location.href.toLowerCase().includes('/waiters/') ? `/Waiters/${localname}/cart` : `/${localname}/cart`), bg: 'var(--menu-accent)', color: 'var(--menu-accent-text)' },
     ];
 
     return (
@@ -50,12 +52,13 @@ const CartIcon: React.FC = () => {
                 >
                     {(window.location.href.toLowerCase().includes('/waiters/') ? [...(actions.filter(a => a.label === 'Carrello'))] : [...actions]).map((action) => (
                         <div key={action.label} className="relative group flex items-center">
-                            <span className="absolute right-full mr-4 px-3 py-1.5 bg-gray-800 text-white text-xs font-bold rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                            <span className="absolute right-full mr-4 px-3 py-1.5 text-xs font-bold rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap" style={{ background: 'rgba(0,0,0,0.8)', color: '#ffffff' }}>
                                 {action.label}
                             </span>
                             <button
                                 onClick={() => { action.onClick(); setIsOpen(false); }}
-                                className={`${action.bgColor} text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform`}
+                                className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                                style={{ background: action.bg, color: action.color }}
                             >
                                 <action.icon className="w-6 h-6" />
                             </button>
@@ -70,7 +73,8 @@ const CartIcon: React.FC = () => {
             */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center shadow-2xl hover:scale-110 transition-transform relative z-10"
+                className="w-16 h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform relative z-10"
+                style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
             >
                 <XMarkIcon className={`w-8 h-8 absolute transition-all duration-300 ${isOpen ? 'opacity-100 rotate-0' : 'opacity-0 -rotate-90'}`} />
                 <PlusIcon className={`w-8 h-8 absolute transition-all duration-300 ${isOpen ? 'opacity-0 rotate-90' : 'opacity-100 rotate-0'}`} />

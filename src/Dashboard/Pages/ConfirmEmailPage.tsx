@@ -10,8 +10,8 @@ const ConfirmEmailPage: React.FC = () => {
     const { code } = useParams()
 
     useEffect(() => {
-        deleteCookie('token')
-        deleteCookie('key')
+        deleteCookie('rf_token')
+        deleteCookie('rf_key')
     }, [])
 
     useEffect(() => {

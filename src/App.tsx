@@ -8,6 +8,7 @@ import { NotificationProvider } from "./Context/NotificationContext";
 import { HistoryProvider } from "./Context/HistoryContext";
 import { CookieConsentProvider } from "./Context/CookieConsentContext";
 import CookieBanner from "./Components/CookieConsent/CookieBanner";
+import NotificationDisplay from "./Components/NotificationDisplay";
 import PWAInstallPrompt from "./Components/PWAInstallPrompt";
 import Layout from "./Dashboard/Layout";
 import MenuThemeProvider from "./Components/Client/MenuThemeProvider";
@@ -41,6 +42,7 @@ const CategoriesPage       = lazy(() => import("./Dashboard/Pages/CategoriesPage
 const DocumentsPage        = lazy(() => import("./Dashboard/Pages/DocumentsPage"));
 const LoyaltyCardsPage     = lazy(() => import("./Dashboard/Pages/LoyaltyCardsPage"));
 const LayoutPage           = lazy(() => import("./Dashboard/Pages/LayoutPage"));
+const TakeawaySlotsPage    = lazy(() => import("./Dashboard/Pages/TakeawaySlotsPage"));
 const ReservationsPage     = lazy(() => import("./Dashboard/Pages/ReservationsPage"));
 const CassaPage            = lazy(() => import("./Dashboard/Pages/CassaPage"));
 const AnalyticsPage        = lazy(() => import("./Dashboard/Pages/AnalyticsPage"));
@@ -77,6 +79,7 @@ const WaiterRoutes = () => (
               <Route path={"/cart"} element={<CartPage waiter={true} />} />
             </Routes>
           </Suspense>
+          <NotificationDisplay />
         </MenuThemeProvider>
       </NotificationProvider>
     </DataProvider>
@@ -103,6 +106,7 @@ const ClientRoutes = () => (
             <Route path="/table-live" element={<TableLivePage />} />
           </Routes>
         </Suspense>
+        <NotificationDisplay />
       </MenuThemeProvider>
     </NotificationProvider>
   </DataProvider>
@@ -132,6 +136,7 @@ const DashboardRoutes = () => (
                 <Route path={"Documents"} element={<DocumentsPage />} />
                 <Route path={"Cards"} element={<LoyaltyCardsPage />} />
                 <Route path={"Layout"} element={<LayoutPage />} />
+                <Route path={"Slots"} element={<TakeawaySlotsPage />} />
                 <Route path={"Tables"} element={<TablesPageTest />} />
                 <Route path={"Orders"} element={<OrderPage />} />
                 <Route path={"Reservations"} element={<ReservationsPage />} />

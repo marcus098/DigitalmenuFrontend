@@ -1,17 +1,20 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Save, Paintbrush, FileText, Settings, Eye, Pencil, Image, X, Loader, Trash2, Layout } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Save, Paintbrush, FileText, Settings, Eye, Pencil, Image, X, Loader, Trash2, Layout, Smartphone, Monitor, RefreshCw, ExternalLink } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { useData } from '../../Context/DataContext';
 import { FeatureCard, StyleDto, UpdateStyle } from "../../types";
 import { useNotification } from "../../Context/NotificationContext";
 import CustomLoading from "../../Components/CustomLoading";
+import { FEATURE_ICONS } from "../../Utilities/featureIcons";
+import { AVAILABLE_FONTS } from "../../Utilities/fonts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEFAULT_FEATURES: FeatureCard[] = [
-    { icon: '🥩', title: 'Ingredienti Freschi', sub: 'Selezionati ogni giorno' },
-    { icon: '👨‍🍳', title: 'Ricette Originali',  sub: 'Chef di esperienza' },
-    { icon: '⚡',  title: 'Veloce & Buono',     sub: 'Pronto in pochissimo' },
-    { icon: '📱', title: 'Ordina dal Tavolo',  sub: 'Scansiona il QR' },
+    { icon: 'beef',       title: 'Ingredienti Freschi', sub: 'Selezionati ogni giorno' },
+    { icon: 'chef-hat',   title: 'Ricette Originali',   sub: 'Chef di esperienza' },
+    { icon: 'zap',        title: 'Veloce & Buono',      sub: 'Pronto in pochissimo' },
+    { icon: 'smartphone', title: 'Ordina dal Tavolo',   sub: 'Scansiona il QR' },
 ];
 
 const TEMPLATES = [
@@ -69,25 +72,6 @@ const TEMPLATES = [
                     <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
                     <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
                     <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
-                </div>
-            </div>
-        ),
-    },
-    {
-        key: 'strafame',
-        label: 'Strafame',
-        desc: 'Street-food energico. Logo hand-written, hero dark con titolo enorme, ticker neon e card "Speciali". Personalità forte.',
-        preview: (primary: string) => (
-            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col">
-                <div className="h-12 bg-[#0e0e0e] flex items-center justify-center relative">
-                    <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, ${primary}33 0%, transparent 70%)` }} />
-                    <div className="relative z-10 italic font-bold tracking-tight text-white text-xs" style={{ fontFamily: 'cursive', textShadow: `1px 1px 0 ${primary}` }}>Strafame</div>
-                </div>
-                <div className="h-2.5" style={{ backgroundColor: primary }} />
-                <div className="flex gap-1 px-2 pt-1.5 pb-1.5 flex-1 bg-white">
-                    <div className="flex-1 h-full rounded bg-gray-100 border border-gray-200" />
-                    <div className="flex-1 h-full rounded bg-gray-100 border border-gray-200" />
-                    <div className="flex-1 h-full rounded bg-gray-100 border border-gray-200" />
                 </div>
             </div>
         ),
@@ -247,11 +231,63 @@ const ControlPanel: React.FC<{
                         </div>
                     </div>
                     <hr />
-                    <ColorInput label="Colore Primario" value={draftTheme.primary} onChange={v => updateThemeValue('primary', v)} />
+                    <ColorInput label="Colore Primario (CTA principali)" value={draftTheme.primary} onChange={v => updateThemeValue('primary', v)} />
                     <ColorInput label="Testo su Primario" value={draftTheme.textOnPrimary} onChange={v => updateThemeValue('textOnPrimary', v)} />
+                    <ColorInput label="Colore Secondario (bottoni Prenota / Asporto)" value={(draftTheme as any).secondaryColor || '#0e0e0e'} onChange={v => updateThemeValue('secondaryColor', v)} />
+                    <ColorInput label="Testo su Secondario" value={(draftTheme as any).secondaryTextColor || '#ffffff'} onChange={v => updateThemeValue('secondaryTextColor', v)} />
                     <ColorInput label="Sfondo Card" value={draftTheme.cardBackground} onChange={v => updateThemeValue('cardBackground', v)} />
                     <ColorInput label="Testo Titoli" value={draftTheme.textTitle} onChange={v => updateThemeValue('textTitle', v)} />
                     <ColorInput label="Testo Corpo" value={draftTheme.textBody} onChange={v => updateThemeValue('textBody', v)} />
+                    <hr />
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Tipografia</p>
+                    <div>
+                        <label className="label-style text-sm">Font</label>
+                        <select
+                            value={draftTheme.font || 'system'}
+                            onChange={e => updateThemeValue('font', e.target.value)}
+                            className="input-style mt-1"
+                            style={{ fontFamily: AVAILABLE_FONTS.find(f => f.key === (draftTheme.font || 'system'))?.family }}
+                        >
+                            {AVAILABLE_FONTS.map(f => (
+                                <option key={f.key} value={f.key} style={{ fontFamily: f.family }}>
+                                    {f.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-[11px] text-gray-400 mt-1">
+                            Il font viene applicato a tutta la landing e alle pagine menu/carrello.
+                        </p>
+                    </div>
+                    <hr />
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Hero (intestazione)</p>
+                    <ColorInput
+                        label="Colore Hero"
+                        value={(draftTheme as any).heroBgColor || '#0e0e0e'}
+                        onChange={v => updateThemeValue('heroBgColor', v)}
+                    />
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="label-style text-sm">
+                                Opacità colore sopra immagine
+                            </label>
+                            <span className="text-xs font-mono text-gray-500">
+                                {Math.round(((draftTheme as any).heroOverlayOpacity ?? 0.6) * 100)}%
+                            </span>
+                        </div>
+                        <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={Math.round(((draftTheme as any).heroOverlayOpacity ?? 0.6) * 100)}
+                            onChange={e => updateThemeValue('heroOverlayOpacity', parseInt(e.target.value, 10) / 100)}
+                            className="w-full accent-primary"
+                            style={{ accentColor: draftTheme.primary }}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">
+                            0% = foto pulita · 100% = colore pieno (foto nascosta). Se non c'è immagine, l'hero usa il colore pieno.
+                        </p>
+                    </div>
                 </div>
             )}
 
@@ -307,15 +343,37 @@ const ControlPanel: React.FC<{
                             {features.map((f, i) => (
                                 <div key={i} className="p-3 bg-slate-50 rounded-xl border border-gray-200 space-y-2">
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Card {i + 1}</p>
-                                    <div className="flex gap-2">
-                                        <div className="w-16">
-                                            <label className="label-style text-xs">Icona</label>
-                                            <input type="text" value={f.icon} onChange={e => updateFeature(i, 'icon', e.target.value)} className="input-style mt-0.5 text-center text-xl" maxLength={4} />
+                                    <div>
+                                        <label className="label-style text-xs">Icona</label>
+                                        <div className="grid grid-cols-8 gap-1 mt-1 p-2 bg-white border border-gray-200 rounded-lg max-h-44 overflow-y-auto">
+                                            {FEATURE_ICONS.map(({ key, label, Cmp }) => {
+                                                const selected = f.icon === key;
+                                                return (
+                                                    <button
+                                                        type="button"
+                                                        key={key}
+                                                        onClick={() => updateFeature(i, 'icon', key)}
+                                                        title={label}
+                                                        className={`aspect-square flex items-center justify-center rounded-md transition-colors ${
+                                                            selected ? 'text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'
+                                                        }`}
+                                                        style={selected ? { backgroundColor: draftTheme.primary } : undefined}
+                                                    >
+                                                        <Cmp className="w-5 h-5" />
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
-                                        <div className="flex-1">
-                                            <label className="label-style text-xs">Titolo</label>
-                                            <input type="text" value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} className="input-style mt-0.5" />
-                                        </div>
+                                        {!FEATURE_ICONS.some(ic => ic.key === f.icon) && f.icon && (
+                                            <p className="text-[11px] text-amber-600 mt-1 flex items-center gap-1">
+                                                <span>⚠</span>
+                                                Icona attuale "{f.icon}" non è in catalogo (verrà mostrata come testo). Scegli una delle icone qui sopra.
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="label-style text-xs">Titolo</label>
+                                        <input type="text" value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} className="input-style mt-0.5" />
                                     </div>
                                     <div>
                                         <label className="label-style text-xs">Sottotitolo</label>
@@ -403,30 +461,132 @@ const ControlPanel: React.FC<{
 };
 
 // ─── PreviewPanel ─────────────────────────────────────────────────────────────
+// Anteprima live: iframe punta al sito vetrina pubblico `/${localname}?preview=1`.
+// Ogni cambio nel pannello manda il `draftTheme` via postMessage, e VenueLandingPage
+// lo applica sopra lo stile salvato — così vedi le modifiche in tempo reale senza
+// dover salvare. Le foto nuove (logo/hero) vengono mostrate via blob URL locali.
 
-// @ts-ignore
-const PreviewPanel: React.FC<{ backgroundCss: React.CSSProperties; draftTheme: StyleDto }> = ({ backgroundCss, draftTheme }) => (
-    <div className="lg:col-span-2 rounded-xl p-2 md:p-4 flex justify-center items-center h-full" style={backgroundCss}>
-        <div className="w-[375px] h-full max-h-[812px] bg-white rounded-3xl shadow-2xl overflow-hidden ring-4 ring-gray-800">
-            <div className="w-full h-full overflow-y-auto" style={backgroundCss}>
-                <MockHeader theme={draftTheme} />
-                <main className="p-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <MockCategoryCard theme={draftTheme} name="Pizze" />
-                        <MockCategoryCard theme={draftTheme} name="Panini" />
-                        <MockCategoryCard theme={draftTheme} name="Bibite" />
-                        <MockCategoryCard theme={draftTheme} name="Dessert" />
-                    </div>
-                </main>
+const PreviewPanel: React.FC<{ draftTheme: StyleDto; localname: string }> = ({ draftTheme, localname }) => {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [ready, setReady] = useState(false);
+    const [device, setDevice] = useState<'mobile' | 'desktop'>('mobile');
+    const [reloadKey, setReloadKey] = useState(0);
+
+    const src = `/${localname}?preview=1`;
+    const publicUrl = `/${localname}`;
+
+    // Quando l'iframe segnala "pronto", marchiamo come ready per iniziare a inviare.
+    // Salviamo anche l'ultimo draftTheme in un ref così possiamo rispondere subito al ready.
+    const draftRef = useRef(draftTheme);
+    useEffect(() => { draftRef.current = draftTheme; }, [draftTheme]);
+
+    useEffect(() => {
+        const handler = (e: MessageEvent) => {
+            if (e.origin !== window.location.origin) return;
+            if (e.data?.type === 'rf-layout-preview-ready') {
+                setReady(true);
+                // rispondi immediatamente con lo stato corrente
+                iframeRef.current?.contentWindow?.postMessage(
+                    { type: 'rf-layout-preview', payload: draftRef.current },
+                    window.location.origin,
+                );
+            }
+        };
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
+    }, []);
+
+    // Reset ready quando ricarichi
+    useEffect(() => { setReady(false); }, [reloadKey]);
+
+    // Push del draftTheme via postMessage a ogni cambio (debounced 50ms per non spammare).
+    // Anche se non ancora ready inviamo: se l'iframe non è pronto verrà perso, ma al ready
+    // riceverà comunque lo stato corrente via il responder qui sopra.
+    useEffect(() => {
+        if (!iframeRef.current?.contentWindow) return;
+        const t = setTimeout(() => {
+            iframeRef.current?.contentWindow?.postMessage(
+                { type: 'rf-layout-preview', payload: draftTheme },
+                window.location.origin,
+            );
+        }, 50);
+        return () => clearTimeout(t);
+    }, [draftTheme, ready]);
+
+    const frameClass = device === 'mobile'
+        ? 'w-[375px] h-[800px] rounded-[2rem] ring-8 ring-gray-900 shadow-2xl'
+        : 'w-full max-w-[1200px] h-[760px] rounded-lg shadow-2xl ring-1 ring-gray-300';
+
+    return (
+        <div className="lg:col-span-2 bg-slate-100 rounded-xl p-3 md:p-5 flex flex-col h-full min-h-[600px]">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between mb-3 px-1">
+                <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                    <button
+                        onClick={() => setDevice('mobile')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                            device === 'mobile' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'
+                        }`}
+                        title="Mobile"
+                    >
+                        <Smartphone className="w-3.5 h-3.5" /> Mobile
+                    </button>
+                    <button
+                        onClick={() => setDevice('desktop')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                            device === 'desktop' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'
+                        }`}
+                        title="Desktop"
+                    >
+                        <Monitor className="w-3.5 h-3.5" /> Desktop
+                    </button>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setReloadKey(k => k + 1)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-gray-500 hover:bg-white hover:text-gray-800 transition-colors"
+                        title="Ricarica anteprima"
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" /> Ricarica
+                    </button>
+                    <a
+                        href={publicUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-gray-500 hover:bg-white hover:text-gray-800 transition-colors"
+                        title="Apri il sito pubblico in una nuova scheda"
+                    >
+                        <ExternalLink className="w-3.5 h-3.5" /> Apri
+                    </a>
+                </div>
             </div>
+
+            {/* Frame */}
+            <div className="flex-1 flex justify-center items-start overflow-auto p-2">
+                <div className={`${frameClass} bg-white overflow-hidden flex-shrink-0 transition-all`}>
+                    <iframe
+                        key={reloadKey}
+                        ref={iframeRef}
+                        src={src}
+                        title="Anteprima sito vetrina"
+                        className="w-full h-full border-0 bg-white"
+                        loading="lazy"
+                    />
+                </div>
+            </div>
+
+            <p className="text-[11px] text-gray-400 text-center mt-2">
+                Anteprima live — la navigazione è bloccata. Salva per pubblicare le modifiche.
+            </p>
         </div>
-    </div>
-);
+    );
+};
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 const LayoutPage: React.FC = () => {
     const { updateStyle, styles, loading } = useData();
+    const { localname } = useParams<{ localname: string }>();
     const [draftTheme, setDraftTheme] = useState<StyleDto>(styles || {
         backgroundGradient: [], cardBackground: "#FFFFFF", primary: "#fb923c", textBody: "#6b7280",
         textOnPrimary: "#FFFFFF", textTitle: "#1f2937", address: "", phone: "",
@@ -510,7 +670,12 @@ const LayoutPage: React.FC = () => {
             showBooking: d.showBooking ?? true,
             showTicker: d.showTicker ?? true,
             landingTemplate: d.landingTemplate || "default",
-        };
+            heroBgColor: d.heroBgColor || "#0e0e0e",
+            heroOverlayOpacity: typeof d.heroOverlayOpacity === 'number' ? d.heroOverlayOpacity : 0.6,
+            secondaryColor: d.secondaryColor || "#0e0e0e",
+            secondaryTextColor: d.secondaryTextColor || "#ffffff",
+            font: d.font || "system",
+        } as any;
         const ok = await updateStyle(payload, logoFile, heroFile);
         if (ok) {
             addNotification({ message: "Stile modificato", type: "success" });
@@ -551,13 +716,13 @@ const LayoutPage: React.FC = () => {
 
             <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow">
                 <ControlPanel {...panelProps} />
-                <PreviewPanel backgroundCss={backgroundCss} draftTheme={draftTheme} />
+                <PreviewPanel draftTheme={draftTheme} localname={localname || ''} />
             </div>
 
             <div className="lg:hidden flex flex-col flex-grow mb-16">
                 {activeMobileView === 'edit'
                     ? <ControlPanel {...panelProps} />
-                    : <PreviewPanel backgroundCss={backgroundCss} draftTheme={draftTheme} />
+                    : <PreviewPanel draftTheme={draftTheme} localname={localname || ''} />
                 }
             </div>
 

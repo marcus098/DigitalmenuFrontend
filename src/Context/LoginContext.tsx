@@ -47,7 +47,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     setUser(userTmp)
                     setAuthorized(true)
                     if (response.data.isNew) {
-                        setCookie('token', response.data.accessToken, response.data.time || 0)
+                        setCookie('rf_token', response.data.accessToken, response.data.time || 1)
                     }
                     if(response.data.localname !== localname){
                         navigate("/" + response.data.localname + "/Dashboard/Home")
@@ -59,7 +59,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 if(response.status === 402){
                     setAuthorized(false)
                     setUser(null)
-                    deleteCookie("token")
+                    deleteCookie("rf_token")
                     setTransparentLoading(false)
                     navigate("/login?reason=billing")
                 }
@@ -94,7 +94,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             setAuthorized(false);
             setUser(null);
         }
-        deleteCookie("token")
+        deleteCookie("rf_token")
         setTransparentLoading(false)
         navigate("/login")
         return message;
@@ -109,7 +109,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     setErrorType(null)
                     if(!authorized)
                         setAuthorized(true);
-                    setCookie("token", response.data?.accessToken, response.data.time || 1)
+                    setCookie("rf_token", response.data?.accessToken, response.data.time || 1)
                     setUser({
                         name: response.data.name,
                         email: response.data.email || "",
@@ -122,29 +122,29 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
                 }else if(response.data.status === 401){
                     setErrorType("credenziali")
-                    deleteCookie("token")
+                    deleteCookie("rf_token")
 
                 }/*else if(response.data.status === 402){
 
-                    deleteCookie("token")
+                    deleteCookie("rf_token")
 
                 }else if(response.data.status === 403){
 
-                    deleteCookie("token")
+                    deleteCookie("rf_token")
 
                 }*/
                 else if(response.data.status === 406){
                     navigate("/confirmByAdmin")
-                    deleteCookie("token")
+                    deleteCookie("rf_token")
 
                 }else if(response.data.status === 408 && response.data){
                     const code = response.data.localname
                     const id = response.data.name
                     navigate("/emailNotConfirmed/" + id + "/" + code);
-                    deleteCookie("token")
+                    deleteCookie("rf_token")
 
                 }else{
-                    deleteCookie("token")
+                    deleteCookie("rf_token")
                 }
             }else{
                 setErrorType('connection')
@@ -195,7 +195,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     const logout = () => {
-        deleteCookie("token")
+        deleteCookie("rf_token")
         setAuthorized(false)
         setUser(null)
         window.location.href = (process.env.REACT_APP_URL || "") + "/login"

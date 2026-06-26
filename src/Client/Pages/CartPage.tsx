@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useNotification } from '../../Context/NotificationContext';
 import { useData } from '../../Context/DataContext';
 import { getCartMap, saveCart, emptyCart, CART_UPDATED_EVENT, getTableSession, getOrCreateClientSessionId, cartToAddComandOrders } from '../../Utilities/Utilities';
-import { sendClientOrderApi, sendTakeawayOrderApi, setReadyApi } from '../../Utilities/api';
+import { sendClientOrderApi, sendTakeawayOrderApi, setReadyApi, getPublicTakeawaySlotsApi, type Slot } from '../../Utilities/api';
 import { ProductCard } from '../../types';
 
 import CustomLoading from '../../Components/CustomLoading';
@@ -44,6 +44,8 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [takeawayForm, setTakeawayForm] = useState({ name: '', phone: '', time: '' });
+    const [takeawaySlots, setTakeawaySlots] = useState<{ date: string; label: string; slots: Slot[] }[]>([]);
+    const [slotsLoading, setSlotsLoading] = useState(false);
 
     const navigate = useNavigate();
     const { localname } = useParams();
@@ -61,6 +63,32 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
         const cartFromStorage = getCartMap(storageKey);
         setCart(cartFromStorage ? Object.values(cartFromStorage) : []);
     }, [waiter]);
+
+    // Carica slot disponibili per asporto (oggi + prossimi 2 giorni).
+    useEffect(() => {
+        if (!isTakeaway || !localname) return;
+        let cancelled = false;
+        (async () => {
+            setSlotsLoading(true);
+            const days = [0, 1, 2].map(d => {
+                const dt = new Date();
+                dt.setDate(dt.getDate() + d);
+                return {
+                    iso: dt.toISOString().split('T')[0],
+                    label: d === 0 ? 'Oggi' : d === 1 ? 'Domani' : dt.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' }),
+                };
+            });
+            const results = await Promise.all(
+                days.map(async d => {
+                    const r = await getPublicTakeawaySlotsApi(localname, d.iso);
+                    return { date: d.iso, label: d.label, slots: (r.success && r.data) ? r.data : [] };
+                })
+            );
+            if (!cancelled) setTakeawaySlots(results.filter(r => r.slots.length > 0));
+            setSlotsLoading(false);
+        })();
+        return () => { cancelled = true; };
+    }, [isTakeaway, localname]);
 
     const updateCartStateAndStorage = (newCart: ProductCard[]) => {
         const storageKey = waiter ? 'waiter' : undefined;
@@ -107,6 +135,10 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
         if (isTakeaway) {
             if (!takeawayForm.name.trim() || !takeawayForm.phone.trim()) {
                 addNotification({ message: 'Inserisci nome e telefono per procedere', type: 'error' });
+                return;
+            }
+            if (!takeawayForm.time) {
+                addNotification({ message: "Scegli un orario di ritiro disponibile", type: 'error' });
                 return;
             }
             setIsSubmitting(true);
@@ -291,15 +323,30 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                                 }
                                                 className="dark-input"
                                             />
-                                            <input
-                                                type="time"
-                                                placeholder="Orario ritiro"
-                                                value={takeawayForm.time}
-                                                onChange={e =>
-                                                    setTakeawayForm(f => ({ ...f, time: e.target.value }))
-                                                }
-                                                className="dark-input"
-                                            />
+                                            {slotsLoading ? (
+                                                <p className="text-xs" style={{ color: 'var(--menu-muted)' }}>Caricamento orari disponibili…</p>
+                                            ) : takeawaySlots.length === 0 ? (
+                                                <p className="text-xs" style={{ color: 'var(--menu-muted)' }}>
+                                                    Nessuno slot disponibile per asporto. Contattaci telefonicamente.
+                                                </p>
+                                            ) : (
+                                                <select
+                                                    value={takeawayForm.time}
+                                                    onChange={e => setTakeawayForm(f => ({ ...f, time: e.target.value }))}
+                                                    className="dark-input"
+                                                >
+                                                    <option value="">Scegli orario ritiro…</option>
+                                                    {takeawaySlots.map(day => (
+                                                        <optgroup key={day.date} label={day.label}>
+                                                            {day.slots.map(s => (
+                                                                <option key={`${day.date}T${s.time}`} value={`${day.date}T${s.time}`}>
+                                                                    {s.time} — {s.maxOrders - s.orderCount} post{s.maxOrders - s.orderCount === 1 ? 'o' : 'i'} liber{s.maxOrders - s.orderCount === 1 ? 'o' : 'i'}
+                                                                </option>
+                                                            ))}
+                                                        </optgroup>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                     </motion.div>
                                 )}

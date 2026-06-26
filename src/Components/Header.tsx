@@ -4,7 +4,7 @@ import { useLoginContext } from '../Context/LoginContext';
 import {
     Menu, Bell, X, Plus, UserCircle, LogOut, Settings,
     LayoutDashboard, UtensilsCrossed, LayoutGrid, ClipboardList,
-    CalendarDays, Receipt, BarChart2, Users, FileBarChart, ChevronDown,
+    CalendarDays, Receipt, Palette, BarChart2, Users, FileBarChart, ChevronDown, Clock,
 } from 'lucide-react';
 import { IS_ADMIN, IS_WAITER } from '../types';
 
@@ -19,9 +19,11 @@ const PRIMARY_LINKS = [
 ];
 
 const ADMIN_MORE_LINKS = [
-    { name: 'Analytics',         icon: BarChart2,   href: 'Analytics'        },
-    { name: 'Camerieri',         icon: Users,        href: 'Waiters'          },
-    { name: 'Report Camerieri',  icon: FileBarChart, href: 'WaiterAnalytics'  },
+    { name: 'Template',         icon: Palette,      href: 'Layout'          },
+    { name: 'Slot Asporto',     icon: Clock,        href: 'Slots'           },
+    { name: 'Analytics',        icon: BarChart2,    href: 'Analytics'       },
+    { name: 'Camerieri',        icon: Users,        href: 'Waiters'         },
+    { name: 'Report Camerieri', icon: FileBarChart, href: 'WaiterAnalytics' },
 ];
 
 /* ── Component ─────────────────────────────────────── */
@@ -33,21 +35,41 @@ const Header: React.FC = () => {
     const [isMobileOpen,  setIsMobileOpen]  = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isMoreOpen,    setIsMoreOpen]    = useState(false);
+    const [moreAnchor,    setMoreAnchor]    = useState<{ top: number; left: number } | null>(null);
 
     const profileRef = useRef<HTMLDivElement>(null);
-    const moreRef    = useRef<HTMLDivElement>(null);
+    const moreBtnRef = useRef<HTMLButtonElement>(null);
+    const morePanelRef = useRef<HTMLDivElement>(null);
 
     /* close dropdowns on outside click */
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (profileRef.current && !profileRef.current.contains(e.target as Node))
                 setIsProfileOpen(false);
-            if (moreRef.current && !moreRef.current.contains(e.target as Node))
-                setIsMoreOpen(false);
+            const target = e.target as Node;
+            const insideBtn   = moreBtnRef.current?.contains(target);
+            const insidePanel = morePanelRef.current?.contains(target);
+            if (!insideBtn && !insidePanel) setIsMoreOpen(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
+
+    /* recompute dropdown anchor on open / scroll / resize */
+    useEffect(() => {
+        if (!isMoreOpen) return;
+        const update = () => {
+            const rect = moreBtnRef.current?.getBoundingClientRect();
+            if (rect) setMoreAnchor({ top: rect.bottom + 6, left: rect.left });
+        };
+        update();
+        window.addEventListener('scroll', update, true);
+        window.addEventListener('resize', update);
+        return () => {
+            window.removeEventListener('scroll', update, true);
+            window.removeEventListener('resize', update);
+        };
+    }, [isMoreOpen]);
 
     const isAdmin  = checkVariable(IS_ADMIN);
     const isWaiter = checkVariable(IS_WAITER);
@@ -100,50 +122,53 @@ const Header: React.FC = () => {
                                 </NavLink>
                             ))}
 
-                            {/* ── "Altro" dropdown (admin only) ── */}
                             {isAdmin && (
-                                <div ref={moreRef} className="relative flex-shrink-0">
-                                    <button
-                                        onClick={() => setIsMoreOpen(v => !v)}
-                                        className={[
-                                            'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold',
-                                            'transition-colors duration-150',
-                                            isMoreOpen
-                                                ? 'text-primary-600 bg-primary-50'
-                                                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100',
-                                        ].join(' ')}
-                                    >
-                                        Altro
-                                        <ChevronDown
-                                            className={`w-3.5 h-3.5 transition-transform ${isMoreOpen ? 'rotate-180' : ''}`}
-                                        />
-                                    </button>
-
-                                    {isMoreOpen && (
-                                        <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
-                                            {ADMIN_MORE_LINKS.map(link => (
-                                                <NavLink
-                                                    key={link.href}
-                                                    to={`/${localname}/Dashboard/${link.href}`}
-                                                    onClick={() => setIsMoreOpen(false)}
-                                                    className={({ isActive }) =>
-                                                        `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
-                                                            isActive
-                                                                ? 'text-primary-600 bg-primary-50'
-                                                                : 'text-gray-600 hover:bg-gray-50'
-                                                        }`
-                                                    }
-                                                    end
-                                                >
-                                                    <link.icon className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                                                    {link.name}
-                                                </NavLink>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                <button
+                                    ref={moreBtnRef}
+                                    onClick={() => setIsMoreOpen(v => !v)}
+                                    className={[
+                                        'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold flex-shrink-0',
+                                        'transition-colors duration-150',
+                                        isMoreOpen
+                                            ? 'text-primary-600 bg-primary-50'
+                                            : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100',
+                                    ].join(' ')}
+                                >
+                                    Altro
+                                    <ChevronDown
+                                        className={`w-3.5 h-3.5 transition-transform ${isMoreOpen ? 'rotate-180' : ''}`}
+                                    />
+                                </button>
                             )}
                         </nav>
+
+                        {/* Dropdown rendered as fixed so it escapes the scrollable nav */}
+                        {isAdmin && isMoreOpen && moreAnchor && (
+                            <div
+                                ref={morePanelRef}
+                                className="fixed w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-[60]"
+                                style={{ top: moreAnchor.top, left: moreAnchor.left }}
+                            >
+                                {ADMIN_MORE_LINKS.map(link => (
+                                    <NavLink
+                                        key={link.href}
+                                        to={`/${localname}/Dashboard/${link.href}`}
+                                        onClick={() => setIsMoreOpen(false)}
+                                        className={({ isActive }) =>
+                                            `flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                                                isActive
+                                                    ? 'text-primary-600 bg-primary-50'
+                                                    : 'text-gray-600 hover:bg-gray-50'
+                                            }`
+                                        }
+                                        end
+                                    >
+                                        <link.icon className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                                        {link.name}
+                                    </NavLink>
+                                ))}
+                            </div>
+                        )}
 
                         {/* ── Right actions ── */}
                         <div className="flex items-center gap-2 ml-auto flex-shrink-0">

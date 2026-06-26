@@ -226,15 +226,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
 
         list.forEach((c) => {
             const items: OrderItem[] = []
-            c.orders.forEach((o) => {
-                    o.products.forEach((p) => {
+            ;(c.orders || []).forEach((o) => {
+                    ;(o.products || []).forEach((p) => {
+                        // productOption può essere null per prodotti senza opzioni (es. asporto Margherita).
+                        const optPrice = p.productOption?.price ?? 0
+                        const optName  = p.productOption?.name  ?? ''
+                        const plus     = p.ingredientsPlus || []
+                        const minus    = p.ingredientsMinus || []
                         items.push({
                             productName: p.productName || "",
                             categoryName: p.categoryName || "",
-                            total: p.productOption.price + p.ingredientsPlus.reduce((acc, i) => acc + (i.price ?? 0), 0),
-                            option: p.productOption.name,
-                            additionalIngredients: p.ingredientsPlus?.map((i) => i.name) || [],
-                            removedIngredients: p.ingredientsMinus?.map((i) => i.name) || [],
+                            total: optPrice + plus.reduce((acc, i) => acc + (i?.price ?? 0), 0),
+                            option: optName,
+                            additionalIngredients: plus.map((i) => i?.name || ''),
+                            removedIngredients: minus.map((i) => i?.name || ''),
                             notes: p.note || "",
                             quantity: p.quantity
                         })

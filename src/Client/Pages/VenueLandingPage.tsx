@@ -6,9 +6,12 @@ import CustomLoading from '../../Components/CustomLoading';
 import { createReservationPublicApi } from '../../Utilities/api';
 import { CategoryDto, FeatureCard } from '../../types';
 import {
-    MapPin, Clock, MessageCircle, Phone, ChefHat, Leaf, Zap, Smartphone,
+    MapPin, Clock, MessageCircle, Phone,
     CheckCircle2, ArrowRight, Loader2, UtensilsCrossed, CalendarDays, ShoppingBag,
 } from 'lucide-react';
+import { FEATURE_ICON_MAP } from '../../Utilities/featureIcons';
+import { FONT_BY_KEY } from '../../Utilities/fonts';
+import { usePreviewStyles } from '../usePreviewStyles';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -17,16 +20,10 @@ const hexToRgb = (hex: string): string => {
     return r ? `${parseInt(r[1], 16)}, ${parseInt(r[2], 16)}, ${parseInt(r[3], 16)}` : '251, 146, 60';
 };
 
-const FEATURE_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-    'chef-hat': ChefHat,
-    'leaf': Leaf,
-    'zap': Zap,
-    'smartphone': Smartphone,
-};
-
 const FeatureIcon: React.FC<{ icon: string; className?: string }> = ({ icon, className }) => {
     const Cmp = FEATURE_ICON_MAP[icon];
     if (Cmp) return <Cmp className={className} />;
+    // fallback: emoji o testo libero (compat con dati vecchi)
     return <span className={className}>{icon}</span>;
 };
 
@@ -185,6 +182,17 @@ interface TemplateProps {
     phone: string;
     instagramUrl: string;
     facebookUrl: string;
+    /** Stile pagina configurabile dalla dashboard. */
+    pageBg: string;             // background gradiente o tinta unita per l'outer wrap
+    cardBg: string;             // sfondo delle sezioni/card chiare
+    textTitle: string;          // colore titoli
+    textBody: string;           // colore testo corrente
+    textOnPrimary: string;      // colore testo su sfondo primario
+    heroBgColor: string;        // tinta dell'hero (anche fallback se non c'è immagine)
+    heroOverlayOpacity: number; // 0..1 — opacità del colore sopra l'immagine hero
+    secondary: string;          // colore secondario (bottoni outline, accenti)
+    secondaryText: string;      // colore testo su sfondo secondario
+    fontFamily: string | null;  // font family CSS scelto in dashboard (null = default template)
     goToMenu: () => void;
     goToTakeaway: () => void;
     scrollTo: (id: string) => void;
@@ -193,256 +201,9 @@ interface TemplateProps {
 
 // ─── Template: DEFAULT ────────────────────────────────────────────────────────
 
-const DefaultTemplate: React.FC<TemplateProps> = ({
-    primary, primaryRgb, name, heroImg, logoImg, description, hours, whatsapp, tiktokUrl,
-    categories, features, sectionMenuTitle, sectionBookingTitle, sectionWhyTitle,
-    showWhyUs, showBooking, showTicker, localname, address, phone, instagramUrl, facebookUrl,
-    goToMenu, goToTakeaway, scrollTo, navigate,
-}) => {
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const [scrolled, setScrolled] = useState(false);
-
-    useEffect(() => {
-        const handler = () => setScrolled(window.scrollY > 50);
-        window.addEventListener('scroll', handler);
-        return () => window.removeEventListener('scroll', handler);
-    }, []);
-
-    const tickerItems = categories.length > 0
-        ? [...categories, ...categories].map(c => c.name)
-        : ['Antipasti','Primi','Secondi','Dolci','Bevande','Antipasti','Primi','Secondi','Dolci','Bevande'];
-
-    return (
-        <div className="min-h-screen overflow-x-hidden bg-white font-sans">
-            <style>{`
-                @keyframes marqueeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-                .marquee-run { animation: marqueeScroll 22s linear infinite; }
-                @keyframes fadeUpIn { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
-                .fade-up { animation: fadeUpIn 0.65s ease-out forwards; }
-                .fade-up-1 { animation-delay: 0.15s; opacity: 0; }
-                .fade-up-2 { animation-delay: 0.3s;  opacity: 0; }
-                .fade-up-3 { animation-delay: 0.45s; opacity: 0; }
-                .fade-up-4 { animation-delay: 0.6s;  opacity: 0; }
-            `}</style>
-
-            {/* Navbar */}
-            <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100' : 'bg-transparent'}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-[70px]">
-                        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-3 group">
-                            {logoImg ? (
-                                <img src={logoImg} alt={name} className="w-10 h-10 rounded-full object-cover shadow-md border-2 group-hover:scale-110 transition-transform" style={{ borderColor: primary }} />
-                            ) : (
-                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-black shadow-md group-hover:scale-110 transition-transform" style={{ backgroundColor: primary }}>
-                                    {name.charAt(0).toUpperCase()}
-                                </div>
-                            )}
-                            <span className={`text-xl font-black tracking-tight transition-colors ${scrolled ? 'text-gray-900' : 'text-white'}`}>{name}</span>
-                        </button>
-                        <div className="hidden md:flex items-center gap-6">
-                            {[['Menu','categories'],['Info','info'],showBooking && ['Prenota','prenota']].filter(Boolean).map((item: any) => (
-                                <button key={item[1]} onClick={() => scrollTo(item[1])} className={`text-sm font-semibold uppercase tracking-wider hover:opacity-70 ${scrolled ? 'text-gray-600' : 'text-white/80'}`}>{item[0]}</button>
-                            ))}
-                            <button onClick={goToMenu} className="text-white text-sm font-bold uppercase tracking-wider px-5 py-2.5 rounded-full hover:scale-105 transition-all" style={{ backgroundColor: primary, boxShadow: `0 4px 15px rgba(${primaryRgb},0.35)` }}>Ordina Ora</button>
-                        </div>
-                        <button onClick={() => setMobileOpen(v => !v)} className={`md:hidden ${scrolled ? 'text-gray-800' : 'text-white'}`}>
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                {mobileOpen ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />}
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                {mobileOpen && (
-                    <div className="md:hidden bg-white border-t px-4 py-4 space-y-1 shadow-lg">
-                        {[['Menu','categories'],['Info','info'],showBooking && ['Prenota','prenota']].filter(Boolean).map((item: any) => (
-                            <button key={item[1]} onClick={() => { scrollTo(item[1]); setMobileOpen(false); }} className="w-full text-left py-3 text-sm font-bold uppercase text-gray-700 border-b border-gray-50 last:border-0">{item[0]}</button>
-                        ))}
-                        <button onClick={goToMenu} className="w-full mt-2 py-3 text-white text-sm font-bold uppercase rounded-xl" style={{ backgroundColor: primary }}>Sfoglia il Menu</button>
-                        <button onClick={goToTakeaway} className="w-full py-3 text-sm font-bold uppercase rounded-xl border-2" style={{ borderColor: primary, color: primary }}>Ordina Asporto</button>
-                    </div>
-                )}
-            </nav>
-
-            {/* Hero */}
-            <section className="relative min-h-[95vh] flex items-center justify-center overflow-hidden bg-gray-900">
-                {heroImg && (
-                    <div className="absolute inset-0">
-                        <img src={heroImg} alt={name} className="w-full h-full object-cover opacity-50" />
-                        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-900/60 to-transparent" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent" />
-                    </div>
-                )}
-                <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at 50% 35%, rgba(${primaryRgb},0.12) 0%, transparent 60%)` }} />
-                <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-20 pb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold tracking-[0.2em] uppercase mb-8 border fade-up fade-up-1" style={{ backgroundColor: `rgba(${primaryRgb},0.1)`, borderColor: `rgba(${primaryRgb},0.3)`, color: primary }}>
-                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
-                        {categories.length > 0 ? categories.slice(0,4).map(c => c.name).join(' · ') : 'Benvenuto'}
-                    </div>
-                    <h1 className="text-6xl md:text-[8rem] lg:text-[10rem] font-black text-white leading-none mb-4 fade-up fade-up-2" style={{ textShadow: `3px 3px 0 rgba(${primaryRgb},0.25), 0 0 80px rgba(${primaryRgb},0.1)` }}>{name}</h1>
-                    {description && <p className="text-xl md:text-2xl text-gray-300 mb-3 font-light uppercase tracking-[0.12em] fade-up fade-up-3">{description}</p>}
-                    {(address || hours) && (
-                        <p className="text-gray-500 text-sm mb-10 tracking-widest fade-up fade-up-3 inline-flex items-center justify-center gap-2 flex-wrap">
-                            {address && <span className="inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {address}</span>}
-                            {address && hours && <span className="opacity-40">·</span>}
-                            {hours && <span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {hours}</span>}
-                        </p>
-                    )}
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap fade-up fade-up-4">
-                        <button onClick={goToMenu} className="text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:scale-105 hover:brightness-110 transition-all duration-300 inline-flex items-center justify-center gap-2" style={{ backgroundColor: primary, boxShadow: `0 0 30px rgba(${primaryRgb},0.4)` }}><UtensilsCrossed className="w-5 h-5" /> Sfoglia il Menu</button>
-                        {showBooking && <button onClick={() => scrollTo('prenota')} className="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-gray-900 hover:border-white transition-all duration-300 inline-flex items-center justify-center gap-2"><CalendarDays className="w-5 h-5" /> Prenota Tavolo</button>}
-                        <button onClick={goToTakeaway} className="bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-gray-900 hover:border-white transition-all duration-300 inline-flex items-center justify-center gap-2"><ShoppingBag className="w-5 h-5" /> Ordina Asporto</button>
-                    </div>
-                </div>
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center opacity-50">
-                    <div className="w-5 h-8 rounded-full border-2 border-white/30 flex items-start justify-center p-1"><div className="w-1 h-2 rounded-full bg-white/60 animate-bounce" /></div>
-                </div>
-            </section>
-
-            {/* Ticker */}
-            {showTicker && (
-                <div className="overflow-hidden py-3" style={{ backgroundColor: primary }}>
-                    <div className="whitespace-nowrap marquee-run inline-flex gap-8">
-                        {tickerItems.map((item, i) => (
-                            <span key={i} className="text-white font-bold text-xs uppercase tracking-[0.2em] inline-flex items-center gap-3">
-                                <span className="opacity-60">·</span> {item}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Why Us */}
-            {showWhyUs && (
-                <section className="py-16 bg-white">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        {sectionWhyTitle && <h2 className="text-center text-2xl font-black text-gray-900 uppercase mb-10">{sectionWhyTitle}</h2>}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                            {features.map((f, i) => (
-                                <div key={i} className="p-6 rounded-2xl group hover:bg-gray-50 transition-colors cursor-default">
-                                    <div className="mb-3 inline-flex items-center justify-center w-12 h-12 rounded-xl group-hover:scale-110 transition-transform" style={{ color: primary, backgroundColor: `rgba(${primaryRgb},0.08)` }}>
-                                        <FeatureIcon icon={f.icon} className="w-6 h-6" />
-                                    </div>
-                                    <div className="font-bold text-sm text-gray-900 uppercase tracking-wide">{f.title}</div>
-                                    <div className="text-gray-400 text-xs mt-1">{f.sub}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* Categories */}
-            {categories.length > 0 && (
-                <section id="categories" className="py-20 bg-gray-50">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="text-center mb-14">
-                            <p className="text-xl font-light mb-2" style={{ color: primary }}>Cosa vuoi mangiare?</p>
-                            <h2 className="text-4xl md:text-6xl font-black text-gray-900 uppercase">
-                                {sectionMenuTitle || 'Il Nostro'} <span style={{ color: primary }}>{sectionMenuTitle ? '' : 'Menu'}</span>
-                            </h2>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-                            {categories.map(cat => {
-                                const img = cat.image ? `${process.env.REACT_APP_BUCKET_URL}${cat.image}` : '';
-                                return (
-                                    <button key={cat.id} onClick={() => navigate(`/${localname}/Products/${cat.id}`)} className="relative rounded-2xl overflow-hidden group h-44 md:h-56 text-left">
-                                        {img ? <img src={img} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="w-full h-full" style={{ backgroundColor: `rgba(${primaryRgb},0.15)` }} />}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                                        <div className="absolute bottom-0 left-0 p-4"><h3 className="text-white text-lg md:text-xl font-black">{cat.name}</h3>{cat.description && <p className="text-gray-300 text-xs mt-0.5 line-clamp-1">{cat.description}</p>}</div>
-                                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                                            <span className="px-3 py-1 text-white text-xs font-bold rounded-full" style={{ backgroundColor: primary }}>Sfoglia →</span>
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <div className="text-center mt-10">
-                            <button onClick={goToMenu} className="px-10 py-4 text-white font-bold uppercase tracking-wider rounded-full hover:scale-105 transition-all" style={{ backgroundColor: primary, boxShadow: `0 8px 25px rgba(${primaryRgb},0.3)` }}>Ordina Ora →</button>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* Info */}
-            <section id="info" className="py-20 bg-gray-900 text-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                        <div>
-                            <p className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: primary }}>Vieni a trovarci</p>
-                            <h2 className="text-4xl md:text-5xl font-black uppercase mb-10 text-white">Info & <span style={{ color: primary }}>Contatti</span></h2>
-                            <div className="space-y-6">
-                                {address && <InfoRow dark primary={primary} icon={<MapPin className="w-5 h-5" />} label="Dove siamo" value={address} />}
-                                {hours   && <InfoRow dark primary={primary} icon={<Clock className="w-5 h-5" />} label="Orari" value={hours} />}
-                                {phone   && <InfoRow dark primary={primary} icon={<Phone className="w-5 h-5" />} label="Telefono" value={<a href={`tel:${phone}`} className="hover:text-white transition-colors">{phone}</a>} />}
-                                {whatsapp && <InfoRow dark primary={primary} icon={<MessageCircle className="w-5 h-5" />} label="WhatsApp" value={<a href={`https://wa.me/${whatsapp.replace(/[^0-9+]/g,'')}`} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{whatsapp}</a>} />}
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-6 lg:pt-20">
-                            {(instagramUrl || facebookUrl || tiktokUrl) && (
-                                <div>
-                                    <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Seguici</p>
-                                    <div className="flex gap-3">
-                                        {instagramUrl?.length > 5 && <SocialBtn dark href={instagramUrl} primary={primary} label="Instagram"><IgIcon /></SocialBtn>}
-                                        {facebookUrl?.length > 5 && <SocialBtn dark href={facebookUrl} primary={primary} label="Facebook"><FbIcon /></SocialBtn>}
-                                        {tiktokUrl?.length > 5 && <SocialBtn dark href={tiktokUrl} primary={primary} label="TikTok"><TkIcon /></SocialBtn>}
-                                    </div>
-                                </div>
-                            )}
-                            <button onClick={goToMenu} className="self-start px-8 py-4 text-white font-bold uppercase tracking-wider rounded-full hover:scale-105 transition-all" style={{ backgroundColor: primary, boxShadow: `0 8px 25px rgba(${primaryRgb},0.25)` }}>Sfoglia il Menu →</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Booking */}
-            {showBooking && (
-                <section id="prenota" className="py-24 bg-white">
-                    <div className="max-w-2xl mx-auto px-4">
-                        <div className="text-center mb-10">
-                            <p className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: primary }}>Riserva il tuo posto</p>
-                            <h2 className="text-4xl font-black uppercase text-gray-900">{sectionBookingTitle || 'Prenota il tuo'} <span style={{ color: primary }}>{sectionBookingTitle ? '' : 'Tavolo'}</span></h2>
-                            <p className="text-gray-400 mt-2 text-sm">Compila il modulo e ti ricontatteremo per confermare.</p>
-                        </div>
-                        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-                            <div className="h-1.5" style={{ background: `linear-gradient(to right, ${primary}, ${primary}99, ${primary})` }} />
-                            <div className="p-8 md:p-10"><BookingForm primary={primary} primaryRgb={primaryRgb} localname={localname} /></div>
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* Footer */}
-            <footer className="bg-[#080808] text-white py-14 border-t border-gray-900">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid md:grid-cols-3 gap-10 mb-10">
-                        <div>
-                            <span className="font-black text-4xl block mb-3" style={{ color: primary }}>{name}</span>
-                            {description && <p className="text-gray-500 text-sm leading-relaxed max-w-xs">{description}</p>}
-                        </div>
-                        <div>
-                            <h4 className="font-bold uppercase text-xs tracking-widest text-gray-500 mb-4">Naviga</h4>
-                            <ul className="space-y-2">
-                                {[['Home', () => window.scrollTo({ top: 0, behavior: 'smooth' })], ['Menu', () => scrollTo('categories')], showBooking && ['Prenota', () => scrollTo('prenota')], ['Info', () => scrollTo('info')]].filter(Boolean).map((item: any) => (
-                                    <li key={item[0]}><button onClick={item[1]} className="text-gray-500 hover:text-white transition-colors text-sm">{item[0]}</button></li>
-                                ))}
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="font-bold uppercase text-xs tracking-widest text-gray-500 mb-4">Contatti</h4>
-                            {address && <p className="text-gray-500 text-xs mt-1 inline-flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> {address}</p>}
-                            {phone   && <p className="text-gray-500 text-xs mt-1 inline-flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> {phone}</p>}
-                            {whatsapp && <p className="text-gray-500 text-xs mt-1 inline-flex items-center gap-2"><MessageCircle className="w-3.5 h-3.5" /> {whatsapp}</p>}
-                        </div>
-                    </div>
-                    <div className="border-t border-gray-900 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-600">
-                        <p>© {new Date().getFullYear()} {name} — Tutti i diritti riservati.</p>
-                        <p>Powered by <span style={{ color: primary }}>AxiomGroup</span></p>
-                    </div>
-                </div>
-            </footer>
-        </div>
-    );
-};
+// DefaultTemplate reuses StrafameTemplate (panineria/pizzeria look-and-feel).
+// Until a separate Default design is needed, both render the same component.
+const DefaultTemplate: React.FC<TemplateProps> = (props) => <StrafameTemplate {...props} />;
 
 // ─── Template: MINIMAL ────────────────────────────────────────────────────────
 
@@ -894,26 +655,40 @@ const LuxuryTemplate: React.FC<TemplateProps> = ({
 const StrafameTemplate: React.FC<TemplateProps> = ({
     primary, primaryRgb, name, heroImg, logoImg, description, hours, whatsapp, tiktokUrl,
     categories, features, sectionMenuTitle, sectionBookingTitle, sectionWhyTitle,
-    showWhyUs, showBooking, showTicker, localname, address, phone, instagramUrl, facebookUrl,
+    showWhyUs, showBooking, localname, address, phone, instagramUrl, facebookUrl,
+    pageBg, cardBg, textTitle, textBody, textOnPrimary,
+    heroBgColor, heroOverlayOpacity, secondary, secondaryText, fontFamily,
     goToMenu, goToTakeaway, scrollTo,
 }) => {
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    const tickerItems = categories.length > 0
-        ? [...categories, ...categories].map(c => c.name)
-        : ['Antipasti','Primi','Secondi','Dolci','Bevande','Antipasti','Primi','Secondi','Dolci','Bevande'];
-
     const specials = categories.slice(0, 3);
 
+    // CSS variables: tutti i colori configurabili viaggiano qui. Cambiandoli nel
+    // pannello (postMessage in modalità preview) si aggiornano live dovunque siano usati.
+    const cssVars: React.CSSProperties = {
+        ['--rf-page' as any]: pageBg,
+        ['--rf-card' as any]: cardBg,
+        ['--rf-title' as any]: textTitle,
+        ['--rf-body' as any]: textBody,
+        ['--rf-on-primary' as any]: textOnPrimary,
+        ['--rf-primary' as any]: primary,
+        ['--rf-secondary' as any]: secondary,
+        ['--rf-secondary-text' as any]: secondaryText,
+    };
+
+    // Se l'utente ha scelto un font globale, lo applichiamo a tutto il template
+    // (sovrascrive sans/serif/etc dei singoli sub-componenti via inline style).
+    const fontStyle: React.CSSProperties = fontFamily ? { fontFamily } : {};
+
     return (
-        <div className="min-h-screen overflow-x-hidden bg-white text-[#0e0e0e] font-sans">
+        <div className="min-h-screen overflow-x-hidden font-sans" style={{ ...cssVars, ...fontStyle, background: 'var(--rf-page)', color: 'var(--rf-body)' }}>
             <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Oswald:wght@300;400;500;600;700&family=Barlow:wght@400;500;600;700&display=swap" />
             <style>{`
                 .sf-hand { font-family: 'Permanent Marker', cursive; }
                 .sf-display { font-family: 'Oswald', sans-serif; }
                 .sf-body { font-family: 'Barlow', sans-serif; }
                 @keyframes sfFadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
-                @keyframes sfMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
                 @keyframes sfFloat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.01); } }
                 .sf-fade-up { animation: sfFadeUp 0.65s ease-out forwards; opacity: 0; }
                 .sf-fade-1 { animation-delay: 0.1s; }
@@ -921,7 +696,6 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
                 .sf-fade-3 { animation-delay: 0.4s; }
                 .sf-fade-4 { animation-delay: 0.55s; }
                 .sf-hero-title { animation: sfFloat 6s ease-in-out infinite; }
-                .sf-marquee-track { display: inline-block; white-space: nowrap; animation: sfMarquee 22s linear infinite; }
                 .sf-slant { clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%); }
                 .sf-slant-bottom { clip-path: polygon(0 0, 100% 6%, 100% 100%, 0 100%); }
                 .sf-nav-link { position: relative; }
@@ -970,13 +744,15 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
                 )}
             </nav>
 
-            {/* Hero */}
-            <section className="sf-slant relative min-h-[95vh] flex items-center justify-center overflow-hidden bg-[#0e0e0e]">
+            {/* Hero — colore + (opzionale) immagine con overlay regolabile */}
+            <section className="sf-slant relative min-h-[95vh] flex items-center justify-center overflow-hidden" style={{ backgroundColor: heroBgColor }}>
                 {heroImg && (
                     <div className="absolute inset-0 z-0">
-                        <img src={heroImg} alt={name} className="w-full h-full object-cover opacity-50" />
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent to-transparent" />
+                        <img src={heroImg} alt={name} className="w-full h-full object-cover" />
+                        {/* overlay del colore hero con opacità dalla dashboard */}
+                        <div className="absolute inset-0" style={{ backgroundColor: heroBgColor, opacity: heroOverlayOpacity }} />
+                        {/* gradient leggero in basso per ancorare il testo (cinematic) */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                     </div>
                 )}
                 <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: `rgba(${primaryRgb},0.1)` }} />
@@ -1011,57 +787,42 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
                             Ordina Ora
                         </button>
                         {showBooking && (
-                            <button onClick={() => scrollTo('prenota')} className="sf-display bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-[#0e0e0e] hover:border-white transition-all duration-300">
+                            <button
+                                onClick={() => scrollTo('prenota')}
+                                className="sf-display border-2 px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider transition-all duration-300 hover:brightness-110"
+                                style={{ backgroundColor: secondary, color: secondaryText, borderColor: secondary }}
+                            >
                                 Prenota Tavolo
                             </button>
                         )}
-                        <button onClick={goToTakeaway} className="sf-display bg-transparent border-2 border-white/40 text-white px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider hover:bg-white hover:text-[#0e0e0e] hover:border-white transition-all duration-300">
+                        <button
+                            onClick={goToTakeaway}
+                            className="sf-display border-2 px-10 py-4 rounded-full font-bold text-lg uppercase tracking-wider transition-all duration-300 hover:brightness-110"
+                            style={{ backgroundColor: secondary, color: secondaryText, borderColor: secondary }}
+                        >
                             Asporto
                         </button>
                     </div>
                 </div>
-
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
-                    <div className="w-5 h-8 rounded-full border-2 border-white/30 flex items-start justify-center p-1">
-                        <div className="w-1 h-2 rounded-full bg-white/60 animate-bounce" />
-                    </div>
-                </div>
             </section>
-
-            {/* Ticker */}
-            {showTicker && (
-                <div className="py-3 overflow-hidden relative z-10" style={{ backgroundColor: primary }}>
-                    <div className="overflow-hidden whitespace-nowrap">
-                        <div className="sf-marquee-track sf-display text-white font-bold text-sm uppercase tracking-[0.2em]">
-                            {tickerItems.map((item, i) => (
-                                <span key={i} className="inline-flex items-center gap-4">
-                                    <span className="opacity-50">·</span>
-                                    {item}
-                                    <span>&nbsp;</span>
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Why Us */}
             {showWhyUs && (
-                <section className="py-20 bg-white">
+                <section className="py-20" style={{ backgroundColor: 'var(--rf-card)' }}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         {sectionWhyTitle && (
-                            <h2 className="sf-display text-center text-3xl md:text-4xl font-bold text-[#0e0e0e] uppercase mb-10">
+                            <h2 className="sf-display text-center text-3xl md:text-4xl font-bold uppercase mb-10" style={{ color: 'var(--rf-title)' }}>
                                 {sectionWhyTitle}
                             </h2>
                         )}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                             {features.map((f, i) => (
-                                <div key={i} className="p-6 rounded-2xl hover:bg-gray-50 transition-colors group cursor-default">
+                                <div key={i} className="p-6 rounded-2xl group cursor-default transition-colors">
                                     <div className="mb-3 inline-flex items-center justify-center w-14 h-14 rounded-2xl group-hover:scale-110 transition-transform" style={{ color: primary, backgroundColor: `rgba(${primaryRgb},0.08)` }}>
                                         <FeatureIcon icon={f.icon} className="w-7 h-7" />
                                     </div>
-                                    <div className="sf-display font-bold text-lg uppercase">{f.title}</div>
-                                    <div className="text-gray-400 text-sm mt-1">{f.sub}</div>
+                                    <div className="sf-display font-bold text-lg uppercase" style={{ color: 'var(--rf-title)' }}>{f.title}</div>
+                                    <div className="text-sm mt-1" style={{ color: 'var(--rf-body)' }}>{f.sub}</div>
                                 </div>
                             ))}
                         </div>
@@ -1111,21 +872,21 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
 
             {/* Menu */}
             {categories.length > 0 && (
-                <section id="categories" className="py-24 bg-gray-50">
+                <section id="categories" className="py-24" style={{ background: 'transparent' }}>
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center mb-14">
                             <p className="sf-hand text-2xl mb-1" style={{ color: primary }}>Cosa mangi stasera?</p>
-                            <h2 className="sf-display text-5xl md:text-6xl font-bold text-[#0e0e0e] uppercase">
+                            <h2 className="sf-display text-5xl md:text-6xl font-bold uppercase" style={{ color: 'var(--rf-title)' }}>
                                 {sectionMenuTitle || 'Il Nostro'} <span style={{ color: primary }}>{sectionMenuTitle ? '' : 'Menu'}</span>
                             </h2>
-                            <p className="text-gray-400 mt-3 max-w-xl mx-auto">Ingredienti freschi, porzioni abbondanti, gusti che ricordi.</p>
+                            <p className="mt-3 max-w-xl mx-auto" style={{ color: 'var(--rf-body)' }}>Ingredienti freschi, porzioni abbondanti, gusti che ricordi.</p>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {categories.map(cat => {
                                 const img = cat.image ? `${process.env.REACT_APP_BUCKET_URL}${cat.image}` : '';
                                 return (
-                                    <button key={cat.id} onClick={() => window.location.assign(`/${localname}/Products/${cat.id}`)} className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col border border-gray-100 group transition-all duration-300 hover:-translate-y-2 hover:shadow-xl text-left">
+                                    <button key={cat.id} onClick={() => window.location.assign(`/${localname}/Products/${cat.id}`)} className="rounded-2xl shadow-md overflow-hidden flex flex-col group transition-all duration-300 hover:-translate-y-2 hover:shadow-xl text-left" style={{ backgroundColor: 'var(--rf-card)' }}>
                                         <div className="relative h-52 overflow-hidden">
                                             {img ? (
                                                 <img src={img} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -1136,9 +897,9 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
                                         </div>
                                         <div className="p-5 flex flex-col flex-1">
                                             <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>Categoria</span>
-                                            <h3 className="sf-display font-bold text-xl text-gray-900 leading-tight mt-0.5">{cat.name}</h3>
-                                            {cat.description && <p className="text-gray-400 text-sm leading-relaxed mt-2 flex-1 line-clamp-2">{cat.description}</p>}
-                                            <div className="mt-5 w-full py-3 bg-[#0e0e0e] text-white sf-display font-bold uppercase text-sm tracking-wider rounded-xl flex items-center justify-center gap-2 transition-colors group-hover:bg-[color:var(--sf-hover)]" style={{ ['--sf-hover' as any]: primary }}>
+                                            <h3 className="sf-display font-bold text-xl leading-tight mt-0.5" style={{ color: 'var(--rf-title)' }}>{cat.name}</h3>
+                                            {cat.description && <p className="text-sm leading-relaxed mt-2 flex-1 line-clamp-2" style={{ color: 'var(--rf-body)' }}>{cat.description}</p>}
+                                            <div className="mt-5 w-full py-3 sf-display font-bold uppercase text-sm tracking-wider rounded-xl flex items-center justify-center gap-2 transition-colors group-hover:bg-[color:var(--sf-hover)]" style={{ ['--sf-hover' as any]: primary, backgroundColor: primary, color: 'var(--rf-on-primary)' }}>
                                                 Sfoglia →
                                             </div>
                                         </div>
@@ -1272,7 +1033,8 @@ const StrafameTemplate: React.FC<TemplateProps> = ({
 // ─── Main dispatcher ──────────────────────────────────────────────────────────
 
 const VenueLandingPage: React.FC = () => {
-    const { loading, styles, categoriesMap } = useData();
+    const { loading, categoriesMap } = useData();
+    const styles = usePreviewStyles(); // merged con draftTheme quando dentro iframe preview
     const { localname } = useParams<{ localname: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -1284,25 +1046,56 @@ const VenueLandingPage: React.FC = () => {
 
     if (loading) return <CustomLoading />;
 
-    const primary     = styles?.primary || '#fb923c';
-    const primaryRgb  = hexToRgb(primary);
-    const name        = styles?.restaurantName || localname || 'Ristorante';
-    const heroImg     = styles?.heroImageUrl ? resolveImageUrl(styles.heroImageUrl, '') : '';
-    const logoImg     = styles?.logoUrl ? resolveImageUrl(styles.logoUrl, '') : '';
-    const description = (styles as any)?.description as string || '';
-    const hours       = (styles as any)?.openingHours as string || '';
-    const whatsapp    = (styles as any)?.whatsapp as string || '';
-    const tiktokUrl   = (styles as any)?.tiktokUrl as string || '';
-    const template    = styles?.landingTemplate || 'default';
+    const eff: any = styles || {};
 
-    let rawFeatures = styles?.features;
+    const primary     = eff.primary || '#fb923c';
+    const primaryRgb  = hexToRgb(primary);
+    const name        = eff.restaurantName || localname || 'Ristorante';
+    const heroImg     = eff.heroImageUrl ? (eff.heroImageUrl.startsWith?.('blob:') ? eff.heroImageUrl : resolveImageUrl(eff.heroImageUrl, '')) : '';
+    const logoImg     = eff.logoUrl ? (eff.logoUrl.startsWith?.('blob:') ? eff.logoUrl : resolveImageUrl(eff.logoUrl, '')) : '';
+    const description = (eff.description as string) || '';
+    const hours       = (eff.openingHours as string) || '';
+    const whatsapp    = (eff.whatsapp as string) || '';
+    const tiktokUrl   = (eff.tiktokUrl as string) || '';
+    const template    = eff.landingTemplate || 'default';
+
+    let rawFeatures = eff.features;
     if (typeof rawFeatures === 'string') {
-        try { rawFeatures = JSON.parse(rawFeatures as any); } catch { rawFeatures = undefined; }
+        try { rawFeatures = JSON.parse(rawFeatures); } catch { rawFeatures = undefined; }
     }
     const features: FeatureCard[] = (rawFeatures as FeatureCard[] | undefined)?.length ? rawFeatures as FeatureCard[] : DEFAULT_FEATURES;
 
     const categories = Array.from(categoriesMap.values()).filter(c => c.available);
 
+    // ── Palette pagina (configurabile da dashboard → Colori) ─────────────────
+    // backgroundGradient può arrivare come array (state in memoria) o come stringa "a;b;c"
+    // (da backend). Lo normalizziamo a array.
+    let bgArr: string[] = [];
+    const bgRaw: any = eff.backgroundGradient;
+    if (Array.isArray(bgRaw)) bgArr = bgRaw.filter(Boolean);
+    else if (typeof bgRaw === 'string' && bgRaw) bgArr = bgRaw.split(';').filter(Boolean);
+    const pageBg = bgArr.length === 0
+        ? '#ffffff'
+        : bgArr.length === 1
+            ? bgArr[0]
+            : `linear-gradient(to bottom right, ${bgArr.join(', ')})`;
+    const cardBg        = eff.cardBackground || '#ffffff';
+    const textTitle     = eff.textTitle      || '#1f2937';
+    const textBody      = eff.textBody       || '#6b7280';
+    const textOnPrimary = eff.textOnPrimary  || '#ffffff';
+    const heroBgColor   = eff.heroBgColor    || '#0e0e0e';
+    const heroOverlayOpacity = typeof eff.heroOverlayOpacity === 'number'
+        ? Math.max(0, Math.min(1, eff.heroOverlayOpacity))
+        : 0.6;
+    const secondary     = eff.secondaryColor     || '#0e0e0e';
+    const secondaryText = eff.secondaryTextColor || '#ffffff';
+    // Font scelto: chiave del catalogo Utilities/fonts.ts → CSS font-family
+    const fontKey = (eff.font || '').trim();
+    const fontFamily = fontKey ? (FONT_BY_KEY[fontKey]?.family || null) : null;
+
+    // Navigazione interna abilitata anche dentro l'iframe: così dalla preview puoi
+    // cliccare "Sfoglia il menù" e atterrare su /Categories / Products mantenendo lo
+    // stesso draftTheme via postMessage (vedi MenuThemeProvider + usePreviewStyles).
     const goToMenu     = () => navigate(`/${localname}/Categories`);
     const goToTakeaway = () => { localStorage.removeItem('rf_table_id'); navigate(`/${localname}/Categories`); };
     const scrollTo     = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -1310,17 +1103,20 @@ const VenueLandingPage: React.FC = () => {
     const props: TemplateProps = {
         primary, primaryRgb, name, heroImg, logoImg, description, hours, whatsapp, tiktokUrl,
         categories, features,
-        sectionMenuTitle:    styles?.sectionMenuTitle    || '',
-        sectionBookingTitle: styles?.sectionBookingTitle || '',
-        sectionWhyTitle:     styles?.sectionWhyTitle     || '',
-        showWhyUs:   styles?.showWhyUs   ?? true,
-        showBooking: styles?.showBooking ?? true,
-        showTicker:  styles?.showTicker  ?? true,
+        sectionMenuTitle:    eff.sectionMenuTitle    || '',
+        sectionBookingTitle: eff.sectionBookingTitle || '',
+        sectionWhyTitle:     eff.sectionWhyTitle     || '',
+        showWhyUs:   eff.showWhyUs   ?? true,
+        showBooking: eff.showBooking ?? true,
+        showTicker:  eff.showTicker  ?? true,
         localname: localname || '',
-        address:      styles?.address      || '',
-        phone:        styles?.phone        || '',
-        instagramUrl: styles?.instagramUrl || '',
-        facebookUrl:  styles?.facebookUrl  || '',
+        address:      eff.address      || '',
+        phone:        eff.phone        || '',
+        instagramUrl: eff.instagramUrl || '',
+        facebookUrl:  eff.facebookUrl  || '',
+        pageBg, cardBg, textTitle, textBody, textOnPrimary,
+        heroBgColor, heroOverlayOpacity,
+        secondary, secondaryText, fontFamily,
         goToMenu, goToTakeaway, scrollTo, navigate,
     };
 

@@ -97,6 +97,13 @@ const DELETE_RESERVATION = (id: number) => `/api/reservations/${id}`
 const CREATE_RESERVATION_PUBLIC = (localname: string) => `/api/public/reservations/${localname}`
 const CREATE_PAYMENT_INTENT_PUBLIC = (localname: string) => `/api/public/payments/intent/${localname}`
 const SEND_TAKEAWAY_ORDER = (localname: string) => `/api/public/orders/takeaway/${localname}`
+const TAKEAWAY_SLOTS_CONFIG = "/api/takeaway/slots/config"
+const TAKEAWAY_SLOTS_DAY = (date: string) => `/api/takeaway/slots/day/${date}`
+const TAKEAWAY_SLOTS_CLOSE = (date: string, time: string) => `/api/takeaway/slots/day/${date}/time/${time}/close`
+const TAKEAWAY_SLOTS_OPEN = (date: string, time: string) => `/api/takeaway/slots/day/${date}/time/${time}/open`
+const TAKEAWAY_SLOTS_MANUAL = (date: string, time: string, products: number) => `/api/takeaway/slots/day/${date}/time/${time}/manual?products=${products}`
+const TAKEAWAY_SLOTS_RESET_MANUAL = (date: string, time: string) => `/api/takeaway/slots/day/${date}/time/${time}/reset-manual`
+const TAKEAWAY_SLOTS_PUBLIC = (localname: string, date: string) => `/api/public/takeaway/slots/${localname}/day/${date}`
 const GET_PAYMENTS = "/api/payments"
 const GET_PAYMENTS_TODAY_TOTAL = "/api/payments/today-total"
 const GET_ESL_CONFIGS = "/api/esl/configs"
@@ -109,6 +116,7 @@ export const UPDATE_ENDPOINT_DASHBOARD = "/api/auth/admin"
 
 const GET = 'GET'
 const POST = 'POST'
+const PUT = 'PUT'
 
 export const login = async (emailUsername: string, password: string): Promise<ApiCallResult<LoginResponse>> => {
     return clientApiCall<LoginResponse>({
@@ -455,6 +463,52 @@ export const sendTakeawayOrderApi = async (
     return clientApiCall<string>({ method: POST, fixed: true, url: SEND_TAKEAWAY_ORDER(localname), data })
 }
 
+// takeaway slots — dashboard (admin)
+export type TimeRange = { start: string; end: string };
+export type SlotConfig = {
+    slotDurationMinutes: number;
+    maxOrdersPerSlot: number;
+    maxProductsPerSlot: number;
+    weeklyHours: Record<string, TimeRange[]>;
+    closedDates: string[];
+};
+export type SlotStatus = 'AVAILABLE' | 'FULL' | 'CLOSED' | 'PAST';
+export type Slot = {
+    time: string;
+    status: SlotStatus;
+    orderCount: number;
+    productCount: number;
+    maxOrders: number;
+    maxProducts: number;
+    manualOrders: number;
+    manualProducts: number;
+};
+
+export const getTakeawaySlotConfigApi = async () =>
+    apiCall<SlotConfig>({ method: GET, fixed: true, url: TAKEAWAY_SLOTS_CONFIG });
+
+export const saveTakeawaySlotConfigApi = async (cfg: SlotConfig) =>
+    apiCall<SlotConfig>({ method: PUT, fixed: true, url: TAKEAWAY_SLOTS_CONFIG, data: cfg });
+
+export const getTakeawaySlotsDayApi = async (date: string) =>
+    apiCall<Slot[]>({ method: GET, fixed: true, url: TAKEAWAY_SLOTS_DAY(date) });
+
+export const closeTakeawaySlotApi = async (date: string, time: string) =>
+    apiCall<void>({ method: POST, fixed: true, url: TAKEAWAY_SLOTS_CLOSE(date, time) });
+
+export const openTakeawaySlotApi = async (date: string, time: string) =>
+    apiCall<void>({ method: POST, fixed: true, url: TAKEAWAY_SLOTS_OPEN(date, time) });
+
+export const addManualTakeawaySlotApi = async (date: string, time: string, products = 1) =>
+    apiCall<void>({ method: POST, fixed: true, url: TAKEAWAY_SLOTS_MANUAL(date, time, products) });
+
+export const resetManualTakeawaySlotApi = async (date: string, time: string) =>
+    apiCall<void>({ method: POST, fixed: true, url: TAKEAWAY_SLOTS_RESET_MANUAL(date, time) });
+
+// takeaway slots — pubblico (cart cliente)
+export const getPublicTakeawaySlotsApi = async (localname: string, date: string) =>
+    clientApiCall<Slot[]>({ method: GET, fixed: true, url: TAKEAWAY_SLOTS_PUBLIC(localname, date) });
+
 // payments
 export const createPaymentIntentPublicApi = async (
     localname: string,
@@ -574,11 +628,11 @@ export const setAddableIngredientApi = async (idIngredient: number, value: boole
 
 
 export const getToken = (): string => {
-    return getCookie('token') || ""
+    return getCookie('rf_token') || ""
 }
 
 const _getKey = (): string => {
-    return getCookie('key') || ""
+    return getCookie('rf_key') || ""
 }
 
 export const instance = axios.create({

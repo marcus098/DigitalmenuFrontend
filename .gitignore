@@ -31,8 +31,8 @@
 *.tsbuildinfo
 
 # Playwright
-/playwright-report
-/test-results
+playwright-report/
+test-results/
 /tests/screenshots
 
 # Personal scratch / session notes
@@ -44,3 +44,14 @@ scripts/setup-github-secrets.ps1
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Generated manuals / certificates (local artifacts)
+MANUALE_*.pdf
+MANUALE_*.html
+CERT_*.pdf
+
+# Local scratch assets
+/public/tmp/
+
+# Config Spring di produzione montata nei container (contiene segreti)
+/config/

@@ -33,7 +33,7 @@ const HomePage             = lazy(() => import("./Dashboard/Pages/HomePage"));
 const MenuPage             = lazy(() => import("./Dashboard/Pages/MenuPage"));
 const ProductPage          = lazy(() => import("./Dashboard/Pages/ProductPage"));
 const IngredientsPage      = lazy(() => import("./Dashboard/Pages/IngredientsPage"));
-const TablesPageTest       = lazy(() => import("./Dashboard/Pages/TablesPageTest"));
+const TablesPage           = lazy(() => import("./Dashboard/Pages/TablesPage"));
 const OrderPage            = lazy(() => import("./Dashboard/Pages/OrderPage"));
 const WaitersPage          = lazy(() => import("./Dashboard/Pages/WaitersPage"));
 const CategoryPage         = lazy(() => import("./Dashboard/Pages/CategoryPage"));
@@ -43,8 +43,10 @@ const DocumentsPage        = lazy(() => import("./Dashboard/Pages/DocumentsPage"
 const LoyaltyCardsPage     = lazy(() => import("./Dashboard/Pages/LoyaltyCardsPage"));
 const LayoutPage           = lazy(() => import("./Dashboard/Pages/LayoutPage"));
 const TakeawaySlotsPage    = lazy(() => import("./Dashboard/Pages/TakeawaySlotsPage"));
+const PrintersPage         = lazy(() => import("./Dashboard/Pages/PrintersPage"));
 const ReservationsPage     = lazy(() => import("./Dashboard/Pages/ReservationsPage"));
 const CassaPage            = lazy(() => import("./Dashboard/Pages/CassaPage"));
+const PaymentsSettingsPage = lazy(() => import("./Dashboard/Pages/PaymentsSettingsPage"));
 const AnalyticsPage        = lazy(() => import("./Dashboard/Pages/AnalyticsPage"));
 const WaiterAnalyticsPage  = lazy(() => import("./Dashboard/Pages/WaiterAnalyticsPage"));
 
@@ -137,10 +139,12 @@ const DashboardRoutes = () => (
                 <Route path={"Cards"} element={<LoyaltyCardsPage />} />
                 <Route path={"Layout"} element={<LayoutPage />} />
                 <Route path={"Slots"} element={<TakeawaySlotsPage />} />
-                <Route path={"Tables"} element={<TablesPageTest />} />
+                <Route path={"Printers"} element={<PrintersPage />} />
+                <Route path={"Tables"} element={<TablesPage />} />
                 <Route path={"Orders"} element={<OrderPage />} />
                 <Route path={"Reservations"} element={<ReservationsPage />} />
                 <Route path={"Cassa"} element={<CassaPage />} />
+                <Route path={"PaymentsSettings"} element={<PaymentsSettingsPage />} />
                 <Route path={"Analytics"} element={<AnalyticsPage />} />
                 <Route path={"WaiterAnalytics"} element={<WaiterAnalyticsPage />} />
               </Route>

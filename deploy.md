@@ -29,7 +29,6 @@ Crea i record **A** puntati all'IP della VPS:
 app.tuodominio.it       → IP_VPS
 api.tuodominio.it       → IP_VPS
 reactive.tuodominio.it  → IP_VPS
-ws.tuodominio.it        → IP_VPS    (opzionale, per il futuro Rust WS)
 ```
 
 Aspetta che `dig app.tuodominio.it` risponda con l'IP prima di proseguire.
@@ -86,7 +85,6 @@ Da compilare in `.env`:
 | `FRONTEND_URL` | `https://app.tuodominio.it` |
 | `BACKEND_URL` | `https://api.tuodominio.it` |
 | `WEBFLUX_URL` | `https://reactive.tuodominio.it` |
-| `WS_URL` | `wss://ws.tuodominio.it` |
 | `POSTGRES_PASSWORD` | password forte: `openssl rand -base64 24` |
 | `BUCKET_S3_*` | credenziali Backblaze del bucket immagini |
 | `STRIPE_SECRET_KEY` | `sk_live_...` da Stripe |
@@ -112,7 +110,7 @@ sudo nano /etc/caddy/Caddyfile
 ```
 
 Sostituisci ovunque:
-- `example.com` → il tuo dominio reale (4 occorrenze: app/api/reactive/ws)
+- `example.com` → il tuo dominio reale (3 occorrenze: app/api/reactive)
 - `admin@example.com` → tua email per notifiche Let's Encrypt
 
 ```bash

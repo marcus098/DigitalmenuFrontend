@@ -4,8 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useNotification } from '../../Context/NotificationContext';
 import { useData } from '../../Context/DataContext';
 import { getCartMap, saveCart, emptyCart, CART_UPDATED_EVENT, getTableSession, getOrCreateClientSessionId, cartToAddComandOrders } from '../../Utilities/Utilities';
-import { sendClientOrderApi, sendTakeawayOrderApi, setReadyApi, getPublicTakeawaySlotsApi, type Slot } from '../../Utilities/api';
-import { ProductCard } from '../../types';
+import { sendClientOrderApi, sendTakeawayOrderApi, setReadyApi, getPublicTakeawaySlotsApi, getPublicPaymentsConfigApi, getPublicTakeawayStatusApi, type Slot } from '../../Utilities/api';
+import { CreatedOrderResponse, ProductCard, PublicPaymentsConfig } from '../../types';
 
 import CustomLoading from '../../Components/CustomLoading';
 import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
@@ -46,6 +46,8 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
     const [takeawayForm, setTakeawayForm] = useState({ name: '', phone: '', time: '' });
     const [takeawaySlots, setTakeawaySlots] = useState<{ date: string; label: string; slots: Slot[] }[]>([]);
     const [slotsLoading, setSlotsLoading] = useState(false);
+    const [paymentsConfig, setPaymentsConfig] = useState<PublicPaymentsConfig | null>(null);
+    const [takeawayPaused, setTakeawayPaused] = useState(false);
 
     const navigate = useNavigate();
     const { localname } = useParams();
@@ -64,12 +66,28 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
         setCart(cartFromStorage ? Object.values(cartFromStorage) : []);
     }, [waiter]);
 
+    // Prepagamento obbligatorio? (il server lo applica comunque: qui serve per testi e redirect)
+    useEffect(() => {
+        if (waiter || !localname) return;
+        getPublicPaymentsConfigApi(localname).then(r => { if (r.success && r.data) setPaymentsConfig(r.data); });
+    }, [waiter, localname]);
+    const prepaymentRequired = !!(isTakeaway ? paymentsConfig?.prepaymentTakeaway : paymentsConfig?.prepaymentTable);
+
     // Carica slot disponibili per asporto (oggi + prossimi 2 giorni).
     useEffect(() => {
         if (!isTakeaway || !localname) return;
         let cancelled = false;
         (async () => {
             setSlotsLoading(true);
+            const status = await getPublicTakeawayStatusApi(localname);
+            if (cancelled) return;
+            if (status.success && status.data?.paused) {
+                setTakeawayPaused(true);
+                setTakeawaySlots([]);
+                setSlotsLoading(false);
+                return;
+            }
+            setTakeawayPaused(false);
             const days = [0, 1, 2].map(d => {
                 const dt = new Date();
                 dt.setDate(dt.getDate() + d);
@@ -84,7 +102,10 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                     return { date: d.iso, label: d.label, slots: (r.success && r.data) ? r.data : [] };
                 })
             );
-            if (!cancelled) setTakeawaySlots(results.filter(r => r.slots.length > 0));
+            // Il server restituisce solo slot prenotabili (liberi o "su richiesta"): chiusi/pieni restano nascosti
+            if (!cancelled) setTakeawaySlots(results
+                .map(r => ({ ...r, slots: r.slots.filter(s => s.status === 'AVAILABLE' || s.status === 'ON_REQUEST') }))
+                .filter(r => r.slots.length > 0));
             setSlotsLoading(false);
         })();
         return () => { cancelled = true; };
@@ -108,6 +129,24 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
             cart.map(i => (i.id.toString() === id ? { ...i, quantity: qty } : i))
         );
     };
+
+    /** Prepagamento obbligatorio → subito al pagamento (l'ordine parte solo dopo); altrimenti stato ordine. */
+    const goAfterOrder = (created: CreatedOrderResponse | string) => {
+        const id = typeof created === 'string' ? created : created.id;
+        const pay = typeof created !== 'string' && created.paymentRequired;
+        navigate(pay ? `/${localname}/payment/${id}` : `/${localname}/order-status/${id}`);
+    };
+
+    const orderErrorMessage = (status: number, message?: string) =>
+        (status === 409 || status === 400) && message && !message.startsWith('Request failed')
+            ? message
+            : "Errore nell'invio dell'ordine. Riprova.";
+
+    const selectedSlot = useMemo(() => {
+        if (!takeawayForm.time) return null;
+        const [d, t] = takeawayForm.time.split('T');
+        return takeawaySlots.find(x => x.date === d)?.slots.find(s => s.time === t) ?? null;
+    }, [takeawayForm.time, takeawaySlots]);
 
     const handleOrder = async () => {
         if (waiter) { setIsOrderModalOpen(true); return; }
@@ -152,9 +191,9 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
             if (result.success && result.data) {
                 emptyCart();
                 window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
-                navigate(`/${localname}/order-status/${(result.data as any).data ?? result.data}`);
+                goAfterOrder(result.data);
             } else {
-                addNotification({ message: "Errore nell'invio dell'ordine. Riprova.", type: 'error' });
+                addNotification({ message: orderErrorMessage(result.status, result.message), type: 'error' });
             }
             return;
         }
@@ -165,14 +204,14 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
             return;
         }
         setIsSubmitting(true);
-        const result = await sendClientOrderApi(Number(rawTableId), orders);
+        const result = await sendClientOrderApi(Number(rawTableId), localname!, getOrCreateClientSessionId(), orders);
         setIsSubmitting(false);
         if (result.success && result.data) {
             emptyCart();
             window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
-            navigate(`/${localname}/order-status/${result.data}`);
+            goAfterOrder(result.data);
         } else {
-            addNotification({ message: "Errore nell'invio dell'ordine. Riprova.", type: 'error' });
+            addNotification({ message: orderErrorMessage(result.status, result.message), type: 'error' });
         }
     };
 
@@ -288,6 +327,12 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                 style={{ borderTop: '1px solid var(--menu-border)' }}
                             >
                                 {/* Takeaway form */}
+                                {prepaymentRequired && !isGroupSession && (
+                                    <p className="mb-4 text-xs" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
+                                        Il locale richiede il pagamento online anticipato: dopo l'invio verrai portato al pagamento
+                                        (l'ordine viene annullato se non paghi entro 15 minuti).
+                                    </p>
+                                )}
                                 {isTakeaway && (
                                     <motion.div
                                         initial={{ opacity: 0, y: 12 }}
@@ -325,6 +370,10 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                             />
                                             {slotsLoading ? (
                                                 <p className="text-xs" style={{ color: 'var(--menu-muted)' }}>Caricamento orari disponibili…</p>
+                                            ) : takeawayPaused ? (
+                                                <p className="text-sm font-semibold" style={{ color: 'var(--menu-accent)' }}>
+                                                    Asporto momentaneamente sospeso. Riprova tra poco.
+                                                </p>
                                             ) : takeawaySlots.length === 0 ? (
                                                 <p className="text-xs" style={{ color: 'var(--menu-muted)' }}>
                                                     Nessuno slot disponibile per asporto. Contattaci telefonicamente.
@@ -340,12 +389,22 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                                         <optgroup key={day.date} label={day.label}>
                                                             {day.slots.map(s => (
                                                                 <option key={`${day.date}T${s.time}`} value={`${day.date}T${s.time}`}>
-                                                                    {s.time} — {s.maxOrders - s.orderCount} post{s.maxOrders - s.orderCount === 1 ? 'o' : 'i'} liber{s.maxOrders - s.orderCount === 1 ? 'o' : 'i'}
+                                                                    {s.status === 'ON_REQUEST'
+                                                                        ? `${s.time} — su richiesta`
+                                                                        : `${s.time} — ${s.maxOrders - s.orderCount} post${s.maxOrders - s.orderCount === 1 ? 'o' : 'i'} liber${s.maxOrders - s.orderCount === 1 ? 'o' : 'i'}`}
                                                                 </option>
                                                             ))}
                                                         </optgroup>
                                                     ))}
                                                 </select>
+                                            )}
+                                            {selectedSlot?.status === 'ON_REQUEST' && (
+                                                <p className="text-xs p-2 rounded-lg" style={{ color: 'var(--menu-text)', background: 'var(--menu-input-bg)' }}>
+                                                    Orario <strong>su richiesta</strong>: il locale deve confermare l'ordine entro 10 minuti.
+                                                    {prepaymentRequired
+                                                        ? " L'importo verrà solo autorizzato e addebitato se il locale accetta."
+                                                        : ' Se non viene confermato, l\'ordine viene annullato.'}
+                                                </p>
                                             )}
                                         </div>
                                     </motion.div>
@@ -367,7 +426,7 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
 
                                 <ShimmerButton
                                     onClick={handleOrder}
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || (isTakeaway && takeawayPaused)}
                                     className="w-full py-4 rounded-2xl"
                                     style={{
                                         background: primaryColor,
@@ -382,6 +441,8 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                         ? 'Invio in corso...'
                                         : isGroupSession
                                         ? 'Sono pronto'
+                                        : prepaymentRequired
+                                        ? 'Ordina e paga'
                                         : isTakeaway
                                         ? 'Invia Ordine Asporto'
                                         : 'Conferma Ordine'}

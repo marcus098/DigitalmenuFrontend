@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import QRCode from 'react-qr-code';
 import { useData } from '../../Context/DataContext';
 import { useLoginContext } from '../../Context/LoginContext';
 import { EslConfigDto } from '../../types';
+import { escapeHtml } from '../../Utilities/Utilities';
 import { getEslConfigsApi, saveEslConfigApi, deleteEslConfigApi, pushEslTagApi } from '../../Utilities/api';
 import { useNotification } from '../../Context/NotificationContext';
 
@@ -96,15 +97,17 @@ const QRCodePage: React.FC = () => {
                                             <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">E-INK ✓</span>
                                         )}
                                     </div>
-                                    <QRCodeCanvas id={`qr-${table.id}`} value={url} size={160} />
+                                    <QRCode id={`qr-${table.id}`} value={url} size={160} />
                                     <p className="mt-3 text-xs text-zinc-400 text-center break-all">{url}</p>
                                     <button
                                         onClick={() => {
-                                            const canvas = document.getElementById(`qr-${table.id}`) as HTMLCanvasElement;
-                                            const dataUrl = canvas?.toDataURL();
+                                            const svg = document.getElementById(`qr-${table.id}`);
+                                            const dataUrl = svg
+                                                ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg))
+                                                : '';
                                             const w = window.open('', '_blank');
                                             if (w) {
-                                                w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:20px"><h2>${table.name}</h2><img src="${dataUrl}" width="200"/><p style="font-size:11px;color:#888">${url}</p></body></html>`);
+                                                w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:20px"><h2>${escapeHtml(table.name)}</h2><img src="${escapeHtml(dataUrl)}" width="200"/><p style="font-size:11px;color:#888">${escapeHtml(url)}</p></body></html>`);
                                                 w.document.close();
                                                 w.print();
                                             }

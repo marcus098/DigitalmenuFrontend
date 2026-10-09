@@ -36,7 +36,8 @@ export const setCookie = (name: string, value: any, days: number): void => {
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
         expires = "; expires=" + date.toUTCString();
     }
-    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/; SameSite=Strict" + secure;
 }
 
 // Funzione per recuperare il valore di un cookie dato il suo nome
@@ -60,26 +61,36 @@ export const deleteCookie = (name: string): void => {
     document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/;';
 }
 
+// Escape dei valori interpolati in HTML (evita XSS con document.write)
+export const escapeHtml = (value: unknown): string => {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 export const print = (order: Orders): void => {
     if (!order) return;
 
     // Genera i dettagli degli ordini
     const orderDetails = order.items.map((item) => {
         const ingPlus = item.additionalIngredients.length
-            ? `<div>+ ${item.additionalIngredients.join(", ")}</div>`
+            ? `<div>+ ${escapeHtml(item.additionalIngredients.join(", "))}</div>`
             : "";
         const ingMinus = item.removedIngredients.length
-            ? `<div>- ${item.removedIngredients.join(", ")}</div>`
+            ? `<div>- ${escapeHtml(item.removedIngredients.join(", "))}</div>`
             : "";
-        const notes = item.notes ? `<div>Note: ${item.notes}</div>` : "";
+        const notes = item.notes ? `<div>Note: ${escapeHtml(item.notes)}</div>` : "";
 
         return `
             <div style="border-bottom: 1px dashed #000; padding: 5px;">
-                <div style="font-weight: bold;">${item.productName}</div>
+                <div style="font-weight: bold;">${escapeHtml(item.productName)}</div>
                 ${ingMinus}
                 ${ingPlus}
                 ${notes}
-                <div>Prezzo: €${item.total.toFixed(2)}</div>
+                <div>Prezzo: €${escapeHtml(item.total.toFixed(2))}</div>
             </div>
         `;
     }).join("");
@@ -87,7 +98,7 @@ export const print = (order: Orders): void => {
     // Struttura del contenuto per la stampa
     const printContent = `
         <div style="text-align: center; font-family: Arial, sans-serif; padding: 10px;">
-            <h2>Ordine Tavolo: ${order.tableName}</h2>
+            <h2>Ordine Tavolo: ${escapeHtml(order.tableName)}</h2>
             <div>${orderDetails}</div>
         </div>
     `;

@@ -2,7 +2,7 @@ import React from "react";
 import {Comand} from "./ComandType";
 import {UserProfile} from "./Dashboard/Pages/ProfilePage";
 import {Orders} from "./Dashboard/Pages/OrderPage";
-import {Table} from "./Dashboard/Pages/TablesPageTest";
+import {Table} from "./Dashboard/Pages/TablesPage";
 
 export interface ApiResponse<T = any>{
     status: number
@@ -19,6 +19,8 @@ export interface NameType{
 
 export interface DataContextType{
     data?: ListToExport
+    /** Contatore degli eventi ordine ricevuti via SSE (dashboard): cambia a ogni aggiornamento realtime. */
+    orderEventTick: number
     waiters?: boolean
     selectedAllergens: number[]
     setSelectedAllergens: React.Dispatch<React.SetStateAction<number[]>>
@@ -27,7 +29,11 @@ export interface DataContextType{
     productsMap: Map<number, ProductDto>
     ingredientsMap: Map<number, IngredientDto>
     comands: Comand[]
-    changeComandStatus: (idComand: string, status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING') => void
+    changeComandStatus: (idComand: string, status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING') => Promise<boolean>
+    /** Accetta un ordine "su richiesta" (AWAIT_APPROVAL → PENDING) */
+    approveComand: (idComand: string) => Promise<boolean>
+    /** Rifiuta un ordine "su richiesta" con motivo opzionale */
+    rejectComand: (idComand: string, reason?: string) => Promise<boolean>
     tablesMap: Map<number, TableDto>
     styles?: StyleDto
     loading: boolean
@@ -126,7 +132,6 @@ export interface LoginContextType{
     logout: () => void
     changePasswordFunc: (oldPassword: string, newPassword: string) => Promise<boolean>
     updateProfileFunc: (userProfile: UserProfile) => Promise<boolean>
-    register: (formData: FormData) => Promise<"Success" | "Errore">
     transparentLoading: boolean
     errorType: 'credenziali' | 'connection' | 'billing' | null
     checkVariable: (value: number) => boolean
@@ -420,7 +425,7 @@ export interface CommandDto {
     createdAt: string
     updatedAt: string
     orders: Order[]
-    status: "PENDING" | "PROGRESS" | "COMPLETED" | "DELETED"
+    status: "AWAIT" | "PENDING" | "PROGRESS" | "COMPLETED" | "DELETED" | "AWAIT_PAYMENT" | "AWAIT_APPROVAL"
 }
 
 export interface CommandFromHomeDto extends CommandDto {
@@ -549,6 +554,8 @@ export interface SignupWaiter {
     code: string
 }
 
+export type PaymentStatus = 'PENDING' | 'AUTHORIZED' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REFUNDED' | 'PARTIALLY_REFUNDED'
+
 export interface PaymentDto {
     id: number
     idAgency: number
@@ -557,14 +564,59 @@ export interface PaymentDto {
     amountCents: number
     currency: string
     stripePaymentIntentId?: string
-    status: string
+    /** Account Stripe Connect del locale che ha incassato */
+    stripeAccountId?: string
+    /** Commissione piattaforma trattenuta (centesimi) */
+    applicationFeeCents?: number
+    /** Totale rimborsato (centesimi) */
+    refundedCents?: number
+    status: PaymentStatus | string
     createdAt: string
     updatedAt: string
+}
+
+/** GET /api/payments/connect/status */
+export interface StripeConnectStatus {
+    platformConfigured: boolean
+    connected: boolean
+    chargesEnabled: boolean
+    detailsSubmitted: boolean
+    /** Commissione piattaforma in basis points (100 = 1%) */
+    applicationFeeBps: number
+}
+
+/** GET /api/public/payments/config/{localname} */
+export interface PublicPaymentsConfig {
+    enabled: boolean
+    /** Pagamento anticipato obbligatorio per l'asporto */
+    prepaymentTakeaway?: boolean
+    /** Pagamento anticipato obbligatorio al tavolo */
+    prepaymentTable?: boolean
+}
+
+/** GET/PUT /api/payments/settings */
+export interface PrepaymentSettings {
+    prepaymentTakeaway: boolean
+    prepaymentTable: boolean
+    /** Stripe attivo (sola lettura) */
+    paymentsEnabled: boolean
+}
+
+/** Risposta creazione ordine pubblico (tavolo / asporto) */
+export interface CreatedOrderResponse {
+    id: string
+    status: string
+    /** true = prepagamento obbligatorio: andare subito al pagamento */
+    paymentRequired: boolean
 }
 
 export interface PaymentIntentResponse {
     clientSecret: string
     paymentIntentId: string
+    /** Importo calcolato lato server (centesimi) */
+    amountCents?: number
+    /** Solo autorizzazione: l'addebito avviene se il locale accetta l'ordine */
+    manualCapture?: boolean
 }
 
 export interface ReservationDto {

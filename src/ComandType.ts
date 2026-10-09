@@ -1,5 +1,8 @@
 // types/ComandDashboard.ts
 
+/** AWAIT_PAYMENT: in attesa del prepagamento (mai mostrata in dashboard). AWAIT_APPROVAL: asporto su richiesta da approvare. */
+export type ComandStatus = 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'AWAIT' | 'PENDING' | 'AWAIT_PAYMENT' | 'AWAIT_APPROVAL';
+
 export interface Ingredient {
     id: number;
     name: string;
@@ -28,7 +31,7 @@ export interface Order {
     id: string;
     userId: string;
     products: Product[];
-    status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'AWAIT' | 'PENDING' | 'WAITING';
+    status: ComandStatus;
 }
 
 export interface Comand {
@@ -36,7 +39,7 @@ export interface Comand {
     createdAt: string;
     updatedAt: string;
     orders: Order[];
-    status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'AWAIT' | 'PENDING' | 'WAITING';
+    status: ComandStatus;
     idTable?: number
     name?: string
     idWaiter?: number
@@ -45,5 +48,23 @@ export interface Comand {
     address?: string
     comandWaiterType?: string
     type?: string
+    /** Pagata online (Stripe) */
+    paid?: boolean
+    paidAt?: string
+    paymentIntentId?: string
+    /** Ordine su richiesta (riserva slot): serve l'approvazione del locale */
+    approvalRequired?: boolean
+    /** Scadenza approvazione (AWAIT_APPROVAL), ISO */
+    approvalDeadline?: string
+    /** Motivo rifiuto/annullamento */
+    rejectReason?: string
+    /** Importo autorizzato (capture manuale) non ancora addebitato */
+    paymentAuthorized?: boolean
+    /** Autorizzazione annullata dopo il rifiuto: nessun addebito */
+    authorizationCanceled?: boolean
+    /** Rimborsato integralmente */
+    refunded?: boolean
+    /** Solo vista pubblica: totale calcolato dal server (centesimi) */
+    totalCents?: number
 }
 

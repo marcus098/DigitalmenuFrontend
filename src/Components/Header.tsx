@@ -4,7 +4,7 @@ import { useLoginContext } from '../Context/LoginContext';
 import {
     Menu, Bell, X, Plus, UserCircle, LogOut, Settings,
     LayoutDashboard, UtensilsCrossed, LayoutGrid, ClipboardList,
-    CalendarDays, Receipt, Palette, BarChart2, Users, FileBarChart, ChevronDown, Clock,
+    CalendarDays, Receipt, Palette, BarChart2, Users, FileBarChart, ChevronDown, Clock, CreditCard, Printer,
 } from 'lucide-react';
 import { IS_ADMIN, IS_WAITER } from '../types';
 
@@ -21,9 +21,11 @@ const PRIMARY_LINKS = [
 const ADMIN_MORE_LINKS = [
     { name: 'Template',         icon: Palette,      href: 'Layout'          },
     { name: 'Slot Asporto',     icon: Clock,        href: 'Slots'           },
+    { name: 'Stampanti',        icon: Printer,      href: 'Printers'        },
     { name: 'Analytics',        icon: BarChart2,    href: 'Analytics'       },
     { name: 'Camerieri',        icon: Users,        href: 'Waiters'         },
     { name: 'Report Camerieri', icon: FileBarChart, href: 'WaiterAnalytics' },
+    { name: 'Pagamenti online', icon: CreditCard,   href: 'PaymentsSettings' },
 ];
 
 /* ── Component ─────────────────────────────────────── */

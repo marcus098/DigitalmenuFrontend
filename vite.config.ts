@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
                         if (/lucide-react|react-icons|@heroicons|@fortawesome/.test(id)) return 'icons';
                         if (id.includes('@radix-ui')) return 'radix';
                         if (/@hello-pangea[\\/]dnd|react-grid-layout|react-resizable/.test(id)) return 'dnd-grid';
-                        if (/qrcode\.react|react-qr-code|react-qr-scanner/.test(id)) return 'qr';
+                        if (/react-qr-code|react-qr-scanner/.test(id)) return 'qr';
                         if (id.includes('@lottiefiles')) return 'lottie';
                         if (/axios|clsx|tailwind-merge|tailwind-variants|class-variance-authority/.test(id)) return 'utils';
                         return undefined;

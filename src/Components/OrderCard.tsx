@@ -2,11 +2,27 @@ import React, { useState } from "react";
 import {Orders} from "../Dashboard/Pages/OrderPage";
 import {formatDateTime} from "../Utilities/Utilities";
 
+const STATUS_LABEL: Record<string, string> = {
+    AWAIT: "Nuovo",
+    PENDING: "In attesa",
+    PROGRESS: "In cucina",
+    COMPLETED: "Completato",
+    DELETED: "Cancellato",
+    AWAIT_APPROVAL: "Da approvare",
+    AWAIT_PAYMENT: "In attesa di pagamento",
+};
+
 interface OrderCardProps {
     order: Orders;
     onStatusChange: (orderId: string, newStatus: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING') => void;
-    onPrint: (orderId: string) => void;
+    /** Slot per il pulsante "Ristampa": il pulsante viene mostrato solo se la callback è fornita. */
+    onPrint?: (orderId: string) => void;
     onDetailsClick: (order: Orders) => void;
+    /** Stampa dal tablet attiva: su AWAIT/PENDING mostra "Accetta e stampa" (→ PROGRESS + stampa RawBT). */
+    onAcceptAndPrint?: (orderId: string) => void;
+    /** Ticket tablet scaricato oltre la finestra del tocco: mostra "Tocca per stampare". */
+    pendingPrint?: boolean;
+    onPrintPending?: (orderId: string) => void;
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({
@@ -14,22 +30,41 @@ const OrderCard: React.FC<OrderCardProps> = ({
                                                  onStatusChange,
                                                  onPrint,
                                                  onDetailsClick,
+                                                 onAcceptAndPrint,
+                                                 pendingPrint,
+                                                 onPrintPending,
                                              }) => {
     const [expanded, setExpanded] = useState(false);
 
     return (
         <div
             className={`border rounded-lg p-4 shadow-md ${
-                order.status === "WAITING"
-                    ? "bg-yellow-50"
+                order.status === "AWAIT"
+                    ? "bg-amber-50 border-2 border-amber-500"
+                    : order.status === "AWAIT_APPROVAL"
+                    ? "bg-orange-50 border-2 border-orange-500"
+                    : order.status === "AWAIT_PAYMENT"
+                    ? "bg-gray-50 border-dashed border-gray-400"
                     : order.status === "PENDING"
                         ? "bg-blue-50"
-                        : "bg-green-50"
+                        : order.status === "PROGRESS"
+                            ? "bg-yellow-50"
+                            : order.status === "DELETED"
+                                ? "bg-red-50"
+                                : "bg-green-50"
             }`}
         >
             <div className="flex justify-between items-center">
-                <h6 className="font-bold">Ordine #{order.id.substring(0, 17)}...</h6>
-                <button onClick={() => onPrint(order.id)}>
+                <div className="flex items-center gap-2 min-w-0">
+                    <h6 className="font-bold truncate">Ordine #{order.id.substring(0, 17)}...</h6>
+                    {order.paid && (
+                        <span className="shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-green-600 text-white" title="Pagato online">
+                            Pagato
+                        </span>
+                    )}
+                </div>
+                {onPrint && (
+                <button onClick={() => onPrint(order.id)} title="Ristampa" aria-label="Ristampa">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-6 w-6 text-gray-600 hover:text-gray-800"
@@ -45,6 +80,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                         />
                     </svg>
                 </button>
+                )}
             </div>
             {order.createdAt && <p className="text-sm text-black-500">{formatDateTime(order.createdAt)}</p>}
             {order.tableName && <p className="text-sm text-gray-500">Tavolo: {order.tableName}</p>}
@@ -100,7 +136,11 @@ const OrderCard: React.FC<OrderCardProps> = ({
                 <div className="text-center mb-2">
     <span
         className={`inline-block px-3 py-0.5 rounded-full text-xs font-semibold text-white ${
-            order.status === "WAITING"
+            order.status === "AWAIT"
+                ? "bg-amber-500"
+                : order.status === "AWAIT_APPROVAL"
+                ? "bg-orange-600"
+                : order.status === "AWAIT_PAYMENT"
                 ? "bg-gray-500"
                 : order.status === "PENDING"
                     ? "bg-blue-500"
@@ -113,13 +153,30 @@ const OrderCard: React.FC<OrderCardProps> = ({
                                 : "bg-gray-400"
         }`}
     >
-      Stato: {order.status}
+      Stato: {STATUS_LABEL[order.status] ?? order.status}
     </span>
                 </div>
 
+                {pendingPrint && onPrintPending && (
+                    <button
+                        onClick={() => onPrintPending(order.id)}
+                        className="w-full mb-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold px-3 py-2 rounded animate-pulse"
+                    >
+                        Tocca per stampare
+                    </button>
+                )}
+                {onAcceptAndPrint && (order.status === "AWAIT" || order.status === "PENDING") && (
+                    <button
+                        onClick={() => onAcceptAndPrint(order.id)}
+                        className="w-full mb-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-3 py-2 rounded"
+                    >
+                        Accetta e stampa
+                    </button>
+                )}
+
                 {/* Pulsanti in fila, piccoli e stretti */}
                 <div className="flex justify-center gap-2 flex-wrap">
-                    {order.status === "WAITING" && (
+                    {order.status === "AWAIT" && (
                         <>
                             <button
                                 onClick={() => onStatusChange(order.id, "PENDING")}
@@ -178,6 +235,12 @@ const OrderCard: React.FC<OrderCardProps> = ({
 
                     {(order.status === "COMPLETED" || order.status === "DELETED") && (
                         <span className="italic text-gray-600 text-xs">Nessuna azione disponibile</span>
+                    )}
+                    {order.status === "AWAIT_APPROVAL" && (
+                        <span className="italic text-orange-700 text-xs">Accetta o rifiuta dalla sezione "Da approvare"</span>
+                    )}
+                    {order.status === "AWAIT_PAYMENT" && (
+                        <span className="italic text-gray-600 text-xs">In attesa del pagamento del cliente</span>
                     )}
                 </div>
 

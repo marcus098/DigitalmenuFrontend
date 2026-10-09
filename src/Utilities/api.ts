@@ -11,7 +11,7 @@ import {
     ListToExport,
     LoginResponse,
     OpenTableSessionResponse,
-    PaymentDto, PaymentIntentResponse,
+    PaymentDto, PaymentIntentResponse, PublicPaymentsConfig, StripeConnectStatus, PrepaymentSettings, CreatedOrderResponse,
     ProductDto, ReservationDto, Response, SignupWaiter, StyleDto, TableDto, TableLookup, TableSessionState, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto, WaiterSessionState,
 } from "../types";
 import {deleteCookie, getCookie} from "./Utilities";
@@ -31,12 +31,11 @@ const UPDATE_TABLES = "/api/tables/updateTablesPosition"
 const UPDATE_SINGLE_TABLE = "/api/tables/updateTable"
 const UPDATE_PRODUCT = "/api/products/updateProduct"
 const GET_URL_INVITE_WAITERS = "/api/users/getInviteUrlWaiter"
-const CONFIRM_WAITER = (id: number) => "/api/users/confirmWaiter/" + id.toString()
+const CONFIRM_WAITER = (id: number) => "/api/users/confirmWaiterAdmin/" + id.toString()
 const DELETE_WAITER = (id: number) => "/api/users/deleteWaiter/" + id.toString()
 const CONFIRM_EMAIL = (code: string) => "/api/users/confirmEmail/" + code
 const RESEND_CONFIRM_EMAIL = (id: number, code: string) => "/api/users/resendEmailVerification/" + id + "/" + code
 const GET_WAITERS = "/api/users/getWaiters"
-const GET_ADMINS = "/api/users/getAdmins"
 const DELETE_INGREDIENT = (id: number) => "/api/ingredients/delete/" + id
 const DELETE_CATEGORY = (idCategory: number) => "/api/categories/deleteCategory/" + idCategory;
 const DELETE_PRODUCT = (idProduct: number) => "/api/products/deleteProduct/" + idProduct
@@ -49,12 +48,7 @@ const UPDATE_PROFILE = "/api/users/updateData"
 const LOGIN = "/api/login"
 const REGISTER_AGENCY = "/api/signupAgency"
 const REGISTER_WAITER = "/api/signupWaiter"
-const REGISTER_USER = "/api/signupUser"
-const RECOVER_PASSWORD = "/api/recoverPassword"
 const CHANGE_PASSWORD = "/api/users/changePassword"
-const CLOSE_ACCOUNT = (code: string) => "/api/closeAccount/" + code
-const CHANGE_EMAIL = (code: string) => "/api/changeEmail/" + code
-const CHANGE_NUMBER = (code: string) => "/api/changeNumber/" + code
 const GET_AGENCY_NAME= (id: number) => "/api/getAgencyName/" + id
 const GET_ORDERS_BY_TABLE = (tableId: number) => "/api/comands/table/" + tableId
 const GET_COMPLETED_ORDERS = (date: string) => "/api/comands/getCompleted/" + date
@@ -64,6 +58,8 @@ const SEND_CLIENT_COMAND = "/api/public/orders/insert"
 const GET_CLIENT_ORDER = (comandId: string) => "/api/public/orders/" + comandId
 const GET_CLIENT_ORDER_HISTORY = (tableId: number, localname: string) => "/api/public/orders/table/" + tableId + "?localname=" + localname
 const CHANGE_COMAND_STATUS = "/api/orders/changeStatus"
+const APPROVE_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/approve`
+const REJECT_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/reject`
 const GET_ALL = (idOrLocalname: string | number) =>  "/api/public/client/getAll/" + idOrLocalname
 const GET_ALL_DASHBOARD = "/api/dashboard/getAll"
 const CHECK = "/api/user/check"
@@ -104,8 +100,21 @@ const TAKEAWAY_SLOTS_OPEN = (date: string, time: string) => `/api/takeaway/slots
 const TAKEAWAY_SLOTS_MANUAL = (date: string, time: string, products: number) => `/api/takeaway/slots/day/${date}/time/${time}/manual?products=${products}`
 const TAKEAWAY_SLOTS_RESET_MANUAL = (date: string, time: string) => `/api/takeaway/slots/day/${date}/time/${time}/reset-manual`
 const TAKEAWAY_SLOTS_PUBLIC = (localname: string, date: string) => `/api/public/takeaway/slots/${localname}/day/${date}`
+const TAKEAWAY_STATUS_PUBLIC = (localname: string) => `/api/public/takeaway/status/${encodeURIComponent(localname)}`
+const TAKEAWAY_DAY_CLOSE = (date: string) => `/api/takeaway/slots/day/${date}/close`
+const TAKEAWAY_DAY_OPEN = (date: string) => `/api/takeaway/slots/day/${date}/open`
+const TAKEAWAY_CLOSURES = "/api/takeaway/closures"
+const TAKEAWAY_CLOSURE = (id: number) => `/api/takeaway/closures/${id}`
+const TAKEAWAY_PAUSE = "/api/takeaway/pause"
+const TAKEAWAY_RESUME = "/api/takeaway/resume"
+const PAYMENT_SETTINGS = "/api/payments/settings"
 const GET_PAYMENTS = "/api/payments"
 const GET_PAYMENTS_TODAY_TOTAL = "/api/payments/today-total"
+const REFUND_PAYMENT = (id: number) => `/api/payments/${id}/refund`
+const STRIPE_CONNECT_ONBOARD = "/api/payments/connect/onboard"
+const STRIPE_CONNECT_STATUS = "/api/payments/connect/status"
+const STRIPE_CONNECT_DASHBOARD_LINK = "/api/payments/connect/dashboard-link"
+const PUBLIC_PAYMENTS_CONFIG = (localname: string) => `/api/public/payments/config/${encodeURIComponent(localname)}`
 const GET_ESL_CONFIGS = "/api/esl/configs"
 const SAVE_ESL_CONFIG = "/api/esl/configs"
 const DELETE_ESL_CONFIG = (tableId: number) => `/api/esl/configs/${tableId}`
@@ -117,6 +126,7 @@ export const UPDATE_ENDPOINT_DASHBOARD = "/api/auth/admin"
 const GET = 'GET'
 const POST = 'POST'
 const PUT = 'PUT'
+const DELETE = 'DELETE'
 
 export const login = async (emailUsername: string, password: string): Promise<ApiCallResult<LoginResponse>> => {
     return clientApiCall<LoginResponse>({
@@ -225,6 +235,14 @@ export const getAgencyByIdApi = async(id: number) => {
     return apiCall<Response<string>>({method: GET, url: GET_AGENCY_NAME(id), fixed: true})
 }
 
+/** Accetta un ordine "su richiesta" (AWAIT_APPROVAL → PENDING). */
+export const approveComandApi = async (comandId: string) =>
+    apiCall<{ message: string }>({ method: POST, url: APPROVE_COMAND(comandId), fixed: true })
+
+/** Rifiuta un ordine "su richiesta"; il motivo è mostrato al cliente. */
+export const rejectComandApi = async (comandId: string, reason?: string) =>
+    apiCall<{ message: string }>({ method: POST, url: REJECT_COMAND(comandId), fixed: true, data: reason ? { reason } : {} })
+
 export const changeComandStatusApi = async (comandId: string, status: string) => {
     const data = {
         comandId: comandId,
@@ -310,8 +328,8 @@ export const sendWaiterComandApi = async (addComandWaiter: AddComandWaiter) => {
     return apiCall<Response<string>>({method: POST, fixed: true, data: addComandWaiter, url: SEND_WAITER_COMAND})
 }
 
-export const sendClientOrderApi = async (tableId: number, orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[] }[] }[]) => {
-    return clientApiCall<string>({ method: POST, fixed: true, webflux: false, url: SEND_CLIENT_COMAND, data: { tableId, orders } })
+export const sendClientOrderApi = async (tableId: number, localname: string, clientSessionId: string, orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[] }[] }[]) => {
+    return clientApiCall<CreatedOrderResponse>({ method: POST, fixed: true, webflux: false, url: SEND_CLIENT_COMAND, data: { tableId, localname, clientSessionId, orders } })
 }
 
 export const getClientOrderApi = async (comandId: string) => {
@@ -419,7 +437,7 @@ export const addFileApi = async(formData: FormData) => {
 }
 
 export const forceDeleteFolderApi = (id: number) => {
-    return apiCall<Response<boolean>>({method: GET, fixed: true, url: FORCE_DELETE_FOLDER(id)})
+    return apiCall<Response<boolean>>({method: DELETE, fixed: true, url: FORCE_DELETE_FOLDER(id)})
 }
 
 export const deleteFolderApi = async(id: number) => {
@@ -460,7 +478,7 @@ export const sendTakeawayOrderApi = async (
     localname: string,
     data: { customerName: string; customerPhone: string; pickupTime?: string; orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[] }[] }[] }
 ) => {
-    return clientApiCall<string>({ method: POST, fixed: true, url: SEND_TAKEAWAY_ORDER(localname), data })
+    return clientApiCall<CreatedOrderResponse>({ method: POST, fixed: true, url: SEND_TAKEAWAY_ORDER(localname), data })
 }
 
 // takeaway slots — dashboard (admin)
@@ -468,11 +486,14 @@ export type TimeRange = { start: string; end: string };
 export type SlotConfig = {
     slotDurationMinutes: number;
     maxOrdersPerSlot: number;
+    /** 0 = nessun limite di prodotti */
     maxProductsPerSlot: number;
+    /** Ordini "su richiesta" oltre la capacità (serve l'approvazione del locale) */
+    reserveOrdersPerSlot: number;
     weeklyHours: Record<string, TimeRange[]>;
     closedDates: string[];
 };
-export type SlotStatus = 'AVAILABLE' | 'FULL' | 'CLOSED' | 'PAST';
+export type SlotStatus = 'AVAILABLE' | 'ON_REQUEST' | 'FULL' | 'CLOSED' | 'PAST';
 export type Slot = {
     time: string;
     status: SlotStatus;
@@ -482,7 +503,12 @@ export type Slot = {
     maxProducts: number;
     manualOrders: number;
     manualProducts: number;
+    reserveOrders?: number;
+    /** Solo CLOSED: SLOT | DAY | RANGE */
+    closedReason?: 'SLOT' | 'DAY' | 'RANGE' | 'PAUSED';
 };
+export type TakeawayClosure = { id: number; from: string; to: string; note?: string | null };
+export type TakeawayPauseStatus = { paused: boolean; pausedUntil?: string | null };
 
 export const getTakeawaySlotConfigApi = async () =>
     apiCall<SlotConfig>({ method: GET, fixed: true, url: TAKEAWAY_SLOTS_CONFIG });
@@ -505,7 +531,35 @@ export const addManualTakeawaySlotApi = async (date: string, time: string, produ
 export const resetManualTakeawaySlotApi = async (date: string, time: string) =>
     apiCall<void>({ method: POST, fixed: true, url: TAKEAWAY_SLOTS_RESET_MANUAL(date, time) });
 
+export const closeTakeawayDayApi = async (date: string) =>
+    apiCall<void>({ method: POST, fixed: true, url: TAKEAWAY_DAY_CLOSE(date) });
+
+export const openTakeawayDayApi = async (date: string) =>
+    apiCall<void>({ method: POST, fixed: true, url: TAKEAWAY_DAY_OPEN(date) });
+
+export const getTakeawayClosuresApi = async () =>
+    apiCall<TakeawayClosure[]>({ method: GET, fixed: true, url: TAKEAWAY_CLOSURES });
+
+export const addTakeawayClosureApi = async (from: string, to: string, note?: string) =>
+    apiCall<TakeawayClosure>({ method: POST, fixed: true, url: TAKEAWAY_CLOSURES, data: { from, to, note } });
+
+export const deleteTakeawayClosureApi = async (id: number) =>
+    apiCall<void>({ method: DELETE, fixed: true, url: TAKEAWAY_CLOSURE(id) });
+
+export const getTakeawayPauseApi = async () =>
+    apiCall<TakeawayPauseStatus>({ method: GET, fixed: true, url: TAKEAWAY_PAUSE });
+
+/** minutes assente = sospeso finché non viene ripreso a mano */
+export const pauseTakeawayApi = async (minutes?: number) =>
+    apiCall<TakeawayPauseStatus>({ method: POST, fixed: true, url: TAKEAWAY_PAUSE, data: minutes ? { minutes } : {} });
+
+export const resumeTakeawayApi = async () =>
+    apiCall<TakeawayPauseStatus>({ method: POST, fixed: true, url: TAKEAWAY_RESUME });
+
 // takeaway slots — pubblico (cart cliente)
+export const getPublicTakeawayStatusApi = async (localname: string) =>
+    clientApiCall<TakeawayPauseStatus>({ method: GET, fixed: true, url: TAKEAWAY_STATUS_PUBLIC(localname) });
+
 export const getPublicTakeawaySlotsApi = async (localname: string, date: string) =>
     clientApiCall<Slot[]>({ method: GET, fixed: true, url: TAKEAWAY_SLOTS_PUBLIC(localname, date) });
 
@@ -523,6 +577,38 @@ export const getPaymentsApi = async () => {
 
 export const getPaymentsTodayTotalApi = async () => {
     return apiCall<{ amountCents: number }>({ method: GET, fixed: true, url: GET_PAYMENTS_TODAY_TOTAL })
+}
+
+/** Rimborso (amountCents omesso = totale del residuo). Lo stato REFUNDED arriva dal webhook Stripe. */
+export const refundPaymentApi = async (paymentId: number, amountCents?: number) => {
+    return apiCall<{ data: { refundId: string; status: string; amountCents: number } }>({
+        method: POST, fixed: true, url: REFUND_PAYMENT(paymentId), data: amountCents != null ? { amountCents } : {},
+    })
+}
+
+// stripe connect (impostazioni pagamenti del locale)
+export const startStripeOnboardingApi = async () => {
+    return apiCall<{ data: { url: string } }>({ method: POST, fixed: true, url: STRIPE_CONNECT_ONBOARD })
+}
+
+export const getStripeConnectStatusApi = async () => {
+    return apiCall<{ data: StripeConnectStatus }>({ method: GET, fixed: true, url: STRIPE_CONNECT_STATUS })
+}
+
+export const getStripeDashboardLinkApi = async () => {
+    return apiCall<{ data: { url: string } }>({ method: POST, fixed: true, url: STRIPE_CONNECT_DASHBOARD_LINK })
+}
+
+/** Impostazioni prepagamento del locale (attivabile solo con Stripe attivo). */
+export const getPrepaymentSettingsApi = async () =>
+    apiCall<{ data: PrepaymentSettings }>({ method: GET, fixed: true, url: PAYMENT_SETTINGS })
+
+export const updatePrepaymentSettingsApi = async (prepaymentTakeaway: boolean, prepaymentTable: boolean) =>
+    apiCall<{ data: PrepaymentSettings }>({ method: PUT, fixed: true, url: PAYMENT_SETTINGS, data: { prepaymentTakeaway, prepaymentTable } })
+
+/** Pubblico: il locale accetta pagamenti online? */
+export const getPublicPaymentsConfigApi = async (localname: string) => {
+    return clientApiCall<PublicPaymentsConfig>({ method: GET, fixed: true, url: PUBLIC_PAYMENTS_CONFIG(localname) })
 }
 
 // esl
@@ -644,12 +730,10 @@ export const instance = axios.create({
 });
 
 instance.interceptors.request.use(config => {
-    const token = 'Bearer ' + getToken();
-    if (process.env.REACT_APP_IS_DEMO !== "true" && token === null) {
-        throw new Error("No token available");
+    const token = getToken();
+    if (token) {
+        config.headers['Authorization'] = 'Bearer ' + token;
     }
-    config.headers['Authorization'] = token;
-    config.headers['from'] = window.location.href;
 
     return config;
 }, error => {

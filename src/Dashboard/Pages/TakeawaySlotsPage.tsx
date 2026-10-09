@@ -1,14 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Calendar, Clock, Plus, Save, Trash2, Lock, Unlock, RotateCcw, CalendarOff,
-    AlertCircle, CheckCircle2, X,
+    AlertCircle, CheckCircle2, X, PauseCircle, PlayCircle, Palmtree,
 } from 'lucide-react';
 import { useNotification } from '../../Context/NotificationContext';
 import {
     getTakeawaySlotConfigApi, saveTakeawaySlotConfigApi,
     getTakeawaySlotsDayApi, closeTakeawaySlotApi, openTakeawaySlotApi,
     addManualTakeawaySlotApi, resetManualTakeawaySlotApi,
-    type SlotConfig, type Slot, type TimeRange,
+    closeTakeawayDayApi, openTakeawayDayApi,
+    getTakeawayClosuresApi, addTakeawayClosureApi, deleteTakeawayClosureApi,
+    getTakeawayPauseApi, pauseTakeawayApi, resumeTakeawayApi,
+    type SlotConfig, type Slot, type TimeRange, type TakeawayClosure, type TakeawayPauseStatus,
 } from '../../Utilities/api';
 import CustomLoading from '../../Components/CustomLoading';
 
@@ -49,6 +52,62 @@ const TakeawaySlotsPage: React.FC = () => {
     const [slots, setSlots]           = useState<Slot[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [newClosedDate, setNewClosedDate] = useState<string>('');
+
+    // Chiusure (giorni / periodi di ferie) e "Sospendi asporto"
+    const [closures, setClosures] = useState<TakeawayClosure[]>([]);
+    const [rangeForm, setRangeForm] = useState({ from: '', to: '', note: 'Ferie' });
+    const [pause, setPause] = useState<TakeawayPauseStatus | null>(null);
+    const [pauseMinutes, setPauseMinutes] = useState<string>('');
+    const [pauseBusy, setPauseBusy] = useState(false);
+
+    const refreshClosures = useCallback(async () => {
+        const res = await getTakeawayClosuresApi();
+        if (res.success && res.data) setClosures(res.data);
+    }, []);
+
+    useEffect(() => {
+        refreshClosures();
+        getTakeawayPauseApi().then(r => { if (r.success && r.data) setPause(r.data); });
+    }, [refreshClosures]);
+
+    const togglePause = async () => {
+        setPauseBusy(true);
+        const res = pause?.paused
+            ? await resumeTakeawayApi()
+            : await pauseTakeawayApi(pauseMinutes ? parseInt(pauseMinutes, 10) : undefined);
+        setPauseBusy(false);
+        if (res.success && res.data) {
+            setPause(res.data);
+            addNotification({ message: res.data.paused ? 'Asporto sospeso' : 'Asporto riattivato', type: 'success' });
+        } else {
+            addNotification({ message: 'Errore aggiornamento asporto', type: 'error' });
+        }
+    };
+
+    const addRangeClosure = async () => {
+        if (!rangeForm.from) return;
+        const to = rangeForm.to || rangeForm.from;
+        const res = await addTakeawayClosureApi(rangeForm.from, to, rangeForm.note.trim() || undefined);
+        if (res.success) {
+            setRangeForm({ from: '', to: '', note: 'Ferie' });
+            refreshClosures();
+            refreshSlots(activeDate);
+            addNotification({ message: 'Chiusura aggiunta', type: 'success' });
+        } else {
+            addNotification({ message: res.message || 'Errore aggiunta chiusura', type: 'error' });
+        }
+    };
+
+    const removeClosure = async (c: TakeawayClosure) => {
+        if (!window.confirm('Eliminare questa chiusura? Gli slot torneranno prenotabili.')) return;
+        const res = await deleteTakeawayClosureApi(c.id);
+        if (res.success) {
+            refreshClosures();
+            refreshSlots(activeDate);
+        } else {
+            addNotification({ message: 'Errore eliminazione chiusura', type: 'error' });
+        }
+    };
 
     // ── Load config ──
     useEffect(() => {
@@ -128,6 +187,21 @@ const TakeawaySlotsPage: React.FC = () => {
     };
 
     // ── Live slot actions ──
+    const dayClosed = slots.length > 0 && slots.every(s => s.status === 'CLOSED' && (s.closedReason === 'DAY' || s.closedReason === 'RANGE'));
+    const dayClosedByRange = dayClosed && slots.some(s => s.closedReason === 'RANGE');
+    const toggleDay = async () => {
+        if (dayClosed) {
+            const res = await openTakeawayDayApi(activeDate);
+            if (!res.success) addNotification({ message: res.message || 'Impossibile riaprire il giorno', type: 'error' });
+        } else {
+            if (!window.confirm(`Chiudere l'asporto per tutta la giornata di ${itDate(activeDate)}?`)) return;
+            const res = await closeTakeawayDayApi(activeDate);
+            if (!res.success) addNotification({ message: 'Errore chiusura giorno', type: 'error' });
+        }
+        refreshSlots(activeDate);
+        refreshClosures();
+    };
+
     const onClose   = async (s: Slot) => { await closeTakeawaySlotApi(activeDate, s.time);   refreshSlots(activeDate); };
     const onOpen    = async (s: Slot) => { await openTakeawaySlotApi(activeDate, s.time);    refreshSlots(activeDate); };
     const onManual  = async (s: Slot) => {
@@ -173,6 +247,40 @@ const TakeawaySlotsPage: React.FC = () => {
                 </button>
             </div>
 
+            {/* ── Sospendi asporto ── */}
+            {pause && (
+                <div className={`rounded-xl shadow-sm p-5 mb-6 flex flex-wrap items-center gap-4 ${pause.paused ? 'bg-red-600 text-white' : 'bg-white'}`}>
+                    {pause.paused ? <PauseCircle className="w-10 h-10" /> : <PlayCircle className="w-10 h-10 text-emerald-500" />}
+                    <div className="flex-1 min-w-[200px]">
+                        <p className="text-lg font-bold">
+                            {pause.paused ? 'Asporto sospeso' : 'Asporto attivo'}
+                        </p>
+                        <p className={`text-sm ${pause.paused ? 'text-red-100' : 'text-gray-500'}`}>
+                            {pause.paused
+                                ? (pause.pausedUntil
+                                    ? `I clienti non possono ordinare fino alle ${new Date(pause.pausedUntil).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}.`
+                                    : 'I clienti non possono ordinare finché non riprendi.')
+                                : 'Nei momenti di punta puoi bloccare temporaneamente i nuovi ordini da asporto online.'}
+                        </p>
+                    </div>
+                    {!pause.paused && (
+                        <select value={pauseMinutes} onChange={e => setPauseMinutes(e.target.value)} className="input-style max-w-[200px]">
+                            <option value="">Finché non riprendo</option>
+                            <option value="30">Per 30 minuti</option>
+                            <option value="60">Per 1 ora</option>
+                            <option value="120">Per 2 ore</option>
+                        </select>
+                    )}
+                    <button
+                        onClick={togglePause}
+                        disabled={pauseBusy}
+                        className={`px-6 py-3 rounded-xl text-base font-bold disabled:opacity-50 ${pause.paused ? 'bg-white text-red-700 hover:bg-red-50' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                    >
+                        {pause.paused ? 'Riprendi asporto' : 'Sospendi asporto'}
+                    </button>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* ── Configurazione settimanale ── */}
@@ -182,14 +290,20 @@ const TakeawaySlotsPage: React.FC = () => {
                         <h2 className="text-lg font-bold text-gray-800">Orari settimanali</h2>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 mb-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
                         <NumberField label="Durata slot (min)" value={config.slotDurationMinutes}
                             onChange={v => update('slotDurationMinutes', v)} min={5} max={120} step={5} />
                         <NumberField label="Max ordini / slot" value={config.maxOrdersPerSlot}
                             onChange={v => update('maxOrdersPerSlot', v)} min={1} max={50} />
-                        <NumberField label="Max prodotti / slot" value={config.maxProductsPerSlot}
-                            onChange={v => update('maxProductsPerSlot', v)} min={1} max={200} />
+                        <NumberField label="Riserva su richiesta" value={config.reserveOrdersPerSlot ?? 0}
+                            onChange={v => update('reserveOrdersPerSlot', v)} min={0} max={50} />
+                        <NumberField label="Max prodotti (0 = no)" value={config.maxProductsPerSlot}
+                            onChange={v => update('maxProductsPerSlot', v)} min={0} max={200} />
                     </div>
+                    <p className="text-xs text-gray-500 mb-6">
+                        Riserva: ordini accettati oltre il massimo solo dopo la tua conferma (entro 10 minuti, altrimenti rifiutati automaticamente).
+                        Il limite prodotti è facoltativo.
+                    </p>
 
                     <div className="space-y-3">
                         {DAYS.map(({ key, short, label }) => {
@@ -261,6 +375,44 @@ const TakeawaySlotsPage: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Ferie / periodi di chiusura */}
+                    <div className="mt-6 pt-5 border-t border-gray-100">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Palmtree className="w-4 h-4 text-gray-500" />
+                            <h3 className="text-sm font-bold text-gray-700">Ferie e periodi di chiusura</h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 mb-3">
+                            <input type="date" value={rangeForm.from} min={todayIso()}
+                                onChange={e => setRangeForm(f => ({ ...f, from: e.target.value }))}
+                                className="input-style" title="Dal" />
+                            <input type="date" value={rangeForm.to} min={rangeForm.from || todayIso()}
+                                onChange={e => setRangeForm(f => ({ ...f, to: e.target.value }))}
+                                className="input-style" title="Al (incluso)" />
+                            <input type="text" value={rangeForm.note} maxLength={200} placeholder="Nota (es. Ferie)"
+                                onChange={e => setRangeForm(f => ({ ...f, note: e.target.value }))}
+                                className="input-style" />
+                            <button onClick={addRangeClosure} disabled={!rangeForm.from}
+                                className="btn-secondary text-sm disabled:opacity-50">+ Aggiungi</button>
+                        </div>
+                        {closures.length === 0 ? (
+                            <p className="text-xs text-gray-400">Nessun periodo di chiusura programmato.</p>
+                        ) : (
+                            <ul className="space-y-1.5">
+                                {closures.map(c => (
+                                    <li key={c.id} className="flex items-center justify-between gap-2 bg-red-50 text-red-800 text-sm px-3 py-2 rounded-lg">
+                                        <span>
+                                            {c.from === c.to ? itDate(c.from) : `Dal ${itDate(c.from)} al ${itDate(c.to)}`}
+                                            {c.note && <span className="ml-2 font-semibold">— {c.note}</span>}
+                                        </span>
+                                        <button onClick={() => removeClosure(c)} title="Elimina" className="p-1 hover:bg-red-100 rounded">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── Vista live: slot del giorno ── */}
@@ -287,7 +439,24 @@ const TakeawaySlotsPage: React.FC = () => {
                             className="input-style ml-auto max-w-[160px] text-sm" />
                     </div>
 
-                    <p className="text-xs text-gray-500 mb-3 capitalize">{itDate(activeDate)}</p>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                        <p className="text-xs text-gray-500 capitalize">{itDate(activeDate)}</p>
+                        {slots.length > 0 && !dayClosedByRange && (
+                            <button onClick={toggleDay}
+                                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${dayClosed
+                                    ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                                    : 'border-red-300 text-red-700 hover:bg-red-50'}`}>
+                                {dayClosed ? 'Riapri giorno' : 'Chiudi giorno'}
+                            </button>
+                        )}
+                    </div>
+                    {dayClosed && (
+                        <div className="mb-3 rounded-lg bg-red-50 text-red-700 text-xs font-semibold px-3 py-2">
+                            {dayClosedByRange
+                                ? 'Giorno compreso in un periodo di chiusura: elimina il periodo per riaprirlo.'
+                                : 'Asporto chiuso per tutta la giornata.'}
+                        </div>
+                    )}
 
                     {loadingSlots ? (
                         <div className="py-12 text-center text-gray-400 text-sm">Caricamento…</div>
@@ -307,6 +476,7 @@ const TakeawaySlotsPage: React.FC = () => {
 
                     <div className="mt-5 pt-5 border-t border-gray-100 text-xs text-gray-500 space-y-1">
                         <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Libero — disponibile per i clienti</p>
+                        <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-500" /> Su richiesta — solo nella riserva, da approvare</p>
                         <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-500" /> Pieno — limite raggiunto</p>
                         <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500" /> Chiuso a mano</p>
                         <p className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-gray-300" /> Passato</p>
@@ -337,6 +507,7 @@ const SlotCard: React.FC<{
 }> = ({ slot, onClose, onOpen, onManual, onReset }) => {
     const cls = {
         AVAILABLE: 'border-emerald-200 bg-emerald-50/50',
+        ON_REQUEST: 'border-orange-300 bg-orange-50/60',
         FULL:      'border-amber-200 bg-amber-50/50',
         CLOSED:    'border-red-200 bg-red-50/50 opacity-70',
         PAST:      'border-gray-200 bg-gray-50 opacity-60',
@@ -344,6 +515,7 @@ const SlotCard: React.FC<{
 
     const dotCls = {
         AVAILABLE: 'bg-emerald-500',
+        ON_REQUEST: 'bg-orange-500',
         FULL:      'bg-amber-500',
         CLOSED:    'bg-red-500',
         PAST:      'bg-gray-300',
@@ -351,8 +523,9 @@ const SlotCard: React.FC<{
 
     const labelStatus = {
         AVAILABLE: 'Libero',
+        ON_REQUEST: 'Su richiesta',
         FULL:      'Pieno',
-        CLOSED:    'Chiuso',
+        CLOSED:    slot.closedReason === 'RANGE' ? 'Ferie' : slot.closedReason === 'DAY' ? 'Giorno chiuso' : 'Chiuso',
         PAST:      'Passato',
     }[slot.status];
 
@@ -366,8 +539,11 @@ const SlotCard: React.FC<{
                 </span>
             </div>
             <div className="text-xs text-gray-600 mb-2.5 leading-tight">
-                <div>Ordini: <span className="font-semibold">{slot.orderCount}/{slot.maxOrders}</span></div>
-                <div>Prodotti: <span className="font-semibold">{slot.productCount}/{slot.maxProducts}</span></div>
+                <div>
+                    Ordini: <span className="font-semibold">{slot.orderCount}/{slot.maxOrders}</span>
+                    {(slot.reserveOrders ?? 0) > 0 && <span className="text-orange-600"> (+{slot.reserveOrders} su rich.)</span>}
+                </div>
+                <div>Prodotti: <span className="font-semibold">{slot.productCount}/{slot.maxProducts > 0 ? slot.maxProducts : '∞'}</span></div>
                 {slot.manualOrders > 0 && (
                     <div className="text-amber-600 text-[10px] mt-0.5">
                         +{slot.manualOrders} manuali ({slot.manualProducts}p)
@@ -377,7 +553,7 @@ const SlotCard: React.FC<{
 
             {slot.status !== 'PAST' && (
                 <div className="flex flex-wrap gap-1">
-                    {slot.status === 'CLOSED' ? (
+                    {slot.status === 'CLOSED' && slot.closedReason && slot.closedReason !== 'SLOT' ? null : slot.status === 'CLOSED' ? (
                         <button onClick={onOpen} title="Riapri slot"
                             className="flex-1 inline-flex items-center justify-center gap-1 text-[11px] font-semibold bg-white border border-gray-200 hover:border-emerald-400 hover:text-emerald-700 rounded-md py-1">
                             <Unlock className="w-3 h-3" /> Riapri

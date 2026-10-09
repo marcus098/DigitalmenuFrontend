@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState, createContext, useContext, useMemo, useCallback} from 'react';
+import React, {useEffect, useRef, useState, createContext, useContext, useMemo} from 'react';
 import {
     AddCategory, AddIngredient, AddProduct, AddTable,
     CategoryDto,
@@ -15,6 +15,8 @@ import {
     addIngredientApi,
     addProductApi, addTableApi,
     changeComandStatusApi,
+    approveComandApi,
+    rejectComandApi,
     changeOrderCategoriesApi, changeOrderProductsApi, confirmWaiterApi,
     deleteCategoryApi,
     deleteIngredientApi,
@@ -30,6 +32,7 @@ import {
     setAvailableIngredientApi,
     setAvailableProductApi, setBusyTableApi,
     UPDATE_ENDPOINT,
+    UPDATE_ENDPOINT_DASHBOARD,
     updateCategoryApi,
     updateIngredientApi,
     updateProductApi, updateSingleTableApi, updateStyleApi, updateTablesApi
@@ -68,6 +71,47 @@ const tagsMap = new Map([
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// ── SSE (Spring WebFlux) ────────────────────────────────────────────────────
+const SSE_MIN_RETRY_MS = 1000;
+const SSE_MAX_RETRY_MS = 30_000;
+
+type SseHandle = {
+    es: EventSource | null;
+    timer: ReturnType<typeof setTimeout> | null;
+    delay: number;
+    connected: boolean;
+};
+
+const newSseHandle = (): SseHandle => ({ es: null, timer: null, delay: SSE_MIN_RETRY_MS, connected: false });
+
+// Una comanda COMPLETED/DELETED esce dalla lista "attiva" della dashboard
+// (stesso comportamento di changeComandStatus).
+const isClosedStatus = (status?: string) => status === 'COMPLETED' || status === 'DELETED';
+// In attesa di prepagamento: mai mostrata in dashboard (non è ancora un ordine per il locale).
+const isHiddenStatus = (status?: string) => status === 'AWAIT_PAYMENT';
+const visibleComands = (list: Comand[]) => list.filter(c => !isHiddenStatus(c.status) && !isClosedStatus(c.status));
+
+// Avviso sonoro breve (Web Audio, nessun asset): nuovo ordine "su richiesta" da approvare.
+const playAlertSound = () => {
+    try {
+        const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        [0, 0.25].forEach(offset => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.25, ctx.currentTime + offset);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.2);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(ctx.currentTime + offset);
+            osc.stop(ctx.currentTime + offset + 0.2);
+        });
+        setTimeout(() => ctx.close?.(), 1000);
+    } catch { /* autoplay bloccato: resta la notifica visiva */ }
+};
+
 export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: boolean, waiters?: boolean }> = ({ children, dashboard, waiters = false }) => {
     const [imagesList, setImagesList] = useState<ImageDto[]>([])
     const [styles, setStyles] = useState<StyleDto>()
@@ -77,6 +121,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     const [ingredientsMap, setIngredientsMap] = useState<Map<number, IngredientDto>>(new Map())
     const [productsMap, setProductsMap] = useState<Map<number, ProductDto>>(new Map())
     const [comands, setComandList] = useState<Comand[]>([])
+    // Incrementato a ogni evento ordine via SSE (anche per comande chiuse/pagate): la Cassa lo usa
+    // per ricaricare i pagamenti senza un canale realtime dedicato.
+    const [orderEventTick, setOrderEventTick] = useState(0)
     const [tablesMap, setTablesMap] = useState<Map<number, TableDto>>(new Map())
 
     const { localname } = useParams()
@@ -84,17 +131,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
 
     const [loading, setLoading] = useState(true);
 
-    // ── Real-time connections ──────────────────────────────────────────────
-    // Dashboard → WebSocket (Rust server, port 8083)
-    // Public    → SSE (Spring WebFlux, port 8081) — unchanged
-    const wsRef = useRef<WebSocket | null>(null);
-    const reconnectDelayRef = useRef<number>(1000);
+    // ── Real-time connections (SSE WebFlux) ────────────────────────────────
+    // Dashboard → /api/auth/admin?token=…   Public → /api/public/updates?localname=…
     const isMountedRef = useRef<boolean>(true);
-    const [eventSource, setEventSource] = useState<EventSource | null>(null);
+    const adminSseRef = useRef<SseHandle>(newSseHandle());
+    const publicSseRef = useRef<SseHandle>(newSseHandle());
+    const comandsRef = useRef<Comand[]>([]);
+    const comandsRefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [initialLoaded, setInitialLoaded] = useState(false);
 
     // Read agencyId from LoginContext (available only inside DashboardRoutes).
     const loginCtx = useContext(LoginContext);
     const agencyId = loginCtx?.user?.idAgency;
+
+    useEffect(() => {
+        comandsRef.current = comands;
+    }, [comands]);
 
     const setStates = (tmp: ListToExport) => {
         if(tmp.categoriesList){
@@ -122,86 +174,197 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         }
 
         if (dashboard && tmp.comands){
-            setComandList(tmp.comands)
+            setComandList(visibleComands(tmp.comands))
         }
 
     }
 
-    // ── Transforms the Rust WS payload into the internal ListToExport format ──
-    const wsDataToListToExport = (data: any): ListToExport => {
-        const result: ListToExport = {};
-        if (data.categories?.length)
-            result.categoriesList = new Map((data.categories as CategoryDto[]).map(c => [c.id, c]));
-        if (data.products?.length)
-            result.productsList = new Map((data.products as ProductDto[]).map(p => [p.id, p]));
-        if (data.ingredients?.length)
-            result.ingredientsList = new Map((data.ingredients as IngredientDto[]).map(i => [i.id, i]));
-        if (data.tables?.length)
-            result.tablesList = new Map((data.tables as TableDto[]).map(t => [t.id, t]));
-        if (data.images?.length)
-            result.imagesList = data.images;
-        if (data.styles?.length)
-            result.styleDto = data.styles[data.styles.length - 1];
-        if (data.orders?.length)
-            result.comands = data.orders;
-        return result;
+    // Full refetch (senza toggle di `loading`): usato dopo una riconnessione SSE
+    // per recuperare gli eventi persi mentre la connessione era giù.
+    const refreshAll = async () => {
+        try {
+            const response = await getAll(dashboard, dashboard ? '' : localname);
+            if (isMountedRef.current && response && response.data) {
+                setStates(response.data)
+            }
+        } catch (err) {
+            console.error("[SSE] refetch failed", err);
+        }
     };
 
-    // ── Dashboard WebSocket (Rust server) ─────────────────────────────────
-    const stopWS = useCallback(() => {
-        if (wsRef.current) {
-            // Prevent the onclose handler from triggering a reconnect.
-            wsRef.current.onclose = null;
-            wsRef.current.close();
-            wsRef.current = null;
+    // Refetch della sola lista comande (debounced): non esiste un endpoint
+    // dashboard per la singola comanda, quindi si riusa getAll.
+    const scheduleComandsRefetch = () => {
+        if (comandsRefetchTimerRef.current) return;
+        comandsRefetchTimerRef.current = setTimeout(async () => {
+            comandsRefetchTimerRef.current = null;
+            try {
+                const response = await getAll(true);
+                if (isMountedRef.current && response?.data?.comands) {
+                    const next = visibleComands(response.data.comands);
+                    // Nuovi ordini "su richiesta": avviso sonoro + notifica (il locale ha pochi minuti per rispondere)
+                    const before = new Set(comandsRef.current.map(c => c.id));
+                    const newApprovals = next.filter(c => c.status === 'AWAIT_APPROVAL' && !before.has(c.id)).length;
+                    setComandList(next)
+                    if (newApprovals > 0) {
+                        playAlertSound();
+                        addNotification({
+                            message: newApprovals === 1 ? "Nuovo ordine da approvare" : `${newApprovals} ordini da approvare`,
+                            type: "warning"
+                        })
+                    }
+                }
+            } catch (err) {
+                console.error("[SSE] comands refetch failed", err);
+            }
+        }, 300);
+    };
+
+    // Upsert per id: il payload contiene DTO completi di categorie/prodotti.
+    const mergeCatalogUpdate = (data: any) => {
+        if (Array.isArray(data?.categories) && data.categories.length) {
+            setCategoriesMap(prev => {
+                const next = new Map(prev);
+                for (const c of data.categories as CategoryDto[]) {
+                    if (c?.id == null) continue;
+                    next.set(c.id, { ...prev.get(c.id), ...c });
+                }
+                return next;
+            });
         }
-    }, []);
-
-    const startWS = useCallback((aid: number) => {
-        stopWS();
-        const token = getToken();
-        if (!token) return;
-
-        const base = process.env.REACT_APP_WS_URL_BASE;
-        if (!base) {
-            console.error('[WS] REACT_APP_WS_URL_BASE is not configured');
-            return;
+        if (Array.isArray(data?.products) && data.products.length) {
+            setProductsMap(prev => {
+                const next = new Map(prev);
+                for (const p of data.products as ProductDto[]) {
+                    if (p?.id == null) continue;
+                    next.set(p.id, { ...prev.get(p.id), ...p });
+                }
+                return next;
+            });
         }
-        const url = `${base}/ws?token=${encodeURIComponent(token)}&agencyId=${aid}`;
-        const ws = new WebSocket(url);
-        wsRef.current = ws;
+    };
 
-        ws.onopen = () => {
-            reconnectDelayRef.current = 1000;
-            console.log('[WS] connected');
+    // Gli eventi ordine sono stub {id, status, idAgency, paid?}: si aggiorna lo stato
+    // delle comande note, si rimuovono quelle chiuse, e per id sconosciuti si
+    // ricarica la lista (mai sostituire la lista con gli stub).
+    const mergeOrderEvents = (events: { id?: string, status?: string, paid?: boolean }[]) => {
+        const known = new Set(comandsRef.current.map(c => c.id));
+        const updates = new Map<string, { status: Comand['status'], paid?: boolean }>();
+        let newOrders = 0;
+        let unknown = false;
+        setOrderEventTick(t => t + 1);
+
+        for (const e of events) {
+            if (!e?.id || !e.status) continue;
+            // In attesa di pagamento: il locale non deve vederla (né refetch né notifiche)
+            if (isHiddenStatus(e.status)) continue;
+            if (known.has(e.id)) {
+                updates.set(e.id, { status: e.status as Comand['status'], paid: e.paid });
+            } else if (!isClosedStatus(e.status)) {
+                unknown = true;
+                if (e.status === 'AWAIT' || e.status === 'PENDING') newOrders++;
+            }
+        }
+
+        if (updates.size > 0) {
+            setComandList(prev => visibleComands(prev
+                .map(c => {
+                    const u = c.id ? updates.get(c.id) : undefined;
+                    if (!u) return c;
+                    // paid può tornare false (rimborso totale)
+                    return { ...c, status: u.status, ...(u.paid !== undefined ? { paid: u.paid } : {}) };
+                })));
+        }
+        if (unknown) scheduleComandsRefetch();
+        if (newOrders > 0) {
+            addNotification({
+                message: newOrders === 1 ? "Nuovo ordine ricevuto" : `${newOrders} nuovi ordini ricevuti`,
+                type: "info"
+            })
+        }
+    };
+
+    const closeSSE = (h: SseHandle) => {
+        if (h.timer) {
+            clearTimeout(h.timer);
+            h.timer = null;
+        }
+        if (h.es) {
+            h.es.onopen = null;
+            h.es.onmessage = null;
+            h.es.onerror = null;
+            h.es.close();
+            h.es = null;
+        }
+    };
+
+    // Apre un EventSource con riconnessione a backoff esponenziale.
+    // Alla riconnessione (non alla prima apertura) esegue un refetch completo.
+    const openSSE = (h: SseHandle, buildUrl: () => string | null, onPayload: (payload: any) => void) => {
+        closeSSE(h);
+        const url = buildUrl();
+        if (!url) return;
+
+        const es = new EventSource(url);
+        h.es = es;
+
+        es.onopen = () => {
+            h.delay = SSE_MIN_RETRY_MS;
+            if (h.connected) refreshAll();
+            h.connected = true;
         };
 
-        ws.onmessage = (event: MessageEvent) => {
+        es.onmessage = (event: MessageEvent) => {
             try {
-                const msg = JSON.parse(event.data as string);
-                if (msg.type === 'AGGREGATED_UPDATE' && msg.data) {
-                    setStates(wsDataToListToExport(msg.data));
-                }
+                onPayload(JSON.parse(event.data as string));
             } catch (e) {
-                console.error('[WS] parse error', e);
+                console.error('[SSE] parse error', e);
             }
         };
 
-        ws.onerror = () => ws.close();
-
-        ws.onclose = () => {
-            wsRef.current = null;
+        es.onerror = () => {
+            closeSSE(h);
             if (!isMountedRef.current) return;
-            const delay = Math.min(reconnectDelayRef.current, 30_000);
-            reconnectDelayRef.current = delay * 2;
-            console.log(`[WS] reconnecting in ${delay}ms`);
-            setTimeout(() => {
-                if (isMountedRef.current) startWS(aid);
+            const delay = h.delay;
+            h.delay = Math.min(delay * 2, SSE_MAX_RETRY_MS);
+            h.timer = setTimeout(() => {
+                h.timer = null;
+                if (isMountedRef.current) openSSE(h, buildUrl, onPayload);
             }, delay);
         };
-    }, [stopWS]);
+    };
 
-    // ── Public SSE (Spring WebFlux, unchanged) ────────────────────────────
+    const webfluxBaseUrl = (): string | null => {
+        const base = process.env.REACT_APP_BACKEND_WEBFLUX_URL_BASE;
+        if (!base) {
+            console.error('[SSE] REACT_APP_BACKEND_WEBFLUX_URL_BASE is not configured');
+            return null;
+        }
+        return base;
+    };
+
+    // ── Dashboard SSE (admin) ─────────────────────────────────────────────
+    const startAdminSSE = () => {
+        openSSE(adminSseRef.current, () => {
+            const base = webfluxBaseUrl();
+            const token = getToken();
+            if (!base || !token) return null;
+            return `${base}${UPDATE_ENDPOINT_DASHBOARD}?token=${encodeURIComponent(token)}`;
+        }, (payload) => {
+            if (payload?.type !== 'aggregated_update' || !payload.data) return;
+            mergeCatalogUpdate(payload.data);
+            if (Array.isArray(payload.data.orders) && payload.data.orders.length) {
+                mergeOrderEvents(payload.data.orders);
+            }
+        });
+    };
+
+    const stopAdminSSE = () => {
+        closeSSE(adminSseRef.current);
+        adminSseRef.current.connected = false;
+        adminSseRef.current.delay = SSE_MIN_RETRY_MS;
+    };
+
     // Funzione per caricare i dati iniziali
     const loadData = async () => {
         try {
@@ -210,13 +373,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             if (response && response.data) {
                 setStates(response.data)
             }
-            // Public mode starts SSE immediately; dashboard WS is started
+            // Public mode starts SSE immediately; dashboard SSE is started
             // by a separate effect once agencyId is resolved from LoginContext.
             if (!dashboard) startSSE();
         } catch (err) {
             console.error("Errore nel caricamento iniziale dei dati:", err);
         } finally {
             setLoading(false);
+            setInitialLoaded(true);
         }
     };
 
@@ -256,7 +420,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                         time: c.time,
                         address: c.address,
                         phone: c.phone,
-                        createdAt: c.createdAt
+                        createdAt: c.createdAt,
+                        paid: !!c.paid,
+                        approvalDeadline: c.approvalDeadline,
+                        approvalRequired: !!c.approvalRequired,
+                        paymentAuthorized: !!c.paymentAuthorized
                     })
                 }
 
@@ -266,26 +434,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     };
 
     // SSE — used only for public/client mode (unauthenticated menu browsing).
+    // Gli eventi ordine (stub) non interessano il menu pubblico.
     const startSSE = () => {
-        if (eventSource) stopSSE();
-        const webfluxBase = process.env.REACT_APP_BACKEND_WEBFLUX_URL_BASE;
-        if (!webfluxBase) {
-            console.error('[SSE] REACT_APP_BACKEND_WEBFLUX_URL_BASE is not configured');
-            return;
-        }
-        const url = webfluxBase + UPDATE_ENDPOINT(localname ?? '', true);
-        const es = new EventSource(url);
-        es.onmessage = (event) => {
-            const update = JSON.parse(event.data);
-            if (update?.updates) setStates(update.updates as ListToExport);
-        };
-        es.onerror = () => es.close();
-        setEventSource(es);
+        openSSE(publicSseRef.current, () => {
+            const base = webfluxBaseUrl();
+            return base ? base + UPDATE_ENDPOINT(localname ?? '', true) : null;
+        }, (payload) => {
+            if (payload?.data) mergeCatalogUpdate(payload.data);
+        });
     };
 
     const stopSSE = () => {
-        eventSource?.close();
-        setEventSource(null);
+        closeSSE(publicSseRef.current);
     };
 
     const changeAvailableAddable = async (entity: Entity, id: number, value: boolean, isAvailable: boolean) => {
@@ -469,7 +629,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return false
     }
 
-    const changeComandStatus = async (idComand: string, status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING') => {
+    /** Accetta un ordine "su richiesta": diventa PENDING (stampa + incasso dell'eventuale autorizzazione). */
+    const approveComand = async (idComand: string): Promise<boolean> => {
+        const response = await approveComandApi(idComand)
+        if (response.success) {
+            setComandList(prev => prev.map(c => c.id === idComand ? { ...c, status: 'PENDING' as Comand['status'] } : c))
+            addNotification({message: "Ordine accettato", type: "success"})
+            return true
+        }
+        addNotification({message: response.message || "Impossibile accettare l'ordine", type: "error"})
+        scheduleComandsRefetch()
+        return false
+    }
+
+    /** Rifiuta un ordine "su richiesta" (motivo opzionale mostrato al cliente, autorizzazione annullata). */
+    const rejectComand = async (idComand: string, reason?: string): Promise<boolean> => {
+        const response = await rejectComandApi(idComand, reason)
+        if (response.success) {
+            setComandList(prev => prev.filter(c => c.id !== idComand))
+            addNotification({message: "Ordine rifiutato", type: "success"})
+            return true
+        }
+        addNotification({message: response.message || "Impossibile rifiutare l'ordine", type: "error"})
+        scheduleComandsRefetch()
+        return false
+    }
+
+    const changeComandStatus = async (idComand: string, status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING'): Promise<boolean> => {
         const response = await changeComandStatusApi(idComand, status)
         if(response.status === 200){
             const values = [...comands]
@@ -478,14 +664,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                 if(c.id === idComand){
                     c.status = status
                 }
-                if(c.status !== 'COMPLETED' && status !== 'DELETED'){
+                if(!isClosedStatus(c.status)){
                     tmp.push(c)
                 }
             })
             setComandList([...tmp])
-
+            return true
         }else{
             addNotification({message: "Errore", type: "error"})
+            return false
         }
     }
 
@@ -694,19 +881,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return () => {
             isMountedRef.current = false;
             stopSSE();
-            stopWS();
+            stopAdminSSE();
+            if (comandsRefetchTimerRef.current) {
+                clearTimeout(comandsRefetchTimerRef.current);
+                comandsRefetchTimerRef.current = null;
+            }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Dashboard WebSocket: connect once both initial load is done and agencyId
-    // is resolved from LoginContext (may arrive slightly after mount).
+    // Dashboard SSE: connect once the initial load is done and agencyId is
+    // resolved from LoginContext (may arrive slightly after mount). Uses
+    // `initialLoaded` (not `loading`, which other actions toggle) so the
+    // stream isn't torn down on every loading change.
     useEffect(() => {
-        if (dashboard && !loading && agencyId) {
-            startWS(agencyId);
-        }
+        if (!dashboard || !initialLoaded || !agencyId) return;
+        startAdminSSE();
+        return () => stopAdminSSE();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dashboard, loading, agencyId]);
+    }, [dashboard, initialLoaded, agencyId]);
 
     const freeTableContext = async(id: number): Promise<string> => {
         const response = await freeTableApi(id)
@@ -919,6 +1112,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         allergensMap,
         waiters,
         comands,
+        orderEventTick,
         selectedAllergens,
         deleteWaiter,
         confirmWaiter,
@@ -932,6 +1126,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         addCategory,
         addProduct,
         changeComandStatus,
+        approveComand,
+        rejectComand,
         addIngredient,
         updateProduct,
         updateCategory,
@@ -958,7 +1154,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         allergensMap,
         waiters,
         selectedAllergens,
-        comands
+        comands,
+        orderEventTick
     ]);
 
     return (

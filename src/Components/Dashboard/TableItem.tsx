@@ -1,6 +1,6 @@
 import React from 'react';
 import {FaBolt, FaChair, FaEdit, FaInfoCircle, FaLock, FaTrashAlt, FaUnlock, FaUsers} from 'react-icons/fa';
-import {Table} from "../../Dashboard/Pages/TablesPageTest";
+import {Table} from "../../Dashboard/Pages/TablesPage";
 
 interface TableItemProps {
     table: Table;

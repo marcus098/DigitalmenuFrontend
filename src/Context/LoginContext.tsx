@@ -1,7 +1,6 @@
  import React, { createContext, useState, ReactNode, useContext, useEffect } from 'react';
 import {deleteCookie, setCookie} from "../Utilities/Utilities";
 import {changePassword, check, login, updateProfileApi} from "../Utilities/api";
-import axios from "axios";
 import {useNavigate, useParams} from "react-router-dom";
 import {User, LoginResponse, LoginContextType} from "../types";
 import {UserProfile} from "../Dashboard/Pages/ProfilePage";
@@ -201,25 +200,8 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         window.location.href = (process.env.REACT_APP_URL || "") + "/login"
     };
 
-    const register = async (formData: FormData) => {
-        const error = "Errore";
-        try{
-            const tmp = await axios.post(process.env.REACT_APP_API_URL + '/auth/signup', formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data"
-                }
-            });
-            if(tmp){
-                return "Success"
-            }
-        }catch (error){
-
-        }
-        return error;
-    }
-
     return (
-        <LoginContext.Provider value={{ _login, logout, changePasswordFunc, updateProfileFunc, register, checkVariable, transparentLoading, loading, user, errorType }}>
+        <LoginContext.Provider value={{ _login, logout, changePasswordFunc, updateProfileFunc, checkVariable, transparentLoading, loading, user, errorType }}>
             {children}
         </LoginContext.Provider>
     );

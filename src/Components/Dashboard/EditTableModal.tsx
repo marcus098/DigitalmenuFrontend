@@ -1,7 +1,7 @@
 // src/Components/EditTableModal.tsx
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import {Table} from "../../Dashboard/Pages/TablesPageTest";
+import {Table} from "../../Dashboard/Pages/TablesPage";
 import {IS_ADMIN} from "../../types";
 import {useLoginContext} from "../../Context/LoginContext";
 

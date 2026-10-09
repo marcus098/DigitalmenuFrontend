@@ -86,20 +86,3 @@ reactive.example.com {
         -Server
     }
 }
-
-# ──────────────────────────────────────────────────────────────────────────────
-# WebSocket (Rust server on 127.0.0.1:8083, when wired up)
-# Caddy auto-detects Upgrade: websocket and proxies natively.
-# ──────────────────────────────────────────────────────────────────────────────
-ws.example.com {
-    reverse_proxy 127.0.0.1:8083 {
-        transport http {
-            read_timeout 24h
-        }
-    }
-
-    header {
-        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-        -Server
-    }
-}

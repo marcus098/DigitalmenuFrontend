@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import {Table} from "../../Dashboard/Pages/TablesPageTest";
+import {Table} from "../../Dashboard/Pages/TablesPage";
 
 interface FreeBusyTableModalProps {
     table: Table;

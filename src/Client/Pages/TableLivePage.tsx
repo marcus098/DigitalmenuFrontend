@@ -9,9 +9,11 @@ import { Check, ChefHat, Clock, PartyPopper } from 'lucide-react';
 const COMAND_STATUS_LABEL: Record<string, string> = {
     AWAIT: 'Inviato',
     PENDING: 'Inviato',
-    WAITING: 'Inviato',
     PROGRESS: 'In preparazione',
     COMPLETED: 'Pronto!',
+    AWAIT_PAYMENT: 'Da pagare',
+    AWAIT_APPROVAL: 'In attesa di conferma',
+    DELETED: 'Annullato',
 };
 
 const TableLivePage: React.FC = () => {
@@ -71,12 +73,14 @@ const TableLivePage: React.FC = () => {
         );
     }
 
-    const clientLabelById = new Map(state.clients.map(c => [c.clientSessionId, c.label]));
+    const clients = state.clients ?? [];
+    const comands = state.comands ?? [];
+    const clientLabelById = new Map(clients.map(c => [c.clientSessionId, c.label]));
     const filteredComands = onlyMine
-        ? state.comands.filter(c => c.clientSessionId === clientSessionId)
-        : state.comands;
+        ? comands.filter(c => c.clientSessionId === clientSessionId)
+        : comands;
 
-    const allCompleted = state.comands.length > 0 && state.comands.every(c => c.status === 'COMPLETED');
+    const allCompleted = comands.length > 0 && comands.every(c => c.status === 'COMPLETED');
 
     return (
         <div className="min-h-screen px-4 pt-6 pb-12" style={{ background: 'var(--menu-bg)' }}>
@@ -85,7 +89,7 @@ const TableLivePage: React.FC = () => {
                     Stato tavolo
                 </h1>
                 <p className="text-sm mb-5" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
-                    {state.tableName} · {state.clients.length} {state.clients.length === 1 ? 'persona' : 'persone'}
+                    {state.tableName} · {clients.length} {clients.length === 1 ? 'persona' : 'persone'}
                 </p>
 
                 <div
@@ -150,6 +154,15 @@ const TableLivePage: React.FC = () => {
                                             </p>
                                         </div>
                                     </div>
+                                    {isMine && c.status === 'AWAIT_PAYMENT' ? (
+                                        <button
+                                            onClick={() => navigate(`/${localname}/payment/${c.comandId}`)}
+                                            className="text-xs font-bold px-3 py-1.5 rounded-full"
+                                            style={{ background: primaryColor, color: 'var(--menu-accent-text)', fontFamily: 'var(--menu-font-body)' }}
+                                        >
+                                            Paga
+                                        </button>
+                                    ) : (
                                     <span
                                         className="text-xs font-semibold px-2 py-1 rounded-full"
                                         style={{
@@ -160,6 +173,7 @@ const TableLivePage: React.FC = () => {
                                     >
                                         {statusLabel}
                                     </span>
+                                    )}
                                 </div>
                             );
                         })}

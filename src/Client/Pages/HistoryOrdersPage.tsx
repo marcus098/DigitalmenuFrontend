@@ -27,8 +27,8 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
-    const total = comanda.orders.reduce((acc, order) =>
-        acc + order.products.reduce((s, p) => s + (p.productOption?.price ?? 0) * p.quantity, 0), 0);
+    const total = (comanda.orders ?? []).reduce((acc, order) =>
+        acc + (order.products ?? []).reduce((s, p) => s + (p.productOption?.price ?? 0) * p.quantity, 0), 0);
     const date = new Date(comanda.createdAt);
     const statusKey = comanda.status ?? 'AWAIT';
 
@@ -54,8 +54,8 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
             </div>
 
             <div className="space-y-3">
-                {comanda.orders.flatMap((order, oi) =>
-                    order.products.map((prod, pi) => (
+                {(comanda.orders ?? []).flatMap((order, oi) =>
+                    (order.products ?? []).map((prod, pi) => (
                         <div
                             key={`${oi}-${pi}`}
                             className="p-3 rounded-lg"
@@ -68,12 +68,12 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
                                 <p className="font-bold" style={{ color: 'var(--menu-text)' }}>€{((prod.productOption?.price ?? 0) * prod.quantity).toFixed(2)}</p>
                             </div>
                             {prod.note && <p className="text-xs mt-1 italic" style={{ color: 'var(--menu-muted)' }}>"{prod.note}"</p>}
-                            {prod.ingredientsMinus.length > 0 && (
+                            {prod.ingredientsMinus?.length > 0 && (
                                 <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
                                     <MinusCircle size={12} /> {prod.ingredientsMinus.map(i => i.name).join(', ')}
                                 </p>
                             )}
-                            {prod.ingredientsPlus.length > 0 && (
+                            {prod.ingredientsPlus?.length > 0 && (
                                 <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
                                     <PlusCircle size={12} /> {prod.ingredientsPlus.map(i => i.name).join(', ')}
                                 </p>

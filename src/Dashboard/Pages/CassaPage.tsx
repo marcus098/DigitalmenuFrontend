@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { getPaymentsApi, getPaymentsTodayTotalApi } from '../../Utilities/api';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getPaymentsApi, getPaymentsTodayTotalApi, refundPaymentApi } from '../../Utilities/api';
 import { useData } from '../../Context/DataContext';
 import { useNotification } from '../../Context/NotificationContext';
 import { PaymentDto, OptionInProduct, ProductDto } from '../../types';
@@ -8,7 +8,7 @@ import CustomLoading from '../../Components/CustomLoading';
 import {
     CurrencyEuroIcon, CheckCircleIcon, ClockIcon, ShoppingBagIcon,
     TableCellsIcon, HomeIcon, XMarkIcon, PlusIcon, MinusIcon,
-    MagnifyingGlassIcon,
+    MagnifyingGlassIcon, ArrowUturnLeftIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 
@@ -408,10 +408,28 @@ const CheckoutPanel: React.FC<PanelProps> = ({
 
 type Tab          = 'checkout' | 'storico';
 type KindFilter   = 'all' | ComandKind;
-type PayFilter    = 'ALL' | 'PENDING' | 'COMPLETED' | 'FAILED';
+type PayFilter    = 'ALL' | 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+
+const PAY_STATUS: Record<string, { label: string; dot: string; badge: string }> = {
+    COMPLETED:          { label: 'Completato',            dot: 'bg-green-500',  badge: 'bg-green-100 text-green-700' },
+    PENDING:            { label: 'In attesa',             dot: 'bg-yellow-400', badge: 'bg-yellow-100 text-yellow-700' },
+    FAILED:             { label: 'Fallito',               dot: 'bg-red-500',    badge: 'bg-red-100 text-red-600' },
+    CANCELED:           { label: 'Annullato',             dot: 'bg-gray-400',   badge: 'bg-gray-100 text-gray-500' },
+    REFUNDED:           { label: 'Rimborsato',            dot: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700' },
+    PARTIALLY_REFUNDED: { label: 'Rimborsato in parte',   dot: 'bg-purple-400', badge: 'bg-purple-50 text-purple-700' },
+    AUTHORIZED:         { label: 'Autorizzato',           dot: 'bg-indigo-400', badge: 'bg-indigo-100 text-indigo-700' },
+};
+
+const isRefundable = (p: PaymentDto) => p.status === 'COMPLETED' || p.status === 'PARTIALLY_REFUNDED';
+const refundedOf = (p: PaymentDto) => p.refundedCents ?? 0;
+const netCents = (p: PaymentDto) => p.amountCents - refundedOf(p);
+const matchesPayFilter = (p: PaymentDto, f: PayFilter) =>
+    f === 'ALL' || p.status === f || (f === 'REFUNDED' && p.status === 'PARTIALLY_REFUNDED');
+
+const PAYMENTS_REFRESH_DEBOUNCE_MS = 1500;
 
 const CassaPage: React.FC = () => {
-    const { comands, tablesMap, productsMap, categoriesMap, changeComandStatus } = useData();
+    const { comands, tablesMap, productsMap, categoriesMap, changeComandStatus, orderEventTick } = useData();
     const { addNotification } = useNotification();
 
     const [tab,         setTab]         = useState<Tab>('checkout');
@@ -425,18 +443,67 @@ const CassaPage: React.FC = () => {
     const [checkout,    setCheckout]    = useState<CheckoutState>(freshState());
     const [confirming,  setConfirming]  = useState(false);
 
+    const [refundTarget,  setRefundTarget]  = useState<PaymentDto | null>(null);
+    const [refundAmount,  setRefundAmount]  = useState('');
+    const [refunding,     setRefunding]     = useState(false);
+
     // Load payment history
-    useEffect(() => {
-        Promise.all([getPaymentsApi(), getPaymentsTodayTotalApi()]).then(([pr, tr]) => {
-            if (pr.success && pr.data) setPayments((pr.data as any).data ?? pr.data);
-            if (tr.success && tr.data) setTodayCents((tr.data as any).data?.amountCents ?? 0);
-            setPayLoading(false);
-        });
+    const loadPayments = useCallback(async () => {
+        const [pr, tr] = await Promise.all([getPaymentsApi(), getPaymentsTodayTotalApi()]);
+        if (pr.success && pr.data) setPayments((pr.data as any).data ?? pr.data);
+        if (tr.success && tr.data) setTodayCents((tr.data as any).data?.amountCents ?? 0);
+        setPayLoading(false);
     }, []);
 
-    // Active comands for checkout (exclude DELETED, require id)
+    useEffect(() => { loadPayments(); }, [loadPayments]);
+
+    // Aggiornamento live: ogni evento ordine via SSE (es. comanda pagata online) ricarica
+    // i pagamenti, con debounce per non martellare il backend sui burst di eventi.
+    const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const scheduleRefresh = useCallback((delay = PAYMENTS_REFRESH_DEBOUNCE_MS) => {
+        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = setTimeout(() => {
+            refreshTimerRef.current = null;
+            loadPayments();
+        }, delay);
+    }, [loadPayments]);
+
+    useEffect(() => {
+        if (orderEventTick > 0) scheduleRefresh();
+    }, [orderEventTick, scheduleRefresh]);
+
+    useEffect(() => () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); }, []);
+
+    const openRefund = (p: PaymentDto) => {
+        setRefundTarget(p);
+        setRefundAmount((netCents(p) / 100).toFixed(2));
+    };
+
+    const handleRefund = async () => {
+        if (!refundTarget) return;
+        const remaining = netCents(refundTarget);
+        const cents = Math.round(parseFloat(refundAmount.replace(',', '.')) * 100);
+        if (!Number.isFinite(cents) || cents <= 0 || cents > remaining) {
+            addNotification({ type: 'warning', message: `Importo non valido (massimo ${formatEurCents(remaining)})` });
+            return;
+        }
+        setRefunding(true);
+        const res = await refundPaymentApi(refundTarget.id, cents === remaining ? undefined : cents);
+        setRefunding(false);
+        if (res.success) {
+            addNotification({ type: 'success', message: 'Rimborso avviato: lo stato si aggiornerà a breve' });
+            setRefundTarget(null);
+            // Lo stato REFUNDED arriva dal webhook Stripe: ricarica dopo qualche secondo
+            scheduleRefresh(4000);
+        } else {
+            addNotification({ type: 'error', message: res.message && !res.message.startsWith('Request failed') ? res.message : 'Errore durante il rimborso' });
+        }
+    };
+
+    // Active comands for checkout (exclude DELETED and orders still waiting for payment/approval, require id)
     const activeComands = useMemo(() =>
-        comands.filter(c => c.status !== 'DELETED' && c.id != null),
+        comands.filter(c => c.status !== 'DELETED' && c.status !== 'AWAIT_PAYMENT'
+            && c.status !== 'AWAIT_APPROVAL' && c.id != null),
         [comands]);
 
     const filteredComands = useMemo(() =>
@@ -472,11 +539,12 @@ const CassaPage: React.FC = () => {
 
     // Payment history
     const filteredPayments = useMemo(() =>
-        payFilter === 'ALL' ? payments : payments.filter(p => p.status === payFilter),
+        payments.filter(p => matchesPayFilter(p, payFilter)),
         [payments, payFilter]);
 
     const totalCompleted = useMemo(() =>
-        payments.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + p.amountCents, 0), [payments]);
+        payments.filter(p => p.status === 'COMPLETED' || p.status === 'PARTIALLY_REFUNDED')
+            .reduce((s, p) => s + netCents(p), 0), [payments]);
     const totalAll = useMemo(() =>
         payments.reduce((s, p) => s + p.amountCents, 0), [payments]);
 
@@ -579,9 +647,16 @@ const CassaPage: React.FC = () => {
                                                         <p className="text-xs text-gray-400">{formatTime(c.createdAt)}</p>
                                                     </div>
                                                 </div>
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${STATUS_BADGE[c.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                                                    {STATUS_LABEL[c.status] ?? c.status}
-                                                </span>
+                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[c.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                                                        {STATUS_LABEL[c.status] ?? c.status}
+                                                    </span>
+                                                    {c.paid && (
+                                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-600 text-white" title="Pagato online">
+                                                            Pagato
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <div className="flex items-end justify-between">
@@ -657,6 +732,7 @@ const CassaPage: React.FC = () => {
                                 { key: 'COMPLETED', label: `Completati (${payments.filter(p => p.status === 'COMPLETED').length})` },
                                 { key: 'PENDING',   label: `In attesa (${payments.filter(p => p.status === 'PENDING').length})` },
                                 { key: 'FAILED',    label: `Falliti (${payments.filter(p => p.status === 'FAILED').length})` },
+                                { key: 'REFUNDED',  label: `Rimborsati (${payments.filter(p => matchesPayFilter(p, 'REFUNDED')).length})` },
                             ] as { key: PayFilter; label: string }[]).map(f => (
                                 <button
                                     key={f.key}
@@ -683,10 +759,7 @@ const CassaPage: React.FC = () => {
                                 <div className="divide-y divide-gray-50">
                                     {filteredPayments.map(p => (
                                         <div key={p.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
-                                            <div className={`w-2 h-2 rounded-full shrink-0 ${
-                                                p.status === 'COMPLETED' ? 'bg-green-500' :
-                                                p.status === 'FAILED'    ? 'bg-red-500'   : 'bg-yellow-400'
-                                            }`} />
+                                            <div className={`w-2 h-2 rounded-full shrink-0 ${(PAY_STATUS[p.status] ?? PAY_STATUS.PENDING).dot}`} />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-semibold text-gray-800 truncate">
                                                     {p.comandId ? `Ordine ${p.comandId.slice(0, 8)}…` : 'Pagamento'}
@@ -696,16 +769,29 @@ const CassaPage: React.FC = () => {
                                                     {p.idTable ? ` · Tavolo ${p.idTable}` : ''}
                                                 </p>
                                             </div>
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${
-                                                p.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                                                p.status === 'FAILED'    ? 'bg-red-100 text-red-600'     :
-                                                'bg-yellow-100 text-yellow-700'
-                                            }`}>
-                                                {p.status === 'COMPLETED' ? 'Completato' : p.status === 'FAILED' ? 'Fallito' : 'In attesa'}
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${(PAY_STATUS[p.status] ?? PAY_STATUS.PENDING).badge}`}>
+                                                {(PAY_STATUS[p.status] ?? { label: p.status }).label}
                                             </span>
-                                            <span className="text-base font-black text-gray-900 shrink-0 min-w-[80px] text-right">
-                                                {formatEurCents(p.amountCents)}
+                                            <span className="shrink-0 min-w-[80px] text-right">
+                                                <span className={`block text-base font-black ${refundedOf(p) > 0 ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                                                    {formatEurCents(p.amountCents)}
+                                                </span>
+                                                {refundedOf(p) > 0 && (
+                                                    <span className="block text-xs font-semibold text-purple-600">
+                                                        −{formatEurCents(refundedOf(p))}
+                                                    </span>
+                                                )}
                                             </span>
+                                            {isRefundable(p) ? (
+                                                <button
+                                                    onClick={() => openRefund(p)}
+                                                    className="shrink-0 p-2 rounded-lg text-gray-500 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+                                                    title="Rimborsa"
+                                                    aria-label="Rimborsa"
+                                                >
+                                                    <ArrowUturnLeftIcon className="w-5 h-5" />
+                                                </button>
+                                            ) : <span className="shrink-0 w-9" />}
                                         </div>
                                     ))}
                                 </div>
@@ -713,6 +799,43 @@ const CassaPage: React.FC = () => {
                         </div>
                     </>
                 )
+            )}
+
+            {/* ── Conferma rimborso ───────────────────────────────────── */}
+            {refundTarget && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => !refunding && setRefundTarget(null)}>
+                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-gray-800 mb-1">Rimborsare il pagamento?</h3>
+                        <p className="text-sm text-gray-500 mb-5">
+                            {refundTarget.comandId ? `Ordine ${refundTarget.comandId.slice(0, 8)}… · ` : ''}
+                            pagato {formatEurCents(refundTarget.amountCents)}
+                            {refundedOf(refundTarget) > 0 ? `, già rimborsati ${formatEurCents(refundedOf(refundTarget))}` : ''}.
+                            Il cliente riceverà l'importo sul metodo di pagamento usato (di solito in 5-10 giorni lavorativi).
+                        </p>
+                        <label className="label-style">Importo da rimborsare (€)</label>
+                        <input
+                            type="number"
+                            inputMode="decimal"
+                            min="0.01"
+                            step="0.01"
+                            max={(netCents(refundTarget) / 100).toFixed(2)}
+                            value={refundAmount}
+                            onChange={e => setRefundAmount(e.target.value)}
+                            className="input-style"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Massimo {formatEurCents(netCents(refundTarget))}. L'operazione non è annullabile.</p>
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button onClick={() => setRefundTarget(null)} disabled={refunding} className="btn-secondary">Annulla</button>
+                            <button
+                                onClick={handleRefund}
+                                disabled={refunding}
+                                className="px-4 py-2 rounded-lg font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+                            >
+                                {refunding ? 'Rimborso…' : 'Rimborsa'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

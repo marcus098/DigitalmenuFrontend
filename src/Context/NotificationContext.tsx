@@ -18,7 +18,12 @@ export const NotificationProvider: React.FC<React.PropsWithChildren<{}>> = ({ ch
     const [notifications, setNotifications] = useState<Notification[]>([]);
 
     const addNotification = (notification: Notification) => {
-        setNotifications((prev) => [...prev, notification]);
+        // Evita toast duplicati identici (es. errore 403 mostrato sia dalla pagina sia dal banner di supporto)
+        setNotifications((prev) =>
+            prev.some((n) => n.message === notification.message && n.type === notification.type)
+                ? prev
+                : [...prev, notification]
+        );
         console.log(notification)
     };
 

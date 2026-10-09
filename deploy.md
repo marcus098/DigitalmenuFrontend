@@ -170,6 +170,42 @@ procedura completa: `docs/PAGAMENTI_SETUP.md` nel repo backend.
 
 ---
 
+## 6b. Superadmin di piattaforma (console `/superadmin`)
+
+La console `/superadmin` permette di vedere tutti i locali, modificare i dati
+dell'abbonamento, tenere note interne e usare **"Accedi come"** per aprire la
+dashboard di un locale e aiutarlo (sessione di supporto a tempo, registrata
+nell'audit, con un banner rosso sempre visibile).
+
+Creazione dell'account (una sola volta):
+
+```bash
+# 1. Genera una password robusta
+openssl rand -base64 24
+
+# 2. In .env (accanto a docker-compose.yml)
+APP_SUPERADMIN_EMAIL=tu@tuodominio.it
+APP_SUPERADMIN_PASSWORD=<password generata>
+
+# 3. Riavvia il backend: crea il superadmin se non esiste
+docker compose up -d backend
+```
+
+Poi accedi dalla normale pagina di login con quell'email: vieni portato su
+`/superadmin`. **Subito dopo** cancella `APP_SUPERADMIN_PASSWORD` da `.env`
+(lascia pure l'email) e riavvia di nuovo il backend: l'account resta nel
+database e la password non rimane in chiaro sul server.
+
+Note sulla sessione di supporto:
+
+- vale solo nella scheda del browser in cui è stata avviata (sessionStorage) e
+  scade da sola; "Esci" o "Esci dal supporto" riportano alla console;
+- durante il supporto il backend blocca cambio password/email, eliminazione
+  account, credenziali di pagamento e rimborsi;
+- ogni accesso richiede un motivo ed è visibile in *Audit*.
+
+---
+
 ## 7. Backup automatici
 
 Il servizio `postgres-backup` definito in `docker-compose.yml` esegue

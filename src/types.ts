@@ -135,6 +135,12 @@ export interface LoginContextType{
     transparentLoading: boolean
     errorType: 'credenziali' | 'connection' | 'billing' | null
     checkVariable: (value: number) => boolean
+    /** true se l'utente loggato è un superadmin di piattaforma (controlsVariable % IS_SUPERADMIN). */
+    isSuperadmin: boolean
+    /** Info sulla sessione di supporto ("Accedi come") attiva in questa scheda, altrimenti null. */
+    impersonation: import('./Utilities/impersonation').ImpersonationInfo | null
+    /** Termina la sessione di supporto e torna alla console superadmin. */
+    exitImpersonation: () => void
 }
 
 export interface UtilitiesContextType{
@@ -333,6 +339,8 @@ export interface LoginResponse {
     isNew: boolean
     idAgency: number
     controlsVariable: number
+    /** Solo per token di impersonazione: email del superadmin che sta operando. */
+    impersonatedBy?: string | null
 }
 
 export interface ScreenType {
@@ -772,3 +780,4 @@ export const IS_WAITER = 3;
 export const IS_TRIAL= 5;
 export const IS_EMAIL_CONFIRMED = 7;
 export const IS_WAITER_CONFIRMED = 11;
+export const IS_SUPERADMIN = 13;

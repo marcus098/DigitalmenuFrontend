@@ -16,6 +16,7 @@ import {
 } from "../types";
 import {deleteCookie, getCookie} from "./Utilities";
 import {apiCall, ApiCallResult, clientApiCall} from "./helper";
+import {endImpersonation, getImpersonationToken, IMPERSONATION_FORBIDDEN_EVENT, isImpersonating} from "./impersonation";
 import {UserProfile} from "../Dashboard/Pages/ProfilePage";
 import {Comand} from "../ComandType";
 
@@ -730,7 +731,8 @@ export const setAddableIngredientApi = async (idIngredient: number, value: boole
 
 
 export const getToken = (): string => {
-    return getCookie('rf_token') || ""
+    // Sessione di supporto ("Accedi come") attiva in questa scheda: usa il suo token
+    return getImpersonationToken() || getCookie('rf_token') || ""
 }
 
 const _getKey = (): string => {
@@ -770,7 +772,18 @@ instance.interceptors.response.use(response => {
         data: apiResponse    // Tipizza 'data' come ApiResponse<any>
     };
 }, error => {
-    // Posso aggiungere un trattamento degli errori qui
+    if (isImpersonating()) {
+        const status = error?.response?.status;
+        if (status === 401) {
+            // Token di supporto scaduto o revocato: torna alla console superadmin
+            endImpersonation();
+        } else if (status === 403) {
+            const message = error?.response?.data?.message;
+            if (message) {
+                window.dispatchEvent(new CustomEvent(IMPERSONATION_FORBIDDEN_EVENT, { detail: message }));
+            }
+        }
+    }
     return Promise.reject(error);
 });
 

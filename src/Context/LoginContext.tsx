@@ -2,7 +2,10 @@
 import {deleteCookie, setCookie} from "../Utilities/Utilities";
 import {changePassword, check, login, updateProfileApi} from "../Utilities/api";
 import {useNavigate, useParams} from "react-router-dom";
-import {User, LoginResponse, LoginContextType} from "../types";
+import {User, LoginResponse, LoginContextType, IS_SUPERADMIN} from "../types";
+import {
+    clearImpersonationStorage, endImpersonation, getImpersonation, ImpersonationInfo, isImpersonationExpired,
+} from "../Utilities/impersonation";
 import {UserProfile} from "../Dashboard/Pages/ProfilePage";
 
 export const LoginContext = createContext<LoginContextType | undefined>(undefined);
@@ -15,6 +18,11 @@ export const useLoginContext = () => {
     return context;
 };
 
+const isSuperadminValue = (controlsVariable: number | undefined | null) =>
+    !!controlsVariable && controlsVariable > 0 && controlsVariable % IS_SUPERADMIN === 0
+
+const onSuperadminPath = () => window.location.pathname.toLowerCase().startsWith("/superadmin")
+
 export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [loading, setLoading] = useState<boolean>(true)
     const [transparentLoading, setTransparentLoading] = useState<boolean>(false)
@@ -23,8 +31,14 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [errorType, setErrorType] = useState<'credenziali' | 'connection' | 'billing' | null>(null)
     const { localname } = useParams()
     const navigate = useNavigate()
+    // Sessione di supporto attiva in questa scheda (letta da sessionStorage: sopravvive al reload)
+    const [impersonation] = useState<ImpersonationInfo | null>(() => getImpersonation())
 
     useEffect(() => {
+        if (impersonation && isImpersonationExpired(impersonation)) {
+            endImpersonation()
+            return
+        }
         _check()
     }, [])
 
@@ -45,17 +59,27 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     }
                     setUser(userTmp)
                     setAuthorized(true)
-                    if (response.data.isNew) {
+                    // Mai rinnovare/sovrascrivere il cookie durante una sessione di supporto:
+                    // il cookie rf_token contiene ancora la sessione del superadmin.
+                    if (response.data.isNew && !getImpersonation()) {
                         setCookie('rf_token', response.data.accessToken, response.data.time || 1)
                     }
-                    if(response.data.localname !== localname){
-                        navigate("/" + response.data.localname + "/Dashboard/Home")
-                    }
-                    if(window.location.href.includes("/login")){
-                        navigate("/" + response.data.localname + "/Dashboard/Home")
+                    if (isSuperadminValue(response.data.controlsVariable)) {
+                        // Il superadmin non ha un locale: la sua home è la console
+                        if (!onSuperadminPath()) navigate("/superadmin")
+                    } else {
+                        if(onSuperadminPath() || response.data.localname !== localname){
+                            navigate("/" + response.data.localname + "/Dashboard/Home")
+                        }
+                        if(window.location.href.includes("/login")){
+                            navigate("/" + response.data.localname + "/Dashboard/Home")
+                        }
                     }
                 }
-                if(response.status === 402){
+                if(response.status === 402 && getImpersonation()){
+                    // Locale bloccato per fatturazione: non toccare il cookie del superadmin
+                    endImpersonation()
+                } else if(response.status === 402){
                     setAuthorized(false)
                     setUser(null)
                     deleteCookie("rf_token")
@@ -89,6 +113,11 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     const _deleteAuthorized = (message: string) => {
+        if (getImpersonation()) {
+            // Token di supporto non più valido: torna alla sessione superadmin
+            endImpersonation()
+            return message
+        }
         if(authorized) {
             setAuthorized(false);
             setUser(null);
@@ -101,6 +130,8 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const _login = async (email: string, password: string) => {
         setTransparentLoading(true)
+        // Un nuovo login esplicito chiude qualsiasi sessione di supporto residua in questa scheda
+        clearImpersonationStorage()
         try {
             const response = await login(email, password);
             if(response && response.data){
@@ -116,7 +147,11 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                         controlsVariable: response.data.controlsVariable
                     })
                     setLoading(false)
-                    navigate("/" + response.data.localname + "/Dashboard/Home")
+                    if (isSuperadminValue(response.data.controlsVariable)) {
+                        navigate("/superadmin")
+                    } else {
+                        navigate("/" + response.data.localname + "/Dashboard/Home")
+                    }
                     return
 
                 }else if(response.data.status === 401){
@@ -194,6 +229,12 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     const logout = () => {
+        if (getImpersonation()) {
+            // Durante il supporto "Logout" = "Esci dal supporto": si torna al superadmin
+            endImpersonation()
+            return
+        }
+        clearImpersonationStorage()
         deleteCookie("rf_token")
         setAuthorized(false)
         setUser(null)
@@ -201,7 +242,12 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     return (
-        <LoginContext.Provider value={{ _login, logout, changePasswordFunc, updateProfileFunc, checkVariable, transparentLoading, loading, user, errorType }}>
+        <LoginContext.Provider value={{
+            _login, logout, changePasswordFunc, updateProfileFunc, checkVariable, transparentLoading, loading, user, errorType,
+            isSuperadmin: !impersonation && isSuperadminValue(user?.controlsVariable),
+            impersonation,
+            exitImpersonation: endImpersonation,
+        }}>
             {children}
         </LoginContext.Provider>
     );

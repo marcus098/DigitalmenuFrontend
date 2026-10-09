@@ -30,7 +30,8 @@ const ADMIN_MORE_LINKS = [
 
 /* ── Component ─────────────────────────────────────── */
 const Header: React.FC = () => {
-    const { user, logout, checkVariable } = useLoginContext();
+    const { user, logout, checkVariable, impersonation } = useLoginContext();
+    const logoutLabel = impersonation ? 'Esci dal supporto' : 'Logout';
     const { localname } = useParams();
     const navigate = useNavigate();
 
@@ -212,11 +213,11 @@ const Header: React.FC = () => {
                                             Il Mio Profilo
                                         </NavLink>
                                         <button
-                                            onClick={() => { logout(); navigate('/login'); }}
+                                            onClick={() => { logout(); if (!impersonation) navigate('/login'); }}
                                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                         >
                                             <LogOut className="w-4 h-4" />
-                                            Logout
+                                            {logoutLabel}
                                         </button>
                                     </div>
                                 )}
@@ -329,11 +330,11 @@ const Header: React.FC = () => {
                                 Il Mio Profilo
                             </NavLink>
                             <button
-                                onClick={() => { logout(); navigate('/login'); }}
+                                onClick={() => { logout(); if (!impersonation) navigate('/login'); }}
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
                             >
                                 <LogOut className="w-5 h-5" />
-                                Logout
+                                {logoutLabel}
                             </button>
                         </div>
                     </div>

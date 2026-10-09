@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import './App.css';
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { UtilitiesProvider } from "./Context/UtilitiesContext";
 import { LoginProvider } from "./Context/LoginContext";
 import { DataProvider } from "./Context/DataContext";
@@ -49,6 +49,12 @@ const CassaPage            = lazy(() => import("./Dashboard/Pages/CassaPage"));
 const PaymentsSettingsPage = lazy(() => import("./Dashboard/Pages/PaymentsSettingsPage"));
 const AnalyticsPage        = lazy(() => import("./Dashboard/Pages/AnalyticsPage"));
 const WaiterAnalyticsPage  = lazy(() => import("./Dashboard/Pages/WaiterAnalyticsPage"));
+
+// Superadmin (console piattaforma) — lazy loaded
+const SuperadminLayout     = lazy(() => import("./Superadmin/SuperadminLayout"));
+const SuperadminHomePage   = lazy(() => import("./Superadmin/SuperadminHomePage"));
+const SuperadminAgencyPage = lazy(() => import("./Superadmin/SuperadminAgencyPage"));
+const SuperadminAuditPage  = lazy(() => import("./Superadmin/SuperadminAuditPage"));
 
 // Client — lazy loaded
 const VenueLandingPage     = lazy(() => import("./Client/Pages/VenueLandingPage"));
@@ -156,6 +162,23 @@ const DashboardRoutes = () => (
   </LoginProvider>
 );
 
+const SuperadminRoutes = () => (
+  <LoginProvider>
+    <NotificationProvider>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path={"/"} element={<SuperadminLayout />}>
+            <Route index element={<SuperadminHomePage />} />
+            <Route path={"agencies/:id"} element={<SuperadminAgencyPage />} />
+            <Route path={"audit"} element={<SuperadminAuditPage />} />
+            <Route path={"*"} element={<Navigate to={"/superadmin"} replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </NotificationProvider>
+  </LoginProvider>
+);
+
 function App() {
   return (
     <BrowserRouter>
@@ -168,6 +191,7 @@ function App() {
               <Route path={"/signup"} element={<SignupPage />} />
               <Route path={"/privacy"} element={<Suspense fallback={<PageLoader />}><PrivacyPolicyPage /></Suspense>} />
               <Route path={"/cookie-policy"} element={<Suspense fallback={<PageLoader />}><CookiePolicyPage /></Suspense>} />
+              <Route path={"/superadmin/*"} element={<SuperadminRoutes />} />
               <Route path={"/:localname/Dashboard/*"} element={<DashboardRoutes />} />
               <Route path={"/Waiters/:localname/*"} element={<WaiterRoutes />} />
               <Route path={"/:localname/*"} element={<ClientRoutes />} />

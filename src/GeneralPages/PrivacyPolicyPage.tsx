@@ -35,7 +35,7 @@ const PrivacyPolicyPage: React.FC = () => {
             <ul>
                 <li><strong>Dati di registrazione</strong>: nome, cognome, email, password (in forma cifrata), numero di telefono.</li>
                 <li><strong>Dati di gestione attività</strong>: dati del locale, menu, ordini, prenotazioni, dati dei tavoli.</li>
-                <li><strong>Dati di pagamento</strong>: gestiti direttamente da Stripe Payments Europe, Ltd. — non memorizziamo i dati delle carte sui nostri server.</li>
+                <li><strong>Dati di pagamento</strong>: gestiti direttamente dal fornitore di pagamento scelto dal locale (Stripe o SumUp), sull'account del locale stesso — non incassiamo pagamenti e non memorizziamo i dati delle carte sui nostri server.</li>
                 <li><strong>Dati di navigazione</strong>: indirizzo IP, user agent, log tecnici, cookie tecnici e — previo consenso — funzionali, analitici e di marketing.</li>
                 <li><strong>Dati dei clienti finali</strong> (utenti che ordinano dal QR): numero di telefono per notifiche d'ordine (opzionale), preferenze allergeni.</li>
             </ul>
@@ -94,8 +94,13 @@ const PrivacyPolicyPage: React.FC = () => {
                 <tbody>
                     <tr>
                         <td>Stripe Payments Europe, Ltd.</td>
-                        <td>Elaborazione pagamenti</td>
+                        <td>Elaborazione pagamenti (account Stripe del locale, se scelto)</td>
                         <td>Irlanda (UE) — trasferimento USA con SCC</td>
+                    </tr>
+                    <tr>
+                        <td>SumUp Limited / SumUp Payments Limited</td>
+                        <td>Elaborazione pagamenti (account SumUp del locale, se scelto)</td>
+                        <td>UE / Regno Unito — decisione di adeguatezza</td>
                     </tr>
                     <tr>
                         <td>Functional Software, Inc. (Sentry)</td>

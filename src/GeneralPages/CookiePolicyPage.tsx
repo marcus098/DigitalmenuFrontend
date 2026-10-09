@@ -108,6 +108,16 @@ const CookiePolicyPage: React.FC = () => {
                         </td>
                     </tr>
                     <tr>
+                        <td>SumUp</td>
+                        <td>Elaborazione pagamenti — caricato solo sulle pagine di pagamento dei locali che usano SumUp</td>
+                        <td>Tecnico</td>
+                        <td>
+                            <a href="https://www.sumup.com/it-it/privacy/" target="_blank" rel="noopener noreferrer">
+                                sumup.com/privacy
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Google Fonts</td>
                         <td>Caricamento font tipografici</td>
                         <td>Tecnico</td>

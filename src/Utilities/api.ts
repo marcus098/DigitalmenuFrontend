@@ -11,7 +11,7 @@ import {
     ListToExport,
     LoginResponse,
     OpenTableSessionResponse,
-    PaymentDto, PaymentIntentResponse, PublicPaymentsConfig, StripeConnectStatus, PrepaymentSettings, CreatedOrderResponse,
+    PaymentDto, PaymentIntentResponse, PublicPaymentsConfig, ProviderSettings, PaymentProvider, SumUpSyncResponse, PrepaymentSettings, CreatedOrderResponse,
     ProductDto, ReservationDto, Response, SignupWaiter, StyleDto, TableDto, TableLookup, TableSessionState, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto, WaiterSessionState,
 } from "../types";
 import {deleteCookie, getCookie} from "./Utilities";
@@ -111,9 +111,12 @@ const PAYMENT_SETTINGS = "/api/payments/settings"
 const GET_PAYMENTS = "/api/payments"
 const GET_PAYMENTS_TODAY_TOTAL = "/api/payments/today-total"
 const REFUND_PAYMENT = (id: number) => `/api/payments/${id}/refund`
-const STRIPE_CONNECT_ONBOARD = "/api/payments/connect/onboard"
-const STRIPE_CONNECT_STATUS = "/api/payments/connect/status"
-const STRIPE_CONNECT_DASHBOARD_LINK = "/api/payments/connect/dashboard-link"
+const PAYMENT_PROVIDER = "/api/payments/provider"
+const PAYMENT_PROVIDER_STRIPE = "/api/payments/provider/stripe"
+const PAYMENT_PROVIDER_SUMUP = "/api/payments/provider/sumup"
+const PAYMENT_PROVIDER_ACTIVE = "/api/payments/provider/active"
+const SUMUP_SYNC_PUBLIC = (localname: string, checkoutId: string) =>
+    `/api/public/payments/sumup/${encodeURIComponent(localname)}/sync/${encodeURIComponent(checkoutId)}`
 const PUBLIC_PAYMENTS_CONFIG = (localname: string) => `/api/public/payments/config/${encodeURIComponent(localname)}`
 const GET_ESL_CONFIGS = "/api/esl/configs"
 const SAVE_ESL_CONFIG = "/api/esl/configs"
@@ -579,32 +582,45 @@ export const getPaymentsTodayTotalApi = async () => {
     return apiCall<{ amountCents: number }>({ method: GET, fixed: true, url: GET_PAYMENTS_TODAY_TOTAL })
 }
 
-/** Rimborso (amountCents omesso = totale del residuo). Lo stato REFUNDED arriva dal webhook Stripe. */
+/** Rimborso (amountCents omesso = totale del residuo). Lo stato REFUNDED può arrivare in differita (webhook). */
 export const refundPaymentApi = async (paymentId: number, amountCents?: number) => {
     return apiCall<{ data: { refundId: string; status: string; amountCents: number } }>({
         method: POST, fixed: true, url: REFUND_PAYMENT(paymentId), data: amountCents != null ? { amountCents } : {},
     })
 }
 
-// stripe connect (impostazioni pagamenti del locale)
-export const startStripeOnboardingApi = async () => {
-    return apiCall<{ data: { url: string } }>({ method: POST, fixed: true, url: STRIPE_CONNECT_ONBOARD })
-}
+// provider di pagamento del locale (account Stripe/SumUp propri, chiavi cifrate lato server)
+export const getPaymentProviderApi = async () =>
+    apiCall<{ data: ProviderSettings }>({ method: GET, fixed: true, url: PAYMENT_PROVIDER })
 
-export const getStripeConnectStatusApi = async () => {
-    return apiCall<{ data: StripeConnectStatus }>({ method: GET, fixed: true, url: STRIPE_CONNECT_STATUS })
-}
+/** secretKey omessa = mantiene quella già salvata. */
+export const saveStripeProviderApi = async (data: { publishableKey: string; secretKey?: string; webhookSecret?: string }) =>
+    apiCall<{ data: ProviderSettings }>({ method: PUT, fixed: true, url: PAYMENT_PROVIDER_STRIPE, data })
 
-export const getStripeDashboardLinkApi = async () => {
-    return apiCall<{ data: { url: string } }>({ method: POST, fixed: true, url: STRIPE_CONNECT_DASHBOARD_LINK })
-}
+/** apiKey omessa = mantiene quella già salvata. */
+export const saveSumUpProviderApi = async (data: { apiKey?: string; merchantCode?: string }) =>
+    apiCall<{ data: ProviderSettings }>({ method: PUT, fixed: true, url: PAYMENT_PROVIDER_SUMUP, data })
 
-/** Impostazioni prepagamento del locale (attivabile solo con Stripe attivo). */
+/** 400 se il provider scelto non è configurato. */
+export const setActivePaymentProviderApi = async (provider: PaymentProvider) =>
+    apiCall<{ data: ProviderSettings }>({ method: PUT, fixed: true, url: PAYMENT_PROVIDER_ACTIVE, data: { provider } })
+
+export const deleteStripeProviderApi = async () =>
+    apiCall<{ data: ProviderSettings }>({ method: DELETE, fixed: true, url: PAYMENT_PROVIDER_STRIPE })
+
+export const deleteSumUpProviderApi = async () =>
+    apiCall<{ data: ProviderSettings }>({ method: DELETE, fixed: true, url: PAYMENT_PROVIDER_SUMUP })
+
+/** Impostazioni prepagamento del locale (attivabile solo con pagamenti online attivi). */
 export const getPrepaymentSettingsApi = async () =>
     apiCall<{ data: PrepaymentSettings }>({ method: GET, fixed: true, url: PAYMENT_SETTINGS })
 
 export const updatePrepaymentSettingsApi = async (prepaymentTakeaway: boolean, prepaymentTable: boolean) =>
     apiCall<{ data: PrepaymentSettings }>({ method: PUT, fixed: true, url: PAYMENT_SETTINGS, data: { prepaymentTakeaway, prepaymentTable } })
+
+/** Pubblico: stato del checkout SumUp (sincronizzato dal server con le API SumUp). */
+export const syncSumUpCheckoutPublicApi = async (localname: string, checkoutId: string) =>
+    clientApiCall<SumUpSyncResponse>({ method: POST, fixed: true, url: SUMUP_SYNC_PUBLIC(localname, checkoutId) })
 
 /** Pubblico: il locale accetta pagamenti online? */
 export const getPublicPaymentsConfigApi = async (localname: string) => {

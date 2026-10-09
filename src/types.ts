@@ -564,10 +564,6 @@ export interface PaymentDto {
     amountCents: number
     currency: string
     stripePaymentIntentId?: string
-    /** Account Stripe Connect del locale che ha incassato */
-    stripeAccountId?: string
-    /** Commissione piattaforma trattenuta (centesimi) */
-    applicationFeeCents?: number
     /** Totale rimborsato (centesimi) */
     refundedCents?: number
     status: PaymentStatus | string
@@ -575,19 +571,53 @@ export interface PaymentDto {
     updatedAt: string
 }
 
-/** GET /api/payments/connect/status */
-export interface StripeConnectStatus {
-    platformConfigured: boolean
-    connected: boolean
-    chargesEnabled: boolean
-    detailsSubmitted: boolean
-    /** Commissione piattaforma in basis points (100 = 1%) */
-    applicationFeeBps: number
+export type PaymentProvider = 'NONE' | 'STRIPE' | 'SUMUP'
+
+export type StripeWebhookStatus = 'AUTO' | 'MANUAL' | 'MISSING'
+
+/** Stato della configurazione Stripe del locale (chiavi proprie, cifrate lato server) */
+export interface StripeProviderStatus {
+    configured: boolean
+    publishableKey: string | null
+    /** Ultime 4 cifre della secret/restricted key salvata (write-only) */
+    secretKeyLast4: string | null
+    livemode: boolean | null
+    accountId: string | null
+    accountName: string | null
+    webhookStatus: StripeWebhookStatus | null
+    /** URL da registrare come endpoint webhook se la creazione automatica non è possibile */
+    webhookUrl: string
+    lastError: string | null
+    verifiedAt: string | null
+}
+
+/** Stato della configurazione SumUp del locale */
+export interface SumUpProviderStatus {
+    configured: boolean
+    merchantCode: string | null
+    apiKeyLast4: string | null
+    lastError: string | null
+    verifiedAt: string | null
+}
+
+/** GET /api/payments/provider (e risposta di tutte le PUT/DELETE su /api/payments/provider/...) */
+export interface ProviderSettings {
+    activeProvider: PaymentProvider
+    enabled: boolean
+    /** false = APP_SECRETS_ENCRYPTION_KEY non configurata sul server: impossibile salvare chiavi */
+    encryptionAvailable: boolean
+    prepaymentTakeaway: boolean
+    prepaymentTable: boolean
+    stripe: StripeProviderStatus
+    sumup: SumUpProviderStatus
 }
 
 /** GET /api/public/payments/config/{localname} */
 export interface PublicPaymentsConfig {
     enabled: boolean
+    provider?: PaymentProvider
+    /** Publishable key Stripe del locale (solo se provider = STRIPE) */
+    stripePublishableKey?: string | null
     /** Pagamento anticipato obbligatorio per l'asporto */
     prepaymentTakeaway?: boolean
     /** Pagamento anticipato obbligatorio al tavolo */
@@ -598,8 +628,8 @@ export interface PublicPaymentsConfig {
 export interface PrepaymentSettings {
     prepaymentTakeaway: boolean
     prepaymentTable: boolean
-    /** Stripe attivo (sola lettura) */
-    paymentsEnabled: boolean
+    /** Pagamenti online attivi (sola lettura) */
+    paymentsEnabled?: boolean
 }
 
 /** Risposta creazione ordine pubblico (tavolo / asporto) */
@@ -610,13 +640,37 @@ export interface CreatedOrderResponse {
     paymentRequired: boolean
 }
 
-export interface PaymentIntentResponse {
+export interface StripePaymentIntentResponse {
+    provider: 'STRIPE'
     clientSecret: string
     paymentIntentId: string
     /** Importo calcolato lato server (centesimi) */
-    amountCents?: number
+    amountCents: number
     /** Solo autorizzazione: l'addebito avviene se il locale accetta l'ordine */
-    manualCapture?: boolean
+    manualCapture: boolean
+    /** Publishable key del locale con cui inizializzare Stripe.js */
+    publishableKey: string
+}
+
+export interface SumUpCheckoutResponse {
+    provider: 'SUMUP'
+    checkoutId: string
+    /** Se presente: redirect alla pagina di pagamento ospitata da SumUp; altrimenti Card Widget */
+    hostedCheckoutUrl: string | null
+    amountCents: number
+    /** SumUp addebita sempre subito (rimborso automatico se l'ordine viene rifiutato) */
+    manualCapture: false
+    /** Ordine su richiesta: dopo il pagamento serve la conferma del locale */
+    approvalRequired: boolean
+}
+
+/** POST /api/public/payments/intent/{localname} */
+export type PaymentIntentResponse = StripePaymentIntentResponse | SumUpCheckoutResponse
+
+/** POST /api/public/payments/sumup/{localname}/sync/{checkoutId} */
+export interface SumUpSyncResponse {
+    status: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED'
+    comandId: string
 }
 
 export interface ReservationDto {

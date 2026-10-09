@@ -51,7 +51,7 @@ export interface Orders {
     phone?: string
     name?: string
     createdAt: string
-    /** Pagato online (Stripe) */
+    /** Pagato online (Stripe o SumUp) */
     paid?: boolean
     /** Ordine "su richiesta": scadenza entro cui accettare/rifiutare */
     approvalDeadline?: string

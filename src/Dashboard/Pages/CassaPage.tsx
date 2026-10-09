@@ -493,7 +493,7 @@ const CassaPage: React.FC = () => {
         if (res.success) {
             addNotification({ type: 'success', message: 'Rimborso avviato: lo stato si aggiornerà a breve' });
             setRefundTarget(null);
-            // Lo stato REFUNDED arriva dal webhook Stripe: ricarica dopo qualche secondo
+            // Lo stato REFUNDED può arrivare in differita (webhook del provider): ricarica dopo qualche secondo
             scheduleRefresh(4000);
         } else {
             addNotification({ type: 'error', message: res.message && !res.message.startsWith('Request failed') ? res.message : 'Errore durante il rimborso' });

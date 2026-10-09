@@ -48,7 +48,7 @@ export interface Comand {
     address?: string
     comandWaiterType?: string
     type?: string
-    /** Pagata online (Stripe) */
+    /** Pagata online (Stripe o SumUp) */
     paid?: boolean
     paidAt?: string
     paymentIntentId?: string

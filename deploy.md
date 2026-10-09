@@ -12,7 +12,6 @@ Tempo: ~45 minuti la prima volta.
 | VPS Ubuntu 22.04 o 24.04 LTS | Hetzner CX22 (€4/mese, sede UE) / DigitalOcean / Scaleway |
 | Dominio | Tuo registrar (Aruba, Cloudflare Registrar, Namecheap) |
 | Account Backblaze B2 | b2.backblazeb2.com — bucket per immagini + bucket per backup |
-| Account Stripe | dashboard.stripe.com — chiavi live |
 | Account Sentry (opzionale) | sentry.io — progetto React |
 | Chiave SSH pubblica | `cat ~/.ssh/id_ed25519.pub` (se non ce l'hai: `ssh-keygen -t ed25519`) |
 
@@ -87,9 +86,7 @@ Da compilare in `.env`:
 | `WEBFLUX_URL` | `https://reactive.tuodominio.it` |
 | `POSTGRES_PASSWORD` | password forte: `openssl rand -base64 24` |
 | `BUCKET_S3_*` | credenziali Backblaze del bucket immagini |
-| `STRIPE_SECRET_KEY` | `sk_live_...` da Stripe |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` da Stripe (Webhooks → Add endpoint) |
-| `STRIPE_PUBLISHABLE_KEY` | `pk_live_...` da Stripe |
+| `APP_SECRETS_ENCRYPTION_KEY` | `openssl rand -base64 32` — cifra le chiavi Stripe/SumUp dei locali. **Fanne un backup**: se la perdi ogni locale deve reinserire le chiavi |
 | `BACKUP_S3_BUCKET` | bucket B2 **separato** per backup (con write-only key) |
 | `BACKUP_PASSPHRASE` | opzionale ma consigliato: `openssl rand -base64 32` |
 | `SENTRY_DSN` | opzionale, dal progetto Sentry |
@@ -155,17 +152,21 @@ Se vedi `HTTP/2 200`, è online.
 
 ---
 
-## 6. Configura il webhook Stripe
+## 6. Pagamenti online (Stripe / SumUp)
 
-Dashboard Stripe → Developers → Webhooks → Add endpoint:
-- URL: `https://api.tuodominio.it/api/stripe/webhook` (verifica il path nel backend)
-- Eventi: `checkout.session.completed`, `payment_intent.succeeded`, `invoice.paid`, `customer.subscription.*`
+La piattaforma **non incassa nulla**: non esistono chiavi Stripe di piattaforma
+né webhook da configurare a livello di server. Ogni locale collega il **proprio**
+account dalla dashboard (*Pagamenti online*):
 
-Copia il **Signing secret** che inizia con `whsec_` in `.env` come
-`STRIPE_WEBHOOK_SECRET` e riavvia il backend:
-```bash
-docker compose up -d backend
-```
+- **Stripe**: publishable key (`pk_...`) + chiave segreta o, meglio, una
+  *restricted key* (`rk_...`). Il backend prova a creare il webhook in automatico;
+  se la chiave non ha i permessi, il locale vede l'URL del webhook da creare a mano
+  e incolla il signing secret (`whsec_...`).
+- **SumUp**: API key personale (+ merchant code opzionale).
+
+Le chiavi sono salvate cifrate con `APP_SECRETS_ENCRYPTION_KEY`: senza questa
+variabile le impostazioni di pagamento restano disabilitate. Dettagli e
+procedura completa: `docs/PAGAMENTI_SETUP.md` nel repo backend.
 
 ---
 
@@ -265,7 +266,7 @@ proxato da Caddy con una sottodomain `status.tuodominio.it`.
 | Settimanale | `sudo apt update && sudo apt upgrade` (anche se `unattended-upgrades` lo fa) |
 | Mensile | Audit Dependabot PR aperte sul repo, mergi quelle non-major |
 | Trimestrale | Rotazione `POSTGRES_PASSWORD`, ricreazione `JWT_SECRET` |
-| Annuale | Rotazione chiavi B2 / Stripe restricted keys |
+| Annuale | Rotazione chiavi B2. Verifica backup di `APP_SECRETS_ENCRYPTION_KEY` |
 | Continuo | Monitorare alert Sentry, controllare Caddy logs per pattern di attacco |
 
 ---
@@ -289,8 +290,12 @@ Caddy si è installato come servizio systemd ma c'è anche un nginx residuo o
 il container frontend prova a bindarsi a 0.0.0.0. Verifica `BIND_ADDR=127.0.0.1`
 in `.env`, e: `sudo lsof -i :443`.
 
-### Stripe webhook 400 — Bad signature
-`STRIPE_WEBHOOK_SECRET` è quello dell'endpoint sbagliato (test invece di live, o uno vecchio). Rigenera nel dashboard Stripe e aggiorna `.env`.
+### Pagamenti di un locale non confermati / webhook Stripe 400
+Il webhook è per-locale. Nella dashboard del locale (*Pagamenti online*) controlla
+lo stato del webhook e l'ultimo errore: se è *manuale*, il signing secret `whsec_...`
+incollato deve essere quello dell'endpoint mostrato (stessa modalità test/live).
+Se dopo un riavvio tutte le chiavi risultano illeggibili, `APP_SECRETS_ENCRYPTION_KEY`
+è cambiata: ripristina quella del backup.
 
 ### Backup non parte
 `docker compose logs postgres-backup` — di solito sono credenziali B2
@@ -307,7 +312,6 @@ ma se non funzionano usa temporaneamente le stesse di `BUCKET_S3_*`.
 | Dominio .it | ~€0.85 (€10/anno) |
 | Backblaze B2 storage (~5 GB foto + backup) | €0.05 |
 | Backblaze B2 download | €0.01/GB (free fino a 3× storage) |
-| Stripe | 1.5% + €0.25 per transazione EU |
 | Sentry free | €0 (fino a 5k errori/mese) |
 | **Totale infra fissa** | **~€5.50/mese** |
 

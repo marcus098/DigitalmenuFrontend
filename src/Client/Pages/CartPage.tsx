@@ -402,7 +402,9 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                                 <p className="text-xs p-2 rounded-lg" style={{ color: 'var(--menu-text)', background: 'var(--menu-input-bg)' }}>
                                                     Orario <strong>su richiesta</strong>: il locale deve confermare l'ordine entro 10 minuti.
                                                     {prepaymentRequired
-                                                        ? " L'importo verrà solo autorizzato e addebitato se il locale accetta."
+                                                        ? paymentsConfig?.provider === 'SUMUP'
+                                                            ? " L'importo verrà addebitato subito e rimborsato automaticamente se il locale non accetta."
+                                                            : " L'importo verrà solo autorizzato e addebitato se il locale accetta."
                                                         : ' Se non viene confermato, l\'ordine viene annullato.'}
                                                 </p>
                                             )}

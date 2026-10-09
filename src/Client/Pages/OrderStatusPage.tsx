@@ -218,6 +218,11 @@ const OrderStatusPage: React.FC = () => {
                             Importo autorizzato: verrà addebitato solo se il locale accetta l'ordine.
                         </p>
                     )}
+                    {paid && !paymentAuthorized && (
+                        <p className="mt-3 text-sm" style={{ color: 'var(--menu-muted)' }}>
+                            Pagamento ricevuto: se il locale non accetta l'ordine verrai rimborsato automaticamente.
+                        </p>
+                    )}
                 </div>
             );
         }

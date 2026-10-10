@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+/* Sito vetrina — stili isolati sotto .lp (caricati solo con la pagina "/"). */
+.lp {
+    --paper: #f3eee4;
+    --paper-2: #e9e1d2;
+    --card: #fbf8f2;
+    --ink: #1a1713;
+    --ink-2: #3a342c;
+    --muted: #625a4e;
+    --rule: #d3c9b6;
+    --accent: #ad3f27;
+    --accent-ink: #fbf8f2;
+    --accent-soft: #e8836a;
+    --olive: #4a5634;
+
+    --f-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --f-body: 'Instrument Sans', 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --f-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+}
+
+.lp ::selection { background: var(--ink); color: var(--paper); }
+
+.lp .f-display {
+    font-family: var(--f-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+    font-weight: 500;
+}
+.lp .f-mono { font-family: var(--f-mono); }
+
+.lp .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.lp a, .lp button, .lp input, .lp select, .lp textarea, .lp summary { outline: none; }
+.lp a:focus-visible,
+.lp button:focus-visible,
+.lp summary:focus-visible,
+.lp input:focus-visible,
+.lp select:focus-visible,
+.lp textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.lp .link-u {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+}
+.lp .link-u:hover { text-decoration-thickness: 2px; color: var(--accent); }
+
+.lp .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.25rem;
+    font-weight: 600;
+    font-size: 15px;
+    border: 1.5px solid var(--ink);
+    transition: background-color .15s ease, color .15s ease, transform .15s ease;
+}
+.lp .btn-ink { background: var(--ink); color: var(--paper); }
+.lp .btn-ink:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.lp .btn-ghost { background: transparent; color: var(--ink); }
+.lp .btn-ghost:hover { background: var(--ink); color: var(--paper); }
+.lp .btn:active { transform: translateY(1px); }
+
+/* Testo e linee su fondo scuro (sezione pagamenti, tessera) */
+.lp .on-dark-72 { color: rgba(243, 238, 228, 0.72); }
+.lp .on-dark-60 { color: rgba(243, 238, 228, 0.62); }
+.lp .on-dark-rule { border-color: rgba(243, 238, 228, 0.25); }
+.lp .on-dark-grid { background-color: rgba(243, 238, 228, 0.18); }
+
+/* Filetto doppio stile "carta del menu" */
+.lp .rule-double { border-top: 3px double var(--ink); }
+
+/* Scontrino: bordo inferiore seghettato */
+.lp .ticket {
+    background: #fffdf8;
+    font-family: var(--f-mono);
+    color: #1d1b17;
+    --tooth: 8px;
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--tooth)) 100%;
+    mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / calc(2 * var(--tooth)) 100%;
+    padding-bottom: calc(var(--tooth) + 14px);
+}
+/* L'ombra va sul contenitore: la mask taglierebbe quella dello scontrino stesso */
+.lp .ticket-wrap { filter: drop-shadow(0 14px 18px rgba(26, 23, 19, 0.20)); }
+
+.lp .leaders {
+    flex: 1;
+    border-bottom: 1px dotted currentColor;
+    opacity: .45;
+    transform: translateY(-4px);
+    margin: 0 6px;
+}
+
+/* FAQ */
+.lp details > summary { list-style: none; cursor: pointer; }
+.lp details > summary::-webkit-details-marker { display: none; }
+.lp details .faq-mark { transition: transform .2s ease; }
+.lp details[open] .faq-mark { transform: rotate(45deg); }
+
+/* Campi del form */
+.lp .field {
+    width: 100%;
+    background-color: var(--card);
+    border: 1.5px solid var(--rule);
+    padding: 0.75rem 0.85rem;
+    font-size: 16px;
+    color: var(--ink);
+    border-radius: 0;
+    transition: border-color .15s ease;
+}
+.lp select.field {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231a1713' stroke-width='1.6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 12px 8px;
+}
+.lp .field:hover { border-color: var(--muted); }
+.lp .field:focus-visible { border-color: var(--ink); outline-offset: 0; }
+.lp .field[aria-invalid="true"] { border-color: var(--accent); }
+
+.lp .hp {
+    position: absolute !important;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp *, .lp *::before, .lp *::after { transition: none !important; animation: none !important; }
+    html:has(.lp) { scroll-behavior: auto !important; }
+}
+
+html:has(.lp) { scroll-behavior: smooth; }

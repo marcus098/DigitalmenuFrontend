@@ -10,6 +10,8 @@ import AllergenModal from '../../Components/Client/AllergenModal';
 import useCartCount from '../../Utilities/useCartCount';
 import { clearTableSession, getTableSession, resolveImageUrl } from '../../Utilities/Utilities';
 import { lookupTableSessionApi } from '../../Utilities/api';
+import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
+import { MenuRule } from '../../Components/Client/MenuPrimitives';
 
 const ClientCategoriesPage: React.FC = () => {
     const { loading, categoriesMap, waiters, setSelectedAllergens, styles } = useData();
@@ -21,6 +23,8 @@ const ClientCategoriesPage: React.FC = () => {
     const [tableGateState, setTableGateState] = useState<'idle' | 'checking' | 'closed' | 'ok'>('idle');
 
     const primaryColor = styles?.primary?.trim() || '#f97316';
+    const { look } = useMenuLook();
+    const centered = look.align === 'center';
 
     useEffect(() => {
         const tableId = searchParams.get('table');
@@ -70,7 +74,7 @@ const ClientCategoriesPage: React.FC = () => {
     if (tableGateState === 'closed') {
         return (
             <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--menu-bg)' }}>
-                <div className="max-w-sm w-full text-center p-6 rounded-2xl" style={{ background: 'var(--menu-surface)', border: '1px solid var(--menu-border)' }}>
+                <div className="max-w-sm w-full text-center p-6" style={{ borderRadius: 'var(--menu-radius)', background: 'var(--menu-surface)', border: '1px solid var(--menu-border)' }}>
                     <h1 className="font-semibold mb-2" style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.4rem' }}>
                         Tavolo non aperto
                     </h1>
@@ -79,8 +83,8 @@ const ClientCategoriesPage: React.FC = () => {
                     </p>
                     <button
                         onClick={() => window.location.reload()}
-                        className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-sm font-semibold"
-                        style={{ background: primaryColor, color: 'var(--menu-accent-text)', fontFamily: 'var(--menu-font-body)' }}
+                        className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold"
+                        style={{ borderRadius: 'var(--menu-radius)', background: primaryColor, color: 'var(--menu-accent-text)', fontFamily: 'var(--menu-font-body)' }}
                     >
                         Riprova
                     </button>
@@ -90,7 +94,7 @@ const ClientCategoriesPage: React.FC = () => {
     }
 
     return (
-        <div style={{ background: 'var(--menu-bg)', minHeight: '100vh' }}>
+        <div className="menu-page" style={{ minHeight: '100vh' }}>
             <div className="max-w-4xl mx-auto" style={{ minHeight: '100vh' }}>
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || localname || ''}
@@ -101,66 +105,65 @@ const ClientCategoriesPage: React.FC = () => {
                 />
 
                 <main>
-                    {/* Hero */}
-                    <div
-                        className="relative overflow-hidden"
-                        style={{ height: 'clamp(200px, 40vw, 300px)' }}
-                    >
-                        <img
-                            src={resolveImageUrl(styles?.heroImageUrl, '/images/restaurant-background.jpg')}
-                            alt={styles?.restaurantName || localname || ''}
-                            className="absolute inset-0 w-full h-full object-cover menu-hero-img"
-                        />
-                        <div
-                            className="absolute inset-0"
-                            style={{ background: 'var(--menu-hero-gradient)' }}
-                        />
-                        <div
-                            className="absolute bottom-0 left-0 right-0 px-6 pb-7 menu-fade-up"
-                            style={{ animationDelay: '0.1s' }}
-                        >
-                            <p
-                                className="uppercase tracking-widest mb-1"
-                                style={{ color: 'var(--menu-accent)', fontFamily: 'var(--menu-font-body)', fontSize: '0.68rem', fontWeight: 700 }}
-                            >
-                                Il Menù
-                            </p>
-                            <h1
-                                className="font-semibold leading-none"
-                                style={{
-                                    color: 'var(--menu-text)',
-                                    fontFamily: 'var(--menu-font-display)',
-                                    fontSize: 'clamp(1.6rem, 6vw, 2.6rem)',
-                                }}
-                            >
-                                {styles?.restaurantName || localname}
-                            </h1>
-                            {styles?.address && (
-                                <p
-                                    className="mt-1"
-                                    style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.75rem' }}
-                                >
-                                    {styles.address}
-                                </p>
+                    {look.hero === 'overlay' ? (
+                        /* Foto con il nome del locale sopra */
+                        <div className="relative overflow-hidden" style={{ height: 'clamp(200px, 42vw, 300px)' }}>
+                            <img
+                                src={resolveImageUrl(styles?.heroImageUrl, '/images/restaurant-background.jpg')}
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover menu-hero-img"
+                            />
+                            <div className="absolute inset-0" style={{ background: 'var(--menu-hero-gradient)' }} />
+                            <div className="absolute bottom-0 left-0 right-0 px-5 pb-6 menu-fade-up" style={{ animationDelay: '0.1s' }}>
+                                <h1 className="menu-h" style={{ fontSize: 'clamp(2rem, 9vw, 3.2rem)' }}>
+                                    {styles?.restaurantName || localname}
+                                </h1>
+                                {styles?.address && (
+                                    <p className="mt-1.5" style={{ color: 'var(--menu-text)', opacity: 0.85, fontSize: '0.8rem' }}>
+                                        {styles.address}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        /* Testata tipografica, foto (se presente) come fascia separata */
+                        <>
+                            {styles?.heroImageUrl && styles.heroImageUrl !== 'DELETE' && (
+                                <div className="px-4 md:px-6 pt-4">
+                                    <div className="overflow-hidden" style={{ height: 'clamp(140px, 34vw, 240px)', borderRadius: 'var(--menu-radius)' }}>
+                                        <img
+                                            src={resolveImageUrl(styles.heroImageUrl, '/images/restaurant-background.jpg')}
+                                            alt=""
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                </div>
                             )}
-                        </div>
-                    </div>
+                            <div className={`px-5 md:px-6 pt-8 pb-2 menu-fade-up ${centered ? 'text-center' : ''}`}>
+                                <h1 className="menu-h" style={{ fontSize: 'clamp(2.2rem, 10vw, 3.6rem)', textAlign: centered ? 'center' : 'left' }}>
+                                    {styles?.restaurantName || localname}
+                                </h1>
+                                {(styles as any)?.description && (
+                                    <p className="mt-3" style={{ color: 'var(--menu-muted)', fontSize: '0.95rem', fontStyle: 'italic' }}>
+                                        {(styles as any).description}
+                                    </p>
+                                )}
+                                {styles?.address && (
+                                    <p className="menu-label mt-3">{styles.address}</p>
+                                )}
+                            </div>
+                        </>
+                    )}
 
-                    {/* Categories section */}
-                    <div className="px-4 md:px-6 pt-6 pb-10">
-                        <div
-                            className="flex items-center gap-3 mb-5 menu-fade-up"
-                            style={{ animationDelay: '0.18s' }}
+                    {/* Indice */}
+                    <div className="px-4 md:px-6 pt-6 pb-12">
+                        <MenuRule className="mb-5" />
+                        <h2
+                            className="menu-label mb-2"
+                            style={{ textAlign: centered ? 'center' : 'left', color: 'var(--menu-emph)' }}
                         >
-                            <span
-                                className="font-semibold"
-                                style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: 'clamp(1.2rem, 4vw, 1.5rem)' }}
-                            >
-                                Scegli una categoria
-                            </span>
-                            <div className="flex-1 h-px" style={{ background: 'var(--menu-border)' }} />
-                        </div>
-
+                            Menù
+                        </h2>
                         <ClientCategoriesList
                             categories={Array.from(categoriesMap.values())}
                             onSelectCategory={handleCategorySelect}

@@ -34,7 +34,9 @@ const getDates = (days: number): string[] =>
         return isoDate(d);
     });
 
+// Conto chiuso in cassa: vale l'importo davvero incassato (sconti e prezzo finale inclusi)
 const computeValue = (comand: Comand): number =>
+    comand.checkout ? comand.checkout.totalCents / 100 :
     comand.orders.reduce((total, order) =>
         total + order.products.reduce((t, p) => {
             const base = (p.productOption?.price ?? 0) * p.quantity;

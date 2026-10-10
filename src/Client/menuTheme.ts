@@ -1,24 +1,30 @@
 /**
  * Menu theme token system.
  *
- * Each landing template ('default' | 'minimal' | 'luxury' | 'strafame') maps
- * to a "menu look": background, surface, card, text colors, fonts, radius.
+ * Il template scelto (`StyleDto.landingTemplate`, vedi `menuTemplates.ts`)
+ * fornisce palette, font e "look" (filetti, puntini, numerazione, texture…).
  *
- * Tokens are injected as CSS custom properties on a wrapping element so any
- * descendant page (Categories, Products, Cart, …) can consume them via
- * `var(--menu-bg)` etc. — no per-page conditional rendering needed.
+ * I token sono iniettati come CSS custom properties su un elemento wrapper
+ * (MenuThemeProvider) così ogni pagina cliente (Categories, Products, Cart, …)
+ * li consuma via `var(--menu-bg)` ecc.
  *
- * The user's existing StyleDto fields (primary, cardBackground, textTitle,
- * textBody, backgroundGradient[0]) override the preset when present, so the
- * dashboard "Colori" tab already personalizes the menu without new backend fields.
+ * I colori salvati dal ristoratore (primary, cardBackground, textTitle,
+ * textBody, backgroundGradient[0]) hanno la precedenza sulla palette del
+ * template: scegliere un template dalla dashboard applica la sua palette a
+ * quei campi, poi il ristoratore può ritoccarli dal tab "Colori".
  */
 
 import type { StyleDto } from '../types';
 import { FONT_BY_KEY } from '../Utilities/fonts';
+import { getTemplateDef, MenuTemplateDef, MenuTemplateKey, TemplateLook } from './menuTemplates';
 
-export type MenuTemplateKey = 'default' | 'minimal' | 'luxury' | 'strafame';
+export type { MenuTemplateKey } from './menuTemplates';
 
 export interface MenuTokens {
+    template: MenuTemplateKey;
+    look: TemplateLook;
+    /** Toggle dashboard "Mostra immagini nelle card". */
+    showImages: boolean;
     bg: string;
     surface: string;
     card: string;
@@ -27,179 +33,82 @@ export interface MenuTokens {
     muted: string;
     accent: string;
     accentText: string;
+    /** Accento usabile come colore di testo sul fondo (accento se leggibile, altrimenti testo). */
+    emph: string;
     secondary: string;
     secondaryText: string;
     border: string;
+    /** Colore dei filetti / puntini (più marcato di `border`). */
+    rule: string;
     inputBg: string;
     inputBorder: string;
     inputText: string;
     inputPlaceholder: string;
     fontDisplay: string;
     fontBody: string;
+    fontPrice: string;
     radius: string;
     // Hero gradient overlay (rgba) — derived from bg so the hero image fades into the page bg.
     heroGradient: string;
     // Indicates the theme is dark (consumers can adjust e.g. shimmer opacity).
     isDark: boolean;
-    // Stylized name for special accents (e.g. Strafame uses Permanent Marker).
     fontAccent?: string;
 }
 
-const RADIUS_BY_STYLE: Record<NonNullable<StyleDto['cardStyle']>, string> = {
-    soft: '16px',
-    rounded: '24px',
-    sharp: '4px',
+// cardStyle: 'soft' è il valore storico di default → significa "usa il raggio del template".
+const RADIUS_OVERRIDE: Record<string, string> = {
+    rounded: '18px',
+    sharp: '0px',
 };
 
-// ─── Presets ──────────────────────────────────────────────────────────────────
-
-// Current production "dark menu" look. Keeps existing pages visually identical
-// when the template is 'default' (no surprise regressions).
-const PRESET_DEFAULT: MenuTokens = {
-    bg:             '#17140f',
-    surface:        '#1e1b15',
-    card:           '#25211a',
-    cardHover:      '#2f2a21',
-    text:           '#ede8da',
-    muted:          '#8a7d6a',
-    accent:         '#f97316',
-    accentText:     '#ffffff',
-    secondary:      '#2f2a21',
-    secondaryText:  '#ede8da',
-    border:         'rgba(255,255,255,0.07)',
-    inputBg:        'rgba(255,255,255,0.06)',
-    inputBorder:    'rgba(255,255,255,0.1)',
-    inputText:      '#ede8da',
-    inputPlaceholder: '#5a5048',
-    fontDisplay:    '"Cormorant Garamond", Georgia, serif',
-    fontBody:       'Nunito, ui-sans-serif, sans-serif',
-    // (defaults sotto sostituiscono per ogni preset; ripetuti per chiarezza)
-    radius:         '16px',
-    heroGradient:   'linear-gradient(to top, rgba(23,20,15,0.95) 0%, rgba(23,20,15,0.4) 55%, rgba(23,20,15,0.15) 100%)',
-    isDark:         true,
-};
-
-const PRESET_MINIMAL: MenuTokens = {
-    bg:             '#ffffff',
-    surface:        '#f9fafb',
-    card:           '#ffffff',
-    cardHover:      '#f3f4f6',
-    text:           '#0f172a',
-    muted:          '#64748b',
-    accent:         '#f97316',
-    accentText:     '#ffffff',
-    secondary:      '#f3f4f6',
-    secondaryText:  '#0f172a',
-    border:         'rgba(15,23,42,0.08)',
-    inputBg:        '#f9fafb',
-    inputBorder:    'rgba(15,23,42,0.1)',
-    inputText:      '#0f172a',
-    inputPlaceholder: '#94a3b8',
-    fontDisplay:    '"DM Sans", ui-sans-serif, system-ui, sans-serif',
-    fontBody:       '"DM Sans", ui-sans-serif, system-ui, sans-serif',
-    radius:         '12px',
-    heroGradient:   'linear-gradient(to top, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.4) 55%, rgba(255,255,255,0.0) 100%)',
-    isDark:         false,
-};
-
-const PRESET_LUXURY: MenuTokens = {
-    bg:             '#000000',
-    surface:        '#0a0a0a',
-    card:           '#111111',
-    cardHover:      '#1a1a1a',
-    text:           '#ffffff',
-    muted:          '#9ca3af',
-    accent:         '#c9a84c',
-    accentText:     '#000000',
-    secondary:      '#1a1a1a',
-    secondaryText:  '#ffffff',
-    border:         'rgba(255,255,255,0.06)',
-    inputBg:        'rgba(255,255,255,0.04)',
-    inputBorder:    'rgba(255,255,255,0.08)',
-    inputText:      '#ffffff',
-    inputPlaceholder: '#4b5563',
-    fontDisplay:    '"Cormorant Garamond", Georgia, serif',
-    fontBody:       '"DM Sans", ui-sans-serif, sans-serif',
-    radius:         '4px',
-    heroGradient:   'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 55%, rgba(0,0,0,0.05) 100%)',
-    isDark:         true,
-};
-
-const PRESET_STRAFAME: MenuTokens = {
-    bg:             '#ffffff',
-    surface:        '#f3f4f6',
-    card:           '#ffffff',
-    cardHover:      '#f9fafb',
-    text:           '#0e0e0e',
-    muted:          '#6b7280',
-    accent:         '#00AEEF',
-    accentText:     '#ffffff',
-    secondary:      '#0e0e0e',
-    secondaryText:  '#ffffff',
-    border:         'rgba(14,14,14,0.08)',
-    inputBg:        '#f9fafb',
-    inputBorder:    'rgba(14,14,14,0.1)',
-    inputText:      '#0e0e0e',
-    inputPlaceholder: '#9ca3af',
-    fontDisplay:    'Oswald, "DM Sans", ui-sans-serif, sans-serif',
-    fontBody:       'Barlow, "DM Sans", ui-sans-serif, sans-serif',
-    radius:         '18px',
-    heroGradient:   'linear-gradient(to top, rgba(14,14,14,0.85) 0%, rgba(14,14,14,0.35) 55%, rgba(14,14,14,0.05) 100%)',
-    isDark:         false,
-    fontAccent:     '"Permanent Marker", cursive',
-};
-
-const PRESETS: Record<MenuTemplateKey, MenuTokens> = {
-    default:  PRESET_DEFAULT,
-    minimal:  PRESET_MINIMAL,
-    luxury:   PRESET_LUXURY,
-    strafame: PRESET_STRAFAME,
-};
+/** Font "dell'abbinamento del template" (nessun override). */
+export const TEMPLATE_FONT_KEY = 'template';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function getMenuTokens(styles: StyleDto | null | undefined): MenuTokens {
-    const template = (styles?.landingTemplate as MenuTemplateKey) || 'default';
-    const preset = PRESETS[template] ?? PRESET_DEFAULT;
+    const def: MenuTemplateDef = getTemplateDef(styles?.landingTemplate);
+    const p = def.palette;
 
     // Apply user overrides from existing StyleDto fields when present.
-    const accent = (styles?.primary || '').trim() || preset.accent;
-    const card = (styles?.cardBackground || '').trim() || preset.card;
-    const text = (styles?.textTitle || '').trim() || preset.text;
-    const muted = (styles?.textBody || '').trim() || preset.muted;
-    const accentText = (styles?.textOnPrimary || '').trim() || preset.accentText;
-    const secondary = ((styles as any)?.secondaryColor || '').trim() || preset.secondary;
-    const secondaryText = ((styles as any)?.secondaryTextColor || '').trim() || preset.secondaryText;
+    const accent = (styles?.primary || '').trim() || p.accent;
+    const card = (styles?.cardBackground || '').trim() || p.card;
+    const text = (styles?.textTitle || '').trim() || p.text;
+    const muted = (styles?.textBody || '').trim() || p.muted;
+    const accentText = (styles?.textOnPrimary || '').trim() || p.accentText;
+    const secondary = ((styles as any)?.secondaryColor || '').trim() || p.secondary;
+    const secondaryText = ((styles as any)?.secondaryTextColor || '').trim() || p.secondaryText;
     const bg = (typeof styles?.backgroundGradient === 'string'
         ? (styles.backgroundGradient as any).split(';')[0]
-        : styles?.backgroundGradient?.[0])?.trim() || preset.bg;
+        : styles?.backgroundGradient?.[0])?.trim() || p.bg;
 
-    const cardStyle = styles?.cardStyle as keyof typeof RADIUS_BY_STYLE | undefined;
-    const radius = cardStyle && RADIUS_BY_STYLE[cardStyle] ? RADIUS_BY_STYLE[cardStyle] : preset.radius;
+    const cardStyle = (styles?.cardStyle || '') as string;
+    const radius = RADIUS_OVERRIDE[cardStyle] ?? `${def.look.radius}px`;
 
     // Font scelto dalla dashboard (chiave del catalogo Utilities/fonts.ts).
-    // Se non specificato o sconosciuto si lascia il font del preset.
+    // 'template', vuoto o sconosciuto → abbinamento del template.
     const fontKey = (styles?.font || '').trim();
-    const fontOpt = fontKey ? FONT_BY_KEY[fontKey] : undefined;
-    const fontBody    = fontOpt?.family || preset.fontBody;
-    const fontDisplay = fontOpt?.family || preset.fontDisplay;
+    const fontOpt = fontKey && fontKey !== TEMPLATE_FONT_KEY ? FONT_BY_KEY[fontKey] : undefined;
+    const fontBody    = fontOpt?.family || def.fonts.body;
+    const fontDisplay = fontOpt?.family || def.fonts.display;
+    const fontPrice   = fontOpt?.family || def.fonts.price || def.fonts.body;
 
     // ── Derived tokens ──────────────────────────────────────────────────────
-    // Capiamo se la palette dell'utente è chiara o scura guardando la luminanza
-    // del card background. Da qui costruiamo surface/input/border coerenti
-    // — altrimenti restano "incollati" al preset originale e stonano (es. box
-    // "Asporto — Dati di contatto" che resta scura su tema chiaro).
-    const userIsDark = relativeLuminance(card) < 0.45;
-    const surface       = blendColors(bg, userIsDark ? '#ffffff' : '#000000', userIsDark ? 0.04 : 0.04);
-    const cardHover     = blendColors(card, userIsDark ? '#ffffff' : '#000000', userIsDark ? 0.05 : 0.05);
-    const border        = userIsDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)';
-    const inputBg       = userIsDark ? 'rgba(255,255,255,0.06)' : blendColors(card, '#000000', 0.04);
-    const inputBorder   = userIsDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
-    const inputText     = text;
-    const inputPlaceholder = muted;
+    // Capiamo se la palette è chiara o scura guardando la luminanza del fondo
+    // pagina e costruiamo surface/input/border coerenti.
+    const userIsDark = relativeLuminance(bg) < 0.35;
+    const surface       = blendColors(bg, userIsDark ? '#ffffff' : '#000000', 0.04);
+    const cardHover     = blendColors(card, userIsDark ? '#ffffff' : '#000000', 0.05);
+    const border        = userIsDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+    const rule          = blendColors(bg, text, 0.38);
+    const emph          = contrastRatio(accent, bg) >= 3.2 ? accent : text;
+    const inputBg       = userIsDark ? 'rgba(255,255,255,0.06)' : blendColors(card, '#000000', 0.03);
+    const inputBorder   = userIsDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
 
     return {
-        ...preset,
+        template: def.key,
+        look: def.look,
+        showImages: styles?.showImages !== false,
         bg,
         surface,
         card,
@@ -208,16 +117,19 @@ export function getMenuTokens(styles: StyleDto | null | undefined): MenuTokens {
         muted,
         accent,
         accentText,
+        emph,
         secondary,
         secondaryText,
         border,
+        rule,
         inputBg,
         inputBorder,
-        inputText,
-        inputPlaceholder,
+        inputText: text,
+        inputPlaceholder: muted,
         radius,
         fontBody,
         fontDisplay,
+        fontPrice,
         isDark: userIsDark,
         heroGradient: buildHeroGradient(bg, userIsDark),
     };
@@ -233,6 +145,12 @@ function relativeLuminance(hex: string): number {
         return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
     };
     return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b);
+}
+
+function contrastRatio(a: string, b: string): number {
+    const la = relativeLuminance(a);
+    const lb = relativeLuminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
 function blendColors(base: string, with_: string, amount: number): string {
@@ -297,6 +215,7 @@ function hexToRgbTuple(hex: string): string {
 }
 
 export function tokensToCssVars(t: MenuTokens): Record<string, string> {
+    const l = t.look;
     return {
         '--menu-bg':              t.bg,
         '--menu-surface':         t.surface,
@@ -306,18 +225,27 @@ export function tokensToCssVars(t: MenuTokens): Record<string, string> {
         '--menu-muted':           t.muted,
         '--menu-accent':          t.accent,
         '--menu-accent-text':     t.accentText,
+        '--menu-emph':            t.emph,
         '--menu-secondary':       t.secondary,
         '--menu-secondary-text':  t.secondaryText,
         '--menu-border':          t.border,
+        '--menu-rule':            t.rule,
         '--menu-input-bg':        t.inputBg,
         '--menu-input-border':    t.inputBorder,
         '--menu-input-text':      t.inputText,
         '--menu-input-placeholder': t.inputPlaceholder,
         '--menu-font-display':    t.fontDisplay,
         '--menu-font-body':       t.fontBody,
+        '--menu-font-price':      t.fontPrice,
         '--menu-font-accent':     t.fontAccent || t.fontDisplay,
         '--menu-radius':          t.radius,
         '--menu-hero-gradient':   t.heroGradient,
+        '--menu-h-transform':     l.headingCase === 'uppercase' ? 'uppercase' : 'none',
+        '--menu-h-caps':          l.headingCase === 'smallcaps' ? 'all-small-caps' : 'normal',
+        '--menu-h-style':         l.headingStyle,
+        '--menu-h-weight':        String(l.headingWeight),
+        '--menu-h-tracking':      l.headingTracking,
+        '--menu-h-align':         l.align,
         '--c-accent':             t.accent,
     };
 }

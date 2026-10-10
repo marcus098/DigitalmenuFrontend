@@ -1,16 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../../Context/DataContext';
-import { getPaymentsApi } from '../../Utilities/api';
-import { PaymentDto } from '../../types';
+import { getCheckoutSummaryApi, getPaymentsApi } from '../../Utilities/api';
+import { CheckoutDaySummary, PaymentDto } from '../../types';
 import CustomLoading from '../../Components/CustomLoading';
 import {
-    ArrowTrendingUpIcon, ShoppingCartIcon, TagIcon, CurrencyEuroIcon,
+    ArrowTrendingUpIcon, ShoppingCartIcon, ReceiptPercentIcon, CurrencyEuroIcon,
 } from '@heroicons/react/24/outline';
 
 const formatEur = (cents: number) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(cents / 100);
 
-const isoDate = (d: Date) => d.toISOString().split('T')[0];
+// Data locale (non UTC): un incasso delle 00:30 appartiene a oggi, non a ieri
+const isoDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Incassato al netto dei rimborsi
+const netPaymentCents = (p: PaymentDto) =>
+    p.status === 'COMPLETED' || p.status === 'PARTIALLY_REFUNDED' ? p.amountCents - (p.refundedCents ?? 0) : 0;
 
 const last7Days = (): { label: string; iso: string }[] => {
     const days = [];
@@ -28,27 +34,39 @@ const last7Days = (): { label: string; iso: string }[] => {
 const AnalyticsPage: React.FC = () => {
     const { loading, comands, productsMap, categoriesMap } = useData();
     const [payments, setPayments] = useState<PaymentDto[]>([]);
+    const [cassa, setCassa] = useState<CheckoutDaySummary[]>([]);
     const [paymentsLoading, setPaymentsLoading] = useState(true);
-
-    useEffect(() => {
-        getPaymentsApi().then(r => {
-            if (r.success && r.data) setPayments((r.data as any).data ?? r.data);
-            setPaymentsLoading(false);
-        });
-    }, []);
 
     const days = useMemo(() => last7Days(), []);
 
-    // Revenue per day from payments (COMPLETED only)
-    const revenueByDay = useMemo(() => {
-        const map: Record<string, number> = {};
-        days.forEach(d => { map[d.iso] = 0; });
-        payments.filter(p => p.status === 'COMPLETED').forEach(p => {
-            const d = p.createdAt ? p.createdAt.split('T')[0] : null;
-            if (d && map[d] !== undefined) map[d] += p.amountCents;
+    useEffect(() => {
+        Promise.all([
+            getPaymentsApi(),
+            getCheckoutSummaryApi(days[0].iso, days[days.length - 1].iso),
+        ]).then(([pr, cr]) => {
+            if (pr.success && pr.data) setPayments((pr.data as any).data ?? pr.data);
+            if (cr.success && cr.data) setCassa(cr.data);
+            setPaymentsLoading(false);
         });
-        return days.map(d => ({ ...d, cents: map[d.iso] }));
-    }, [payments, days]);
+    }, [days]);
+
+    // Incasso per giorno = pagamenti online (netti) + conti chiusi in cassa con l'importo davvero incassato
+    // (sconti e prezzo finale inclusi). I conti già pagati online non sono contati due volte (lo esclude il backend).
+    const revenueByDay = useMemo(() => {
+        const map: Record<string, { online: number; cassa: number; discount: number }> = {};
+        days.forEach(d => { map[d.iso] = { online: 0, cassa: 0, discount: 0 }; });
+        payments.forEach(p => {
+            const d = p.createdAt ? isoDate(new Date(p.createdAt)) : null;
+            if (d && map[d]) map[d].online += netPaymentCents(p);
+        });
+        cassa.forEach(c => {
+            if (map[c.date]) {
+                map[c.date].cassa += c.totalCents;
+                map[c.date].discount += c.discountCents;
+            }
+        });
+        return days.map(d => ({ ...d, ...map[d.iso], cents: map[d.iso].online + map[d.iso].cassa }));
+    }, [payments, cassa, days]);
 
     // Orders per day from comands (all statuses)
     const ordersByDay = useMemo(() => {
@@ -76,10 +94,10 @@ const AnalyticsPage: React.FC = () => {
     const maxOrders  = useMemo(() => Math.max(...ordersByDay.map(d => d.count), 1), [ordersByDay]);
     const maxCatCount = useMemo(() => Math.max(...topCategories.map(c => c.count), 1), [topCategories]);
 
-    const totalRevenue  = useMemo(() => payments.filter(p => p.status === 'COMPLETED').reduce((s, p) => s + p.amountCents, 0), [payments]);
+    const weekRevenue   = useMemo(() => revenueByDay.reduce((s, d) => s + d.cents, 0), [revenueByDay]);
+    const weekDiscounts = useMemo(() => revenueByDay.reduce((s, d) => s + d.discount, 0), [revenueByDay]);
     const totalOrders   = comands.length;
     const totalProducts = productsMap.size;
-    const totalCats     = categoriesMap.size;
 
     if (loading || paymentsLoading) return <CustomLoading isFullPage />;
 
@@ -95,10 +113,10 @@ const AnalyticsPage: React.FC = () => {
             {/* Summary KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[
-                    { label: 'Ricavi Totali', value: formatEur(totalRevenue), icon: CurrencyEuroIcon, color: 'bg-emerald-500' },
+                    { label: 'Incassato (7 giorni)', value: formatEur(weekRevenue), icon: CurrencyEuroIcon, color: 'bg-emerald-500' },
+                    { label: 'Sconti concessi (7 giorni)', value: formatEur(weekDiscounts), icon: ReceiptPercentIcon, color: 'bg-rose-500' },
                     { label: 'Ordini Attivi', value: totalOrders, icon: ShoppingCartIcon, color: 'bg-amber-500' },
                     { label: 'Prodotti a Menu', value: totalProducts, icon: ArrowTrendingUpIcon, color: 'bg-blue-500' },
-                    { label: 'Categorie', value: totalCats, icon: TagIcon, color: 'bg-violet-500' },
                 ].map(({ label, value, icon: Icon, color }) => (
                     <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
@@ -117,13 +135,15 @@ const AnalyticsPage: React.FC = () => {
 
                 {/* Revenue chart */}
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-5">Ricavi (€) — ultimi 7 giorni</h2>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-1">Incassato (€) — ultimi 7 giorni</h2>
+                    <p className="text-xs text-gray-400 mb-4">Pagamenti online + conti chiusi in cassa, al netto di sconti e rimborsi.</p>
                     <div className="flex items-end gap-2 h-40">
                         {revenueByDay.map(d => {
                             const pct = maxRevenue > 0 ? (d.cents / maxRevenue) * 100 : 0;
                             return (
                                 <div key={d.iso} className="flex-1 flex flex-col items-center gap-1 group">
-                                    <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                    <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                                          title={`Online ${formatEur(d.online)} · Cassa ${formatEur(d.cassa)}${d.discount ? ` · Sconti ${formatEur(d.discount)}` : ''}`}>
                                         {formatEur(d.cents)}
                                     </span>
                                     <div className="w-full rounded-t-lg bg-emerald-500 transition-all" style={{ height: `${Math.max(pct, 4)}%` }} />

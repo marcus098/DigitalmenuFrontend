@@ -12,6 +12,8 @@ import ProductListItem from '../../Components/Client/ProductListItem';
 import AllergenModal from '../../Components/Client/AllergenModal';
 import ProductCustomizationDrawer from '../../Components/ProductCustomizationDrawer';
 import useCartCount from '../../Utilities/useCartCount';
+import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
+import { MenuRule } from '../../Components/Client/MenuPrimitives';
 
 const ClientProductsPage: React.FC = () => {
     const [selectedDish, setSelectedDish] = useState<ProductDto | null>(null);
@@ -24,6 +26,8 @@ const ClientProductsPage: React.FC = () => {
     const navigate = useNavigate();
 
     const primaryColor = styles?.primary?.trim() || '#f97316';
+    const { look } = useMenuLook();
+    const centered = look.align === 'center';
 
     const currentCategoryId = Number(idCategory);
     const category = categoriesMap.get(currentCategoryId);
@@ -41,7 +45,7 @@ const ClientProductsPage: React.FC = () => {
     if (loading) return <CustomLoading />;
 
     return (
-        <div style={{ background: 'var(--menu-bg)', minHeight: '100vh' }}>
+        <div className="menu-page" style={{ minHeight: '100vh' }}>
             <div className="max-w-4xl mx-auto" style={{ minHeight: '100vh' }}>
 
                 <ClientStickyHeader
@@ -64,35 +68,27 @@ const ClientProductsPage: React.FC = () => {
 
                 <main className="px-4 md:px-6 pt-7 pb-12">
 
-                    <div className="mb-6 menu-fade-up" style={{ animationDelay: '0.05s' }}>
-                        <h1
-                            className="font-semibold leading-none"
-                            style={{
-                                color: 'var(--menu-text)',
-                                fontFamily: 'var(--menu-font-display)',
-                                fontSize: 'clamp(2rem, 7vw, 3rem)',
-                            }}
-                        >
+                    <div className={`mb-5 menu-fade-up ${centered ? 'text-center' : ''}`} style={{ animationDelay: '0.05s' }}>
+                        <h1 className="menu-h" style={{ fontSize: 'clamp(2rem, 8vw, 3.1rem)', textAlign: centered ? 'center' : 'left' }}>
                             {category?.name || 'Prodotti'}
                         </h1>
-                        {visibleProducts.length > 0 && (
+                        {category?.description && (
                             <p
-                                className="mt-1.5"
-                                style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.8rem' }}
+                                className={`mt-2 ${centered ? 'mx-auto' : ''}`}
+                                style={{ color: 'var(--menu-muted)', fontSize: '0.92rem', lineHeight: 1.5, maxWidth: '34rem', fontStyle: look.headingStyle === 'italic' ? 'italic' : 'normal' }}
                             >
-                                {visibleProducts.length}{' '}
-                                {visibleProducts.length === 1 ? 'piatto disponibile' : 'piatti disponibili'}
+                                {category.description}
                             </p>
                         )}
                     </div>
 
-                    <div className="mb-6" style={{ height: 1, background: 'var(--menu-border)' }} />
+                    <MenuRule className="mb-2" />
 
                     {visibleProducts.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 menu-fade-in" style={{ animationDelay: '0.1s' }}>
                             <p
-                                className="italic"
-                                style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-display)', fontSize: '1.5rem' }}
+                                className="menu-h"
+                                style={{ color: 'var(--menu-muted)', fontSize: '1.4rem' }}
                             >
                                 Nessun piatto disponibile
                             </p>
@@ -106,11 +102,20 @@ const ClientProductsPage: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-3 menu-stagger">
-                            {visibleProducts.map(dish => (
-                                <div key={dish.id} className="menu-fade-up">
+                        <div className={`flex flex-col menu-fade-in ${look.productLayout === 'cards' ? 'gap-3.5 pt-3' : ''}`}>
+                            {visibleProducts.map((dish, i) => (
+                                <div
+                                    key={dish.id}
+                                    style={
+                                        look.productLayout === 'menu'
+                                            ? { borderBottom: `1px ${look.divider === 'dashed' ? 'dashed' : 'solid'} var(--menu-border)` }
+                                            : undefined
+                                    }
+                                >
+                                    {look.productLayout === 'centered' && i > 0 && <MenuRule className="my-1" />}
                                     <ProductListItem
                                         product={dish}
+                                        index={i + 1}
                                         onClick={() => {
                                             setSelectedDish(dish);
                                             setIsDrawerOpen(true);

@@ -9,6 +9,21 @@ import DeletePopup from "../../Components/DeletePopup";
 import { useHistory } from "../../Context/HistoryContext";
 import CustomLoading from "../../Components/CustomLoading";
 import { GripVerticalIcon, Search, Plus } from "lucide-react";
+// Stesso breakpoint "md" di Tailwind: sopra la lista categorie è verticale, sotto orizzontale.
+// La direzione del Droppable deve coincidere col layout reale, altrimenti il D&D calcola
+// le posizioni sull'asse sbagliato (elementi che "spariscono" o finiscono in posti casuali).
+const MD_QUERY = "(min-width: 768px)";
+const useIsDesktop = () => {
+    const [isDesktop, setIsDesktop] = useState(() => window.matchMedia(MD_QUERY).matches);
+    useEffect(() => {
+        const mql = window.matchMedia(MD_QUERY);
+        const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+        mql.addEventListener("change", onChange);
+        return () => mql.removeEventListener("change", onChange);
+    }, []);
+    return isDesktop;
+};
+
 const MenuPage: React.FC = () => {
 
     const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -28,10 +43,16 @@ const MenuPage: React.FC = () => {
 
     const { navigateWithHistory } = useHistory();
     const { localname } = useParams();
+    const isDesktop = useIsDesktop();
+
+    const sortedCategories = useMemo(
+        () => [...Array.from(categoriesMap.values())].sort((a, b) => a.progressiveNumber - b.progressiveNumber),
+        [categoriesMap]
+    );
 
     useEffect(() => {
         if (!loading && selectedCategory === null && categoriesMap.size > 0) {
-            const firstCategory = [...Array.from(categoriesMap.values())].sort((a, b) => a.progressiveNumber - b.progressiveNumber)[0];
+            const firstCategory = sortedCategories[0];
             const hash = window.location.hash.replace('#', '')
             if(hash.trim() !== ""){
                 setSelectedCategory(Number(hash))
@@ -40,14 +61,14 @@ const MenuPage: React.FC = () => {
                 window.location.hash = firstCategory.id + ""
             }
         }
-    }, [loading, categoriesMap, selectedCategory]);
+    }, [loading, categoriesMap, sortedCategories, selectedCategory]);
 
     const onDragEnd = async (result: DropResult) => {
         const { source, destination, type } = result;
         if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) return;
 
         if (type === "category") {
-            const reorderedCategories = [...Array.from(categoriesMap.values())].sort((a, b) => a.progressiveNumber - b.progressiveNumber);
+            const reorderedCategories = [...sortedCategories];
             const [movedItem] = reorderedCategories.splice(source.index, 1);
             reorderedCategories.splice(destination.index, 0, movedItem);
             const orderedIds: IdWithOrder[] = reorderedCategories.map((cat, index) => ({ id: cat.id, order: index + 1 }));
@@ -112,27 +133,28 @@ const MenuPage: React.FC = () => {
                           - direction="horizontal" per permettere lo scroll e D&D su mobile
                           - md:flex-col per tornare a una lista verticale su desktop
                         */}
-                        <Droppable droppableId="categories" type="category" direction="horizontal">
+                        <Droppable droppableId="categories" type="category" direction={isDesktop ? "vertical" : "horizontal"}>
                             {(provided) => (
                                 <div ref={provided.innerRef} {...provided.droppableProps}
                                      className="flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0">
 
-                                    {[...Array.from(categoriesMap.values())].sort((a, b) => a.progressiveNumber - b.progressiveNumber).map((cat, index) => (
+                                    {sortedCategories.map((cat, index) => (
                                         <Draggable key={cat.id} draggableId={String(cat.id)} index={index}>
-                                            {(provided) => (
+                                            {(provided, snapshot) => (
+                                                // Tutta la card è trascinabile (su touch: tieni premuto e trascina);
+                                                // il click semplice seleziona la categoria.
                                                 <div
-                                                    ref={provided.innerRef} {...provided.draggableProps}
+                                                    ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
                                                     onClick={() => {
                                                             setSelectedCategory(cat.id);
                                                             window.location.hash = cat.id + ""
                                                         }
                                                     }
-                                                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 md:flex-shrink-1 ${selectedCategory === cat.id ? 'bg-primary text-white shadow' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                                    title="Trascina per riordinare"
+                                                    className={`flex items-center justify-between p-3 rounded-lg cursor-grab active:cursor-grabbing select-none transition-colors flex-shrink-0 md:flex-shrink-1 ${selectedCategory === cat.id ? 'bg-primary text-white shadow' : 'bg-gray-100 hover:bg-gray-200'} ${snapshot.isDragging ? 'shadow-lg ring-2 ring-primary/40' : ''}`}
                                                 >
-                                                    <span className="font-semibold text-sm md:text-base">{cat.name}</span>
-                                                    <div {...provided.dragHandleProps} className="ml-2">
-                                                        <GripVerticalIcon className="w-5 h-5 opacity-60" />
-                                                    </div>
+                                                    <span className="font-semibold text-sm md:text-base whitespace-nowrap md:whitespace-normal">{cat.name}</span>
+                                                    <GripVerticalIcon className="w-5 h-5 opacity-60 ml-2 flex-shrink-0" />
                                                 </div>
                                             )}
                                         </Draggable>

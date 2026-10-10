@@ -64,7 +64,39 @@ export interface Comand {
     authorizationCanceled?: boolean
     /** Rimborsato integralmente */
     refunded?: boolean
+    /** Chiusura del conto in cassa (importo incassato e sconto) */
+    checkout?: ComandCheckout
     /** Solo vista pubblica: totale calcolato dal server (centesimi) */
     totalCents?: number
 }
 
+
+/** Chiusura del conto in cassa: quanto è stato incassato davvero. */
+export interface ComandCheckout {
+    subtotalCents: number
+    discountCents: number
+    totalCents: number
+    discountMode: 'PCT' | 'FINAL'
+    discountPct?: number
+    cardDiscountCents: number
+    cardId?: number
+    pointsUsed: number
+    pointsEarned: number
+    stampRedeemed: boolean
+    loyaltyError: boolean
+    paidOnline: boolean
+    closedAt: string
+    closedBy?: number
+}
+
+export interface CheckoutRequest {
+    subtotalCents: number
+    totalCents: number
+    discountMode: 'PCT' | 'FINAL'
+    discountPct?: number
+    cardDiscountCents: number
+    cardId?: number
+    pointsToUse: number
+    redeemStamps: boolean
+    earn: boolean
+}

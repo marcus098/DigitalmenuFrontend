@@ -9,7 +9,6 @@ import { HistoryProvider } from "./Context/HistoryContext";
 import { CookieConsentProvider } from "./Context/CookieConsentContext";
 import CookieBanner from "./Components/CookieConsent/CookieBanner";
 import NotificationDisplay from "./Components/NotificationDisplay";
-import PWAInstallPrompt from "./Components/PWAInstallPrompt";
 import Layout from "./Dashboard/Layout";
 import MenuThemeProvider from "./Components/Client/MenuThemeProvider";
 
@@ -21,6 +20,9 @@ import WaiterSignupPage from "./Dashboard/Pages/WaiterSignupPage";
 import ConfirmEmailPage from "./Dashboard/Pages/ConfirmEmailPage";
 import WaiterAccountPendingAdminApproval from "./Dashboard/Pages/WaiterAccountPendingAdminApproval";
 import EmailNotConfirmedPage from "./Dashboard/Pages/EmailNotConfirmedPage";
+
+// Sito vetrina ("/") — lazy loaded
+const LandingPage = lazy(() => import("./Landing/LandingPage"));
 
 // Legal — lazy loaded
 const PrivacyPolicyPage = lazy(() => import("./GeneralPages/PrivacyPolicyPage"));
@@ -186,6 +188,7 @@ function App() {
         <NotificationProvider>
           <UtilitiesProvider>
             <Routes>
+              <Route path={"/"} element={<Suspense fallback={<PageLoader />}><LandingPage /></Suspense>} />
               <Route path={"/login"} element={<LoginProvider><LoginPage /></LoginProvider>} />
               <Route path={"/cardStatus"} element={<CardStatusPage />} />
               <Route path={"/signup"} element={<SignupPage />} />
@@ -201,7 +204,6 @@ function App() {
               <Route path={"/emailNotConfirmed/:id/:code"} element={<EmailNotConfirmedPage />} />
             </Routes>
             <CookieBanner />
-            <PWAInstallPrompt />
           </UtilitiesProvider>
         </NotificationProvider>
       </CookieConsentProvider>

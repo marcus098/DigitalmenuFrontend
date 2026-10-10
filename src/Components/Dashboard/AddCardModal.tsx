@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import {AddCard, CardType} from "../../types";
+import {AddCard, CardType, LoyaltySettings} from "../../types";
 
 // Definiamo le props che il modale si aspetta di ricevere
 export interface NewCardConfig {
@@ -12,19 +12,25 @@ export interface NewCardConfig {
 interface IssueCardModalProps {
     onClose: () => void;
     onCreate: (add: AddCard) => void;
+    /** Regole del locale: se impostate prevalgono (il backend le applica comunque) */
+    settings?: LoyaltySettings | null;
 }
 
-export const AddCardModal: React.FC<IssueCardModalProps> = ({ onClose, onCreate }) => {
+export const AddCardModal: React.FC<IssueCardModalProps> = ({ onClose, onCreate, settings }) => {
+    const fixedStamps = settings?.stampsForPrize ?? null;
+    const fixedRate = settings?.eurosPerPoint ?? null;
     // Stato interno del modale
     const [cardType, setCardType] = useState<CardType>('stamps');
     const [totalStamps, setTotalStamps] = useState<number>(10);
     const [pointConversionRate, setPointConversionRate] = useState<number>(1);
 
     const handleCreateClick = () => {
-        if (cardType === 'stamps' && totalStamps > 0) {
-            onCreate({ typePoints: false, scope: totalStamps, priceForPoint: pointConversionRate });
-        } else if (cardType === 'points' && pointConversionRate > 0) {
-            onCreate({ typePoints: true, scope: totalStamps, priceForPoint: pointConversionRate });
+        const stamps = fixedStamps ?? totalStamps;
+        const rate = fixedRate ?? pointConversionRate;
+        if (cardType === 'stamps' && stamps > 0) {
+            onCreate({ typePoints: false, scope: stamps, priceForPoint: rate });
+        } else if (cardType === 'points' && rate > 0) {
+            onCreate({ typePoints: true, scope: stamps, priceForPoint: rate });
         }
         onClose();
     };
@@ -58,14 +64,32 @@ export const AddCardModal: React.FC<IssueCardModalProps> = ({ onClose, onCreate 
                     {cardType === 'stamps' ? (
                         <div className="mt-1">
                             <p className="text-sm text-gray-600 mb-2">Il cliente riceverà un premio dopo aver collezionato un certo numero di timbri.</p>
-                            <label htmlFor="total-stamps" className="label-style text-xs">Numero totale di timbri richiesti</label>
-                            <input id="total-stamps" type="number" value={totalStamps} onChange={e => setTotalStamps(Number(e.target.value))} className="input-style w-full md:w-1/2"/>
+                            {fixedStamps != null ? (
+                                <p className="text-sm font-semibold text-gray-800">
+                                    Premio a {fixedStamps} timbri{settings?.stampsPrize ? ` (${settings.stampsPrize})` : ''}
+                                    <span className="block text-xs font-normal text-gray-500">Dalle regole tessere del locale.</span>
+                                </p>
+                            ) : (
+                                <>
+                                    <label htmlFor="total-stamps" className="label-style text-xs">Numero totale di timbri richiesti</label>
+                                    <input id="total-stamps" type="number" value={totalStamps} onChange={e => setTotalStamps(Number(e.target.value))} className="input-style w-full md:w-1/2"/>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div className="mt-1">
                             <p className="text-sm text-gray-600 mb-2">Il cliente accumula punti in base alla spesa, che potrà poi convertire in premi.</p>
-                            <label htmlFor="point-rate" className="label-style text-xs">€ per ottenere 1 punto (es. inserisci 1 per 1€ = 1 punto)</label>
-                            <input id="point-rate" type="number" value={pointConversionRate} onChange={e => setPointConversionRate(Number(e.target.value))} className="input-style w-full md:w-1/2"/>
+                            {fixedRate != null ? (
+                                <p className="text-sm font-semibold text-gray-800">
+                                    1 punto ogni {fixedRate.toLocaleString('it-IT')} €
+                                    <span className="block text-xs font-normal text-gray-500">Dalle regole tessere del locale.</span>
+                                </p>
+                            ) : (
+                                <>
+                                    <label htmlFor="point-rate" className="label-style text-xs">€ per ottenere 1 punto (es. inserisci 1 per 1€ = 1 punto)</label>
+                                    <input id="point-rate" type="number" value={pointConversionRate} onChange={e => setPointConversionRate(Number(e.target.value))} className="input-style w-full md:w-1/2"/>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

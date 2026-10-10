@@ -1,125 +1,70 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { CategoryDto } from '../../types';
+import { useMenuLook } from './MenuThemeProvider';
 
 interface CategoryCardProps {
     category: CategoryDto;
     onClick: () => void;
 }
 
+/**
+ * Riquadro categoria per i template a "tessere" (caffè, pub, street food).
+ * Foto sopra, nome sotto su fondo pieno — niente velature o gradienti sopra
+ * la foto. Senza foto: blocco nel colore secondario con l'iniziale.
+ */
 const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {
-    const hasImage = Boolean(category.image);
-    const imageUrl = hasImage
+    const { look, showImages } = useMenuLook();
+    const imageUrl = showImages && category.image
         ? `${process.env.REACT_APP_BUCKET_URL}${category.image}`
         : null;
-
-    const gradients = [
-        'linear-gradient(135deg, #3d2b1f 0%, #6b3a2a 100%)',
-        'linear-gradient(135deg, #1f2d3d 0%, #2a4a6b 100%)',
-        'linear-gradient(135deg, #2d3320 0%, #4a5a30 100%)',
-        'linear-gradient(135deg, #2d1f3d 0%, #4a2a6b 100%)',
-        'linear-gradient(135deg, #3d2020 0%, #6b3030 100%)',
-    ];
-    const fallbackGradient = gradients[category.name.length % gradients.length];
+    const heavy = look.cardBorder === 'heavy';
+    const edge = heavy ? '2px solid var(--menu-text)' : '1px solid var(--menu-border)';
 
     return (
-        <motion.div
+        <button
+            type="button"
             onClick={onClick}
-            className="relative overflow-hidden cursor-pointer"
+            className="menu-row menu-focus w-full text-left flex flex-col overflow-hidden"
             style={{
-                aspectRatio: '3 / 4',
-                borderRadius: 'var(--menu-radius)',
-                border: '1px solid var(--menu-border)',
                 background: 'var(--menu-card)',
+                borderRadius: 'var(--menu-radius)',
+                border: edge,
+                boxShadow: look.offsetShadow ? '4px 4px 0 var(--menu-text)' : 'none',
             }}
-            whileHover={{
-                scale: 1.025,
-                boxShadow: '0 20px 40px rgba(0,0,0,0.35)',
-            }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 22 }}
         >
-            {imageUrl ? (
-                <motion.img
-                    src={imageUrl}
-                    alt={category.name}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    initial={{ scale: 1.06 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                    whileHover={{ scale: 1.08 }}
-                    onError={e => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                />
-            ) : (
-                <div className="absolute inset-0" style={{ background: fallbackGradient }} />
-            )}
-
-            {/* Readability scrim — image-backed cards always need contrast for the label */}
             <div
-                className="absolute inset-0"
-                style={{
-                    background:
-                        'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.22) 55%, rgba(0,0,0,0.05) 100%)',
-                }}
-            />
-
-            <motion.div
-                className="absolute inset-0"
-                style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 60%)' }}
-                initial={{ opacity: 0 }}
-                whileHover={{ opacity: 1 }}
-                transition={{ duration: 0.25 }}
-            />
-
-            {!imageUrl && (
-                <div
-                    className="absolute inset-0 flex items-center justify-center font-bold"
-                    style={{
-                        fontFamily: 'var(--menu-font-display)',
-                        fontSize: 'clamp(3rem, 8vw, 5rem)',
-                        color: 'rgba(255,255,255,0.18)',
-                    }}
-                >
-                    {category.name.charAt(0).toUpperCase()}
-                </div>
-            )}
-
-            <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-                <h2
-                    className="font-semibold leading-tight"
-                    style={{
-                        color: '#ffffff',
-                        fontFamily: 'var(--menu-font-display)',
-                        fontSize: 'clamp(1.15rem, 3.5vw, 1.5rem)',
-                        textShadow: '0 2px 8px rgba(0,0,0,0.6)',
-                    }}
-                >
+                className="relative w-full overflow-hidden"
+                style={{ aspectRatio: '4 / 3', background: 'var(--menu-secondary)', borderBottom: edge }}
+            >
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                ) : (
+                    <span
+                        aria-hidden="true"
+                        className="menu-h absolute inset-0 flex items-center justify-center"
+                        style={{ color: 'var(--menu-secondary-text)', opacity: 0.5, fontSize: 'clamp(2.4rem, 9vw, 3.4rem)' }}
+                    >
+                        {category.name.charAt(0).toUpperCase()}
+                    </span>
+                )}
+            </div>
+            <div className="px-3 py-2.5" style={{ minHeight: 52 }}>
+                <h2 className="menu-h" style={{ fontSize: 'clamp(1.02rem, 3.6vw, 1.2rem)', lineHeight: 1.15 }}>
                     {category.name}
                 </h2>
                 {category.description && (
-                    <p
-                        className="mt-0.5 line-clamp-1"
-                        style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--menu-font-body)', fontSize: '0.7rem' }}
-                    >
+                    <p className="mt-0.5 line-clamp-1" style={{ color: 'var(--menu-muted)', fontSize: '0.75rem' }}>
                         {category.description}
                     </p>
                 )}
             </div>
-
-            <motion.div
-                className="absolute bottom-0 left-0 right-0"
-                style={{
-                    height: 2,
-                    background: 'var(--menu-accent)',
-                    originX: 0,
-                }}
-                initial={{ scaleX: 0, opacity: 0 }}
-                whileHover={{ scaleX: 1, opacity: 1 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-            />
-        </motion.div>
+        </button>
     );
 };
 

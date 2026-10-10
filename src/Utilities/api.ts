@@ -4,7 +4,7 @@ import {
     AddComandOrder,
     AddComandWaiter,
     AddIngredient, AddTable,
-    ApiResponse, CardDto,
+    ApiResponse, CardDto, CheckoutDaySummary, CheckoutResult, LoyaltySettings,
     CategoryDto, FileDto, FolderDto, IdWithOrder,
     IngredientDto,
     JoinResponse,
@@ -18,7 +18,7 @@ import {deleteCookie, getCookie} from "./Utilities";
 import {apiCall, ApiCallResult, clientApiCall} from "./helper";
 import {endImpersonation, getImpersonationToken, IMPERSONATION_FORBIDDEN_EVENT, isImpersonating} from "./impersonation";
 import {UserProfile} from "../Dashboard/Pages/ProfilePage";
-import {Comand} from "../ComandType";
+import {CheckoutRequest, Comand} from "../ComandType";
 
 const ADD_INGREDIENT = "/api/ingredients/insert";
 const ADD_CATEGORY = "/api/categories/addCategory";
@@ -77,6 +77,9 @@ const ADD_CARD = "/api/cards/add"
 const ADD_POINT_TO_CARD = (id: number, quantity: number) =>  "/api/cards/addPoints/" + id + "/" + quantity
 const SEND_CARD_BY_EMAIL = (id: number, email: string) => "/api/cards/send/" + id + "/" + email
 const DELETE_CARD = (id: number) => "/api/cards/delete/" + id
+const LOYALTY_SETTINGS = "/api/cards/settings"
+const CHECKOUT_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/checkout`
+const CHECKOUT_SUMMARY = (from: string, to: string) => `/api/orders/checkout-summary?from=${from}&to=${to}`
 const GET_FILES = (folderId: number) => "/api/filemanager/files/" + folderId
 const DOWNLOAD_FILE = (id: number) => "/api/filemanager/files/download/" + id
 const ADD_FILE = "/api/filemanager/files/add"
@@ -414,6 +417,24 @@ export const addPointToCardApi = async(id: number, quantity: number) => {
 export const sendCardByEmailApi = async(id: number, email: string) => {
     return apiCall<Response<CardDto>>({method: GET, fixed: true, url: SEND_CARD_BY_EMAIL(id, email)})
 }
+
+export const getLoyaltySettingsApi = async () =>
+    apiCall<Response<LoyaltySettings>>({method: GET, fixed: true, url: LOYALTY_SETTINGS})
+
+export const updateLoyaltySettingsApi = async (settings: LoyaltySettings) =>
+    apiCall<Response<LoyaltySettings>>({method: PUT, fixed: true, url: LOYALTY_SETTINGS, data: settings})
+
+/** Chiusura conto in cassa: salva incasso/sconto sulla comanda e muove la tessera. */
+export const checkoutComandApi = async (comandId: string, req: CheckoutRequest) =>
+    apiCall<CheckoutResult>({method: POST, fixed: true, url: CHECKOUT_COMAND(comandId), data: req})
+
+/** Incassi di cassa per giorno (yyyy-MM-dd, estremi inclusi). */
+export const getCheckoutSummaryApi = async (from: string, to: string) =>
+    apiCall<CheckoutDaySummary[]>({method: GET, fixed: true, url: CHECKOUT_SUMMARY(from, to)})
+
+/** Comande servite (COMPLETED) ma non ancora incassate in cassa. */
+export const getToCheckoutApi = async () =>
+    apiCall<Comand[]>({method: GET, fixed: true, url: "/api/orders/to-checkout"})
 
 export const deleteCardApi = async(id: number) => {
     return apiCall<Response<CardDto>>({method: GET, fixed: true, url: DELETE_CARD(id)})

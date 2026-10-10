@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo } from 'react';
-import { getMenuTokens, tokensToCssVars } from '../../Client/menuTheme';
+import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import { getMenuTokens, MenuTokens, tokensToCssVars, TEMPLATE_FONT_KEY } from '../../Client/menuTheme';
 import { usePreviewStyles } from '../../Client/usePreviewStyles';
 import { buildGoogleFontsHref } from '../../Utilities/fonts';
+import { buildTemplateFontsHref, getTemplateDef } from '../../Client/menuTemplates';
 
 /**
  * Wraps the client (customer-facing) routes and injects menu CSS variables on
@@ -9,10 +10,31 @@ import { buildGoogleFontsHref } from '../../Utilities/fonts';
  * touching DataContext themselves. Also keeps the document body background
  * matched so navigation does not flash white.
  *
+ * Espone anche i token (incluso il "look" del template) via `useMenuLook()`
+ * per i componenti che cambiano impaginazione in base al template.
+ *
  * Quando l'app è renderizzata dentro un iframe (Dashboard → Layout) i campi
  * dello style salvato vengono sovrascritti in tempo reale dal draftTheme via
  * postMessage — vedi `usePreviewStyles`.
  */
+
+const MenuLookContext = createContext<MenuTokens | null>(null);
+
+/** Token del tema corrente. Fuori dal provider ricade sul template di default. */
+export function useMenuLook(): MenuTokens {
+    const ctx = useContext(MenuLookContext);
+    return ctx ?? getMenuTokens(null);
+}
+
+function ensureStylesheet(id: string, href: string | null) {
+    if (!href || document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+}
+
 const MenuThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const styles = usePreviewStyles();
 
@@ -27,28 +49,27 @@ const MenuThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         return () => { document.body.style.backgroundColor = prev; };
     }, [tokens.bg]);
 
-    // Carica dinamicamente i font Google necessari: quello scelto dall'utente
-    // (styles.font) + Permanent Marker se un template lo richiede come accent.
+    // Font del template (abbinamento titoli/testo/prezzi) + eventuale font scelto
+    // dall'utente in dashboard. Caricati on-demand da Google Fonts.
     const userFontKey = (styles?.font || '').trim();
     useEffect(() => {
-        const keys: string[] = [];
-        if (userFontKey) keys.push(userFontKey);
-        if (tokens.fontAccent && tokens.fontAccent.includes('Permanent Marker')) keys.push('permanent-marker');
-        const href = buildGoogleFontsHref(keys);
-        if (!href) return;
-        const id = `menu-fonts-${keys.join('-')}`;
-        if (document.getElementById(id)) return;
-        const link = document.createElement('link');
-        link.id = id;
-        link.rel = 'stylesheet';
-        link.href = href;
-        document.head.appendChild(link);
-    }, [userFontKey, tokens.fontAccent]);
+        ensureStylesheet(`menu-tpl-fonts-${tokens.template}`, buildTemplateFontsHref([getTemplateDef(tokens.template)]));
+        if (userFontKey && userFontKey !== TEMPLATE_FONT_KEY) {
+            ensureStylesheet(`menu-fonts-${userFontKey}`, buildGoogleFontsHref([userFontKey]));
+        }
+    }, [userFontKey, tokens.template]);
 
     return (
-        <div style={cssVars as React.CSSProperties}>
-            {children}
-        </div>
+        <MenuLookContext.Provider value={tokens}>
+            <div
+                style={cssVars as React.CSSProperties}
+                data-menu-template={tokens.template}
+                data-menu-texture={tokens.look.texture}
+                data-menu-dark={tokens.isDark ? 'true' : 'false'}
+            >
+                {children}
+            </div>
+        </MenuLookContext.Provider>
     );
 };
 

@@ -7,6 +7,7 @@ import { useNotification } from "../../Context/NotificationContext";
 import CustomLoading from "../../Components/CustomLoading";
 import { FEATURE_ICONS } from "../../Utilities/featureIcons";
 import { AVAILABLE_FONTS } from "../../Utilities/fonts";
+import TemplateLibrary from "../../Components/Dashboard/TemplateLibrary";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -16,67 +17,6 @@ const DEFAULT_FEATURES: FeatureCard[] = [
     { icon: 'zap',        title: 'Veloce & Buono',      sub: 'Pronto in pochissimo' },
     { icon: 'smartphone', title: 'Ordina dal Tavolo',   sub: 'Scansiona il QR' },
 ];
-
-const TEMPLATES = [
-    {
-        key: 'default',
-        label: 'Classico',
-        desc: 'Hero grande, ticker colorato, dark info section. Il layout originale, ricco di impatto.',
-        preview: (primary: string) => (
-            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col gap-0.5">
-                <div className="h-16 flex items-end p-2" style={{ background: `linear-gradient(135deg, #111 60%, ${primary}33)` }}>
-                    <div className="w-12 h-2 rounded bg-white/60" />
-                </div>
-                <div className="h-3" style={{ backgroundColor: primary }} />
-                <div className="flex gap-1 px-2 pt-1.5 flex-1 bg-gray-50">
-                    <div className="flex-1 h-8 rounded bg-gray-200" />
-                    <div className="flex-1 h-8 rounded bg-gray-200" />
-                    <div className="flex-1 h-8 rounded bg-gray-200" />
-                </div>
-            </div>
-        ),
-    },
-    {
-        key: 'minimal',
-        label: 'Minimal',
-        desc: 'Layout pulito, tutto bianco. Navbar sempre visibile, hero compatto, focus sul menu.',
-        preview: (primary: string) => (
-            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col gap-0.5">
-                <div className="h-8 bg-white border-b border-gray-200 flex items-center px-3 gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: primary }} />
-                    <div className="w-16 h-2 rounded bg-gray-200" />
-                </div>
-                <div className="h-14 bg-gray-50 flex items-center justify-center">
-                    <div className="w-24 h-4 rounded bg-gray-300" />
-                </div>
-                <div className="flex gap-1 px-2 pt-1 flex-1 bg-white">
-                    <div className="flex-1 h-6 rounded bg-gray-100" />
-                    <div className="flex-1 h-6 rounded bg-gray-100" />
-                </div>
-            </div>
-        ),
-    },
-    {
-        key: 'luxury',
-        label: 'Luxury',
-        desc: 'Dark premium, cinematografico. Hero full-screen, tutto nero, accenti nel colore primario.',
-        preview: (primary: string) => (
-            <div className="w-full h-28 rounded-lg overflow-hidden flex flex-col">
-                <div className="h-20 bg-[#080808] flex items-end p-3">
-                    <div>
-                        <div className="w-4 h-0.5 rounded mb-1" style={{ backgroundColor: primary }} />
-                        <div className="w-20 h-3 rounded bg-white/70" />
-                    </div>
-                </div>
-                <div className="flex gap-0.5 flex-1 bg-[#111]">
-                    <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
-                    <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
-                    <div className="flex-1 bg-[#1a1a1a] rounded-sm m-1" />
-                </div>
-            </div>
-        ),
-    },
-] as const;
 
 // ─── Reusable sub-components ──────────────────────────────────────────────────
 
@@ -179,7 +119,6 @@ const ControlPanel: React.FC<{
     updateFeature,
 }) => {
     const features: FeatureCard[] = draftTheme.features?.length ? draftTheme.features : DEFAULT_FEATURES;
-    const template = (draftTheme as any).landingTemplate || 'default';
 
     const logoPreview = draftTheme.logoUrl
         ? (draftTheme.logoUrl.startsWith('blob:') ? draftTheme.logoUrl : (process.env.REACT_APP_BUCKET_URL || '') + draftTheme.logoUrl)
@@ -243,11 +182,12 @@ const ControlPanel: React.FC<{
                     <div>
                         <label className="label-style text-sm">Font</label>
                         <select
-                            value={draftTheme.font || 'system'}
+                            value={draftTheme.font || 'template'}
                             onChange={e => updateThemeValue('font', e.target.value)}
                             className="input-style mt-1"
                             style={{ fontFamily: AVAILABLE_FONTS.find(f => f.key === (draftTheme.font || 'system'))?.family }}
                         >
+                            <option value="template">Abbinamento del template (consigliato)</option>
                             {AVAILABLE_FONTS.map(f => (
                                 <option key={f.key} value={f.key} style={{ fontFamily: f.family }}>
                                     {f.name}
@@ -255,7 +195,7 @@ const ControlPanel: React.FC<{
                             ))}
                         </select>
                         <p className="text-[11px] text-gray-400 mt-1">
-                            Il font viene applicato a tutta la landing e alle pagine menu/carrello.
+                            Ogni template ha già titoli e testo abbinati. Scegli un font solo se vuoi sostituirli entrambi.
                         </p>
                     </div>
                     <hr />
@@ -393,8 +333,8 @@ const ControlPanel: React.FC<{
                     <div>
                         <label className="label-style">Stile Angoli Card</label>
                         <select value={draftTheme.cardStyle} onChange={e => updateThemeValue('cardStyle', e.target.value)} className="input-style mt-1">
-                            <option value="soft">Morbido (consigliato)</option>
-                            <option value="rounded">Molto arrotondato</option>
+                            <option value="soft">Come da template (consigliato)</option>
+                            <option value="rounded">Arrotondato</option>
                             <option value="sharp">Squadrato</option>
                         </select>
                     </div>
@@ -422,39 +362,7 @@ const ControlPanel: React.FC<{
 
             {/* ── Template ── */}
             {activeTab === 'template' && (
-                <div className="space-y-4">
-                    <div>
-                        <p className="text-sm font-semibold text-gray-700 mb-1">Scegli il layout della landing page</p>
-                        <p className="text-xs text-gray-400 mb-4">Il template cambia l'aspetto visivo complessivo. Tutti i tuoi contenuti (testi, immagini, colori) restano invariati.</p>
-                    </div>
-                    <div className="space-y-3">
-                        {TEMPLATES.map(t => {
-                            const isSelected = template === t.key;
-                            return (
-                                <button
-                                    key={t.key}
-                                    onClick={() => updateThemeValue('landingTemplate', t.key)}
-                                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                                        isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 bg-white'
-                                    }`}
-                                >
-                                    <div className="mb-3">{t.preview(draftTheme.primary)}</div>
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div>
-                                            <p className={`font-black text-base ${isSelected ? 'text-primary' : 'text-gray-800'}`}>{t.label}</p>
-                                            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{t.desc}</p>
-                                        </div>
-                                        <div className={`w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center ${
-                                            isSelected ? 'border-primary bg-primary' : 'border-gray-300'
-                                        }`}>
-                                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                                        </div>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
+                <TemplateLibrary draftTheme={draftTheme} updateThemeValue={updateThemeValue} />
             )}
         </div>
     );
@@ -591,7 +499,7 @@ const LayoutPage: React.FC = () => {
         backgroundGradient: [], cardBackground: "#FFFFFF", primary: "#fb923c", textBody: "#6b7280",
         textOnPrimary: "#FFFFFF", textTitle: "#1f2937", address: "", phone: "",
         facebookUrl: "", instagramUrl: "", heroImageUrl: "", logoUrl: "",
-        restaurantName: "Il Tuo Ristorante", cardStyle: "soft", showImages: true, font: "sans-serif",
+        restaurantName: "Il Tuo Ristorante", cardStyle: "soft", showImages: true, font: "template",
         description: "", openingHours: "", whatsapp: "", tiktokUrl: "",
         features: DEFAULT_FEATURES,
         sectionMenuTitle: "", sectionBookingTitle: "", sectionWhyTitle: "",
@@ -674,7 +582,7 @@ const LayoutPage: React.FC = () => {
             heroOverlayOpacity: typeof d.heroOverlayOpacity === 'number' ? d.heroOverlayOpacity : 0.6,
             secondaryColor: d.secondaryColor || "#0e0e0e",
             secondaryTextColor: d.secondaryTextColor || "#ffffff",
-            font: d.font || "system",
+            font: d.font || "template",
         } as any;
         const ok = await updateStyle(payload, logoFile, heroFile);
         if (ok) {

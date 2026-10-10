@@ -1,5 +1,6 @@
 import React, {useState, useMemo, useEffect} from 'react';
-import {CardDto, AddCard} from '../../types';
+import {CardDto, AddCard, LoyaltySettings} from '../../types';
+import LoyaltySettingsPanel from "../../Components/Dashboard/LoyaltySettingsPanel";
 import QRCode from 'react-qr-code';
 import { PlusIcon, MagnifyingGlassIcon, StarIcon, CheckBadgeIcon, QrCodeIcon, EnvelopeIcon, PrinterIcon, LinkIcon } from '@heroicons/react/24/outline';
 import { XMarkIcon } from '@heroicons/react/24/solid';
@@ -264,6 +265,7 @@ const LoyaltyCardsPage: React.FC = () => {
     const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
     const [loading, setLoading] = useState(true)
     const [cardsList, setCardsList] = useState<CardDto[]>([])
+    const [loyalty, setLoyalty] = useState<LoyaltySettings | null>(null)
     const {addNotification} = useNotification()
 
 
@@ -416,13 +418,16 @@ const LoyaltyCardsPage: React.FC = () => {
     return (
         <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
             {loading && <CustomLoading isTransparent={true} isFullPage={true} />}
-            {isIssueModalOpen && <AddCardModal onClose={() => setIsIssueModalOpen(false)} onCreate={handleCreateCard} />}
+            {isIssueModalOpen && <AddCardModal settings={loyalty} onClose={() => setIsIssueModalOpen(false)} onCreate={handleCreateCard} />}
             {selectedCard && <CardDetailModal resetCard={resetCard} claimCard={claimCard} addPoint={addPoint} deleteCard={deleteCard} card={selectedCard} onClose={() => setSelectedCard(null)} onUpdate={handleUpdateCard} />}
 
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-gray-800">Carte Fedeltà</h1>
                 <p className="text-gray-500 mt-1">Emetti e gestisci le carte per i tuoi clienti.</p>
             </div>
+
+            {/* Cambiando le regole cambiano i valori effettivi delle tessere: si ricaricano */}
+            <LoyaltySettingsPanel onLoaded={setLoyalty} onSaved={s => { setLoyalty(s); loadCards(); }} />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-white p-4 rounded-xl shadow-lg"><p className="text-sm text-gray-500">Carte Totali</p><p className="text-2xl font-bold">{kpi.total}</p></div>

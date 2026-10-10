@@ -1,161 +1,193 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { ProductDto } from '../../types';
 import { Plus } from 'lucide-react';
+import { useMenuLook } from './MenuThemeProvider';
+import { MenuPrice, MenuTags } from './MenuPrimitives';
 
 interface ProductListItemProps {
     product: ProductDto;
     onClick: () => void;
+    /** Posizione nella categoria (1-based) — usata dai template con piatti numerati. */
+    index?: number;
 }
 
-const TAG_STYLES: Record<number, { bg: string; color: string; label: string }> = {
-    1: { bg: 'rgba(34,197,94,0.15)',  color: '#4ade80', label: '🌿 Veg' },
-    2: { bg: 'rgba(96,165,250,0.15)', color: '#60a5fa', label: 'Senza Glutine' },
-    3: { bg: 'rgba(239,68,68,0.15)',  color: '#f87171', label: '🌶 Piccante' },
-    4: { bg: 'rgba(201,168,76,0.15)', color: '#c9a84c', label: '⭐ Classico' },
-};
+/**
+ * Riga prodotto del menu pubblico. Tre impaginazioni, scelte dal template:
+ *  - 'menu':     riga da menu stampato (nome · puntini · prezzo, descrizione sotto)
+ *  - 'centered': blocco centrato, molto spazio (fine dining)
+ *  - 'cards':    scheda con foto in evidenza (caffè, street food)
+ */
+const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, index }) => {
+    const { look, showImages } = useMenuLook();
 
-const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick }) => {
-    const imageUrl = product.image
+    const imageUrl = showImages && product.image
         ? `${process.env.REACT_APP_BUCKET_URL}${product.image}`
         : null;
 
-    const displayPrice =
-        product.options && product.options.length > 0 ? product.options[0].price : 0;
-    const hasMultipleOptions = product.options && product.options.length > 1;
+    const price = product.options && product.options.length > 0 ? product.options[0].price : 0;
+    const from = !!product.options && product.options.length > 1;
+    const number = look.productNumbers && index ? String(index).padStart(2, '0') : null;
+    const ariaLabel = `${product.name}, ${from ? 'da ' : ''}${price.toFixed(2)} euro. Apri per aggiungere`;
 
-    return (
-        <motion.div
-            onClick={onClick}
-            className="flex items-center gap-4 cursor-pointer"
-            style={{
-                padding: '16px',
-                borderRadius: 'var(--menu-radius)',
-                border: '1px solid var(--menu-border)',
-                background: 'var(--menu-card)',
-            }}
-            whileHover={{
-                y: -2,
-                boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
-            }}
-            whileTap={{ scale: 0.99, y: 0 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 26 }}
-        >
-            <div
-                className="flex-shrink-0 overflow-hidden"
-                style={{ width: 88, height: 88, borderRadius: 12 }}
+    const hideBrokenImg = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+    };
+
+    // ── Fine dining: blocco centrato ────────────────────────────────────────
+    if (look.productLayout === 'centered') {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                aria-label={ariaLabel}
+                className="menu-row w-full text-center px-4 py-6"
+                style={{ borderRadius: 'var(--menu-radius)' }}
             >
-                {imageUrl ? (
-                    <motion.img
-                        src={imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                        whileHover={{ scale: 1.08 }}
-                        transition={{ duration: 0.32, ease: 'easeOut' }}
-                        onError={e => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                    />
-                ) : (
-                    <div
-                        className="w-full h-full flex items-center justify-center font-bold"
-                        style={{
-                            background: 'var(--menu-surface)',
-                            color: 'var(--menu-muted)',
-                            fontFamily: 'var(--menu-font-display)',
-                            opacity: 0.4,
-                            fontSize: '2rem',
-                        }}
-                    >
-                        {product.name.charAt(0)}
-                    </div>
-                )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-                <h3
-                    className="font-semibold leading-snug"
-                    style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: 'clamp(1.05rem, 3vw, 1.2rem)' }}
-                >
+                <h3 className="menu-h" style={{ fontSize: 'clamp(1.35rem, 4.6vw, 1.6rem)', lineHeight: 1.15 }}>
                     {product.name}
                 </h3>
-
                 {product.description && (
                     <p
-                        className="mt-0.5 line-clamp-2"
-                        style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.78rem', lineHeight: 1.45 }}
+                        className="mt-2 mx-auto max-w-md"
+                        style={{ color: 'var(--menu-muted)', fontSize: '0.86rem', lineHeight: 1.55, letterSpacing: '0.01em' }}
                     >
                         {product.description}
                     </p>
                 )}
+                <MenuTags tags={product.tags} align="center" />
+                <div className="mt-3" style={{ letterSpacing: '0.08em' }}>
+                    <MenuPrice value={price} from={from} size="0.95rem" />
+                </div>
+            </button>
+        );
+    }
 
-                {product.tags && product.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                        {product.tags.slice(0, 3).map(tag => {
-                            const ts = TAG_STYLES[tag] || {
-                                bg: 'var(--menu-input-bg)',
-                                color: 'var(--menu-muted)',
-                                label: String(tag),
-                            };
-                            return (
-                                <span
-                                    key={tag}
-                                    style={{
-                                        fontFamily: 'var(--menu-font-body)',
-                                        fontSize: '0.65rem',
-                                        fontWeight: 600,
-                                        padding: '2px 8px',
-                                        borderRadius: 99,
-                                        background: ts.bg,
-                                        color: ts.color,
-                                        letterSpacing: '0.03em',
-                                    }}
-                                >
-                                    {ts.label}
-                                </span>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-
-            <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                <div>
-                    <span
-                        className="font-bold leading-none"
+    // ── Schede con foto ─────────────────────────────────────────────────────
+    if (look.productLayout === 'cards') {
+        const heavy = look.cardBorder === 'heavy';
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                aria-label={ariaLabel}
+                className="menu-row w-full text-left flex items-stretch overflow-hidden"
+                style={{
+                    background: 'var(--menu-card)',
+                    borderRadius: 'var(--menu-radius)',
+                    border: heavy ? '2px solid var(--menu-text)' : '1px solid var(--menu-border)',
+                    boxShadow: look.offsetShadow ? '4px 4px 0 var(--menu-text)' : 'none',
+                    minHeight: 104,
+                }}
+            >
+                {imageUrl && (
+                    <div
+                        className="flex-shrink-0 overflow-hidden"
                         style={{
-                            color: 'var(--menu-accent)',
-                            fontFamily: 'var(--menu-font-display)',
-                            fontSize: 'clamp(1.1rem, 3.5vw, 1.3rem)',
+                            width: 'clamp(96px, 28vw, 132px)',
+                            borderRight: heavy ? '2px solid var(--menu-text)' : 'none',
+                            background: 'var(--menu-surface)',
                         }}
                     >
-                        €{displayPrice.toFixed(2)}
-                    </span>
-                    {hasMultipleOptions && (
-                        <p
-                            className="text-right"
-                            style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.65rem', marginTop: 1 }}
-                        >
-                            da
+                        <img src={imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" onError={hideBrokenImg} />
+                    </div>
+                )}
+                <div className="flex-1 min-w-0 flex flex-col p-3.5">
+                    <h3 className="menu-h" style={{ fontSize: 'clamp(1.08rem, 3.6vw, 1.25rem)', lineHeight: 1.15 }}>
+                        {product.name}
+                    </h3>
+                    {product.description && (
+                        <p className="mt-1 line-clamp-2" style={{ color: 'var(--menu-muted)', fontSize: '0.82rem', lineHeight: 1.45 }}>
+                            {product.description}
                         </p>
                     )}
+                    <MenuTags tags={product.tags} />
+                    <div className="mt-auto pt-2.5 flex items-center justify-between gap-3">
+                        <MenuPrice value={price} from={from} />
+                        <span
+                            aria-hidden="true"
+                            className="flex items-center justify-center flex-shrink-0"
+                            style={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 'var(--menu-radius)',
+                                background: 'var(--menu-secondary)',
+                                color: 'var(--menu-secondary-text)',
+                            }}
+                        >
+                            <Plus className="w-4 h-4" strokeWidth={2.5} />
+                        </span>
+                    </div>
                 </div>
+            </button>
+        );
+    }
 
-                <motion.div
-                    className="flex items-center justify-center rounded-full"
-                    style={{ width: 32, height: 32 }}
-                    initial={{ background: 'var(--menu-input-bg)', color: 'var(--menu-muted)' }}
-                    whileHover={{
-                        background: 'var(--menu-accent)',
-                        color: 'var(--menu-accent-text)',
-                        scale: 1.18,
-                    }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+    // ── Riga da menu stampato ───────────────────────────────────────────────
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-label={ariaLabel}
+            className="menu-row w-full text-left flex items-start gap-3.5 py-4 px-1"
+            style={{ minHeight: 56 }}
+        >
+            {number && (
+                <span
+                    className="menu-price flex-shrink-0 pt-0.5"
+                    style={{ color: 'var(--menu-emph)', fontSize: '0.8rem', fontWeight: 600, minWidth: '1.6rem' }}
+                    aria-hidden="true"
                 >
-                    <Plus className="w-4 h-4" />
-                </motion.div>
+                    {number}
+                </span>
+            )}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-baseline">
+                    <h3
+                        className="menu-h min-w-0"
+                        style={{
+                            fontSize: 'clamp(1.08rem, 3.8vw, 1.28rem)',
+                            lineHeight: 1.2,
+                            textAlign: 'left',
+                            // le spaziature ampie dei titoli (es. Cocktail bar) sui nomi dei piatti mandano a capo
+                            ...(look.headingCase === 'uppercase' ? { letterSpacing: '0.05em' } : {}),
+                        }}
+                    >
+                        {product.name}
+                    </h3>
+                    {look.leaders ? <span className="menu-leader" aria-hidden="true" /> : <span className="flex-1 min-w-[1rem]" />}
+                    <MenuPrice value={price} from={from} />
+                </div>
+                {product.description && (
+                    <p
+                        className="mt-1"
+                        style={{
+                            color: 'var(--menu-muted)',
+                            fontSize: '0.86rem',
+                            lineHeight: 1.5,
+                            fontStyle: look.headingStyle === 'italic' ? 'italic' : 'normal',
+                            maxWidth: '36rem',
+                        }}
+                    >
+                        {product.description}
+                    </p>
+                )}
+                <MenuTags tags={product.tags} />
             </div>
-        </motion.div>
+            {imageUrl && (
+                <div
+                    className="flex-shrink-0 overflow-hidden"
+                    style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 'var(--menu-radius)',
+                        border: '1px solid var(--menu-border)',
+                        background: 'var(--menu-surface)',
+                    }}
+                >
+                    <img src={imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" onError={hideBrokenImg} />
+                </div>
+            )}
+        </button>
     );
 };
 

@@ -1,16 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getPaymentsApi, getPaymentsTodayTotalApi, refundPaymentApi } from '../../Utilities/api';
+import {
+    getCheckoutSummaryApi, getInfoCardApi, getLoyaltySettingsApi, getToCheckoutApi,
+    getPaymentsApi, getPaymentsTodayTotalApi, refundPaymentApi,
+} from '../../Utilities/api';
 import { useData } from '../../Context/DataContext';
 import { useNotification } from '../../Context/NotificationContext';
-import { PaymentDto, OptionInProduct, ProductDto } from '../../types';
+import { CardDto, LoyaltySettings, PaymentDto, OptionInProduct, ProductDto } from '../../types';
 import { Comand, Product } from '../../ComandType';
 import CustomLoading from '../../Components/CustomLoading';
 import {
     CurrencyEuroIcon, CheckCircleIcon, ClockIcon, ShoppingBagIcon,
     TableCellsIcon, HomeIcon, XMarkIcon, PlusIcon, MinusIcon,
-    MagnifyingGlassIcon, ArrowUturnLeftIcon,
+    MagnifyingGlassIcon, ArrowUturnLeftIcon, QrCodeIcon, CreditCardIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
+
+// Caricato solo quando si apre lo scanner della tessera
+const QrScanner = React.lazy(() => import('react-qr-scanner'));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,10 +66,10 @@ const comandItems = (c: Comand) =>
 const STATUS_BADGE: Record<string, string> = {
     PENDING:   'bg-yellow-100 text-yellow-700',
     PROGRESS:  'bg-blue-100   text-blue-700',
-    COMPLETED: 'bg-green-100  text-green-700',
+    COMPLETED: 'bg-amber-100  text-amber-800',
 };
 const STATUS_LABEL: Record<string, string> = {
-    PENDING: 'In attesa', PROGRESS: 'In preparazione', COMPLETED: 'Completato',
+    PENDING: 'In attesa', PROGRESS: 'In preparazione', COMPLETED: 'Servito · da incassare',
 };
 
 const KIND_ICON: Record<ComandKind, React.FC<{ className?: string }>> = {
@@ -86,13 +92,225 @@ interface ExtraItem {
     qty: number;
 }
 
+type DiscountMode = 'pct' | 'final';
+
 interface CheckoutState {
     quantities: Record<string, number>; // key: `${orderId}_${idx}`
     extras: ExtraItem[];
+    discountMode: DiscountMode;
     discountPct: number;
+    finalPrice: string;        // "Prezzo finale": quanto paga davvero il cliente (testo, accetta la virgola)
+    card: CardDto | null;      // tessera fedeltà collegata al conto
+    earn: boolean;             // accumula punti / timbro alla chiusura
+    redeemStamps: boolean;     // tessera a timbri: riscatta il premio (scala `scope` timbri)
+    pointsToUse: number;       // tessera a punti: punti da scalare
+    pointsValue: string;       // valore in € dei punti usati (sconto tessera)
 }
 
-const freshState = (): CheckoutState => ({ quantities: {}, extras: [], discountPct: 0 });
+const freshState = (): CheckoutState => ({
+    quantities: {}, extras: [], discountMode: 'pct', discountPct: 0, finalPrice: '',
+    card: null, earn: true, redeemStamps: false, pointsToUse: 0, pointsValue: '',
+});
+
+const parseEur = (v: string): number | null => {
+    if (v.trim() === '') return null;
+    const n = parseFloat(v.replace(',', '.'));
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+const checkoutSubtotal = (comand: Comand, state: CheckoutState) =>
+    comand.orders.reduce((s, order) =>
+        s + order.products.reduce((ps, p, idx) =>
+            ps + itemUnitPrice(p) * (state.quantities[`${order.id}_${idx}`] ?? p.quantity), 0), 0) +
+    state.extras.reduce((s, e) => s + e.price * e.qty, 0);
+
+/**
+ * Totale del conto. Con il "prezzo finale" il totale è quello digitato (include già ogni sconto,
+ * tessera compresa); altrimenti subtotale − sconto % − sconto tessera.
+ */
+const computeTotals = (subtotal: number, state: CheckoutState, loyalty: LoyaltySettings | null) => {
+    const pctAmt = round2(subtotal * (state.discountPct / 100));
+    // Valore dei punti: dalle impostazioni del locale se c'è, altrimenti quello digitato dall'operatore
+    const cardAmt = !state.card?.typePoints || state.pointsToUse <= 0 ? 0
+        : loyalty?.pointValue != null ? round2(state.pointsToUse * loyalty.pointValue)
+        : (parseEur(state.pointsValue) ?? 0);
+    const final = state.discountMode === 'final' ? parseEur(state.finalPrice) : null;
+    const total = state.discountMode === 'final'
+        ? (final ?? round2(subtotal))
+        : Math.max(0, round2(subtotal - pctAmt - cardAmt));
+    const card = state.card;
+    const earned = !card || !state.earn ? 0
+        : card.typePoints ? (card.priceForPoint > 0 ? Math.floor(total / card.priceForPoint + 1e-9) : 0)
+        : 1;
+    return { pctAmt, cardAmt, final, total, adjustment: round2(subtotal - total), earned };
+};
+
+// ─── Tessera fedeltà ─────────────────────────────────────────────────────────
+
+const LoyaltySection: React.FC<{
+    state: CheckoutState;
+    onChange: (s: CheckoutState) => void;
+    earned: number;
+    cardAmt: number;
+    loyalty: LoyaltySettings | null;
+}> = ({ state, onChange, earned, cardAmt, loyalty }) => {
+    const { addNotification } = useNotification();
+    const [open, setOpen] = useState(false);
+    const [code, setCode] = useState('');
+    const [scanning, setScanning] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const card = state.card;
+
+    const lookup = async (raw: string) => {
+        // Il QR della tessera contiene l'URL .../cardStatus#CODICE
+        const c = raw.split('#').pop()?.trim().toUpperCase();
+        if (!c || loading) return;
+        setScanning(false);
+        setLoading(true);
+        const res = await getInfoCardApi(c);
+        setLoading(false);
+        if (res.success && res.data?.data) {
+            onChange({ ...state, card: res.data.data, earn: true, redeemStamps: false, pointsToUse: 0, pointsValue: '' });
+            setCode('');
+        } else {
+            addNotification({ type: 'warning', message: 'Tessera non trovata' });
+        }
+    };
+
+    const unlink = () => onChange({ ...state, card: null, redeemStamps: false, pointsToUse: 0, pointsValue: '' });
+
+    if (!card && !open) {
+        return (
+            <button onClick={() => setOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-gray-200 text-sm font-semibold text-gray-500 hover:border-primary hover:text-primary transition-colors">
+                <CreditCardIcon className="w-4 h-4" />
+                Collega tessera fedeltà
+            </button>
+        );
+    }
+
+    if (!card) {
+        return (
+            <div className="border border-gray-200 rounded-xl p-3 space-y-2">
+                {scanning ? (
+                    <React.Suspense fallback={<p className="text-xs text-gray-400 text-center py-6">Avvio fotocamera…</p>}>
+                        <QrScanner
+                            onScan={(d: { text: string } | null) => { if (d) lookup(d.text); }}
+                            onError={() => {
+                                setScanning(false);
+                                addNotification({ type: 'error', message: 'Impossibile avviare la fotocamera' });
+                            }}
+                            constraints={{ video: { facingMode: 'environment' } }}
+                            style={{ width: '100%', borderRadius: '12px' }}
+                        />
+                        <button onClick={() => setScanning(false)} className="w-full text-xs text-gray-500 font-semibold py-1">
+                            Annulla scansione
+                        </button>
+                    </React.Suspense>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <input
+                            autoFocus
+                            value={code}
+                            onChange={e => setCode(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') lookup(code); }}
+                            placeholder="Codice tessera"
+                            className="flex-1 min-w-0 text-sm uppercase border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        <button onClick={() => lookup(code)} disabled={loading || !code.trim()}
+                                className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold disabled:opacity-50">
+                            {loading ? '…' : 'Cerca'}
+                        </button>
+                        <button onClick={() => setScanning(true)} title="Scansiona QR" aria-label="Scansiona QR"
+                                className="p-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">
+                            <QrCodeIcon className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => setOpen(false)} title="Chiudi" aria-label="Chiudi"
+                                className="p-1.5 text-gray-400 hover:text-gray-600">
+                            <XMarkIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    const prizeReady = !card.typePoints && card.actualValue >= card.scope;
+
+    return (
+        <div className="border border-primary/20 bg-primary/5 rounded-xl p-3 space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                    <p className="font-bold text-gray-800 truncate">
+                        <CreditCardIcon className="w-4 h-4 inline -mt-0.5 mr-1" />{card.code}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                        {card.typePoints
+                            ? `${card.actualValue} punti · 1 punto ogni ${formatEur(card.priceForPoint)}`
+                            : `${card.actualValue} / ${card.scope} timbri`}
+                    </p>
+                </div>
+                <button onClick={unlink} title="Scollega tessera" aria-label="Scollega tessera"
+                        className="p-1.5 text-gray-400 hover:text-gray-600">
+                    <XMarkIcon className="w-4 h-4" />
+                </button>
+            </div>
+
+            {prizeReady && (
+                <label className="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" className="mt-0.5" checked={state.redeemStamps}
+                           onChange={e => onChange({ ...state, redeemStamps: e.target.checked, earn: !e.target.checked })} />
+                    <span>
+                        <span className="font-semibold text-green-700">Premio disponibile: riscatta</span>
+                        <span className="block text-xs text-gray-500">
+                            {loyalty?.stampsPrize ? `Premio: ${loyalty.stampsPrize}. ` : ''}
+                            Scala {card.scope} timbri. Applica il premio con lo sconto o il prezzo finale.
+                        </span>
+                    </span>
+                </label>
+            )}
+
+            {card.typePoints && card.actualValue > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-gray-500">Usa</span>
+                    <input type="number" min={0} max={card.actualValue} value={state.pointsToUse || ''} placeholder="0"
+                           onChange={e => onChange({ ...state, pointsToUse: Math.max(0, Math.min(card.actualValue, Math.floor(Number(e.target.value) || 0))) })}
+                           className="w-16 text-sm text-center border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    {loyalty?.pointValue != null ? (
+                        <span className="text-xs text-gray-500">
+                            punti = <b className="text-gray-800">{formatEur(cardAmt)}</b> di sconto
+                            <span className="block">1 punto = {formatEur(loyalty.pointValue)}</span>
+                        </span>
+                    ) : (
+                        <>
+                            <span className="text-xs text-gray-500">punti, valore €</span>
+                            <input type="text" inputMode="decimal" value={state.pointsValue} placeholder="0,00"
+                                   disabled={state.pointsToUse <= 0}
+                                   onChange={e => onChange({ ...state, pointsValue: e.target.value.replace(/[^0-9.,]/g, '') })}
+                                   className="w-20 text-sm text-center border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-gray-50" />
+                        </>
+                    )}
+                    {state.discountMode === 'final' && state.pointsToUse > 0 && (
+                        <p className="w-full text-xs text-gray-500">Con il prezzo finale lo sconto tessera è già compreso nell'importo digitato.</p>
+                    )}
+                </div>
+            )}
+
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={state.earn} onChange={e => onChange({ ...state, earn: e.target.checked })} />
+                <span className="text-gray-700">
+                    {card.typePoints
+                        ? <>Accredita <b>{earned}</b> {earned === 1 ? 'punto' : 'punti'} alla chiusura</>
+                        : prizeReady && !state.redeemStamps
+                            ? 'Aggiungi 1 timbro (tessera già piena)'
+                            : 'Aggiungi 1 timbro alla chiusura'}
+                </span>
+            </label>
+        </div>
+    );
+};
 
 // ─── CheckoutPanel ────────────────────────────────────────────────────────────
 
@@ -106,10 +324,11 @@ interface PanelProps {
     confirming:   boolean;
     productsMap:  Map<number, ProductDto>;
     categoriesMap: Map<number, { name: string }>;
+    loyalty:      LoyaltySettings | null;
 }
 
 const CheckoutPanel: React.FC<PanelProps> = ({
-    comand, label, state, onChange, onClose, onConfirm, confirming, productsMap,
+    comand, label, state, onChange, onClose, onConfirm, confirming, productsMap, loyalty,
 }) => {
     const [addMode, setAddMode] = useState(false);
     const [search,  setSearch]  = useState('');
@@ -167,13 +386,23 @@ const CheckoutPanel: React.FC<PanelProps> = ({
         });
 
     // Totals
-    const subtotal =
-        lineItems.reduce((s, { p, qty }) => s + itemUnitPrice(p) * qty, 0) +
-        state.extras.reduce((s, e) => s + e.price * e.qty, 0);
-    const discountAmt = subtotal * (state.discountPct / 100);
-    const total = Math.max(0, subtotal - discountAmt);
+    const subtotal = checkoutSubtotal(comand, state);
+    const totals = computeTotals(subtotal, state, loyalty);
+    const { total } = totals;
+    const finalInvalid = state.discountMode === 'final' && totals.final === null;
 
     const DISCOUNT_PRESETS = [0, 5, 10, 15, 20];
+
+    // Arrotondamenti rapidi per il prezzo finale (all'euro e ai 5 € inferiori)
+    const roundSuggestions = Array.from(new Set([Math.floor(subtotal), Math.floor(subtotal / 5) * 5]))
+        .filter(v => v > 0 && v < round2(subtotal));
+
+    const setMode = (mode: DiscountMode) => onChange({
+        ...state,
+        discountMode: mode,
+        // Passando a "prezzo finale" si parte dal totale attuale, da correggere a mano
+        finalPrice: mode === 'final' && state.finalPrice === '' ? total.toFixed(2).replace('.', ',') : state.finalPrice,
+    });
 
     return (
         <div className="flex flex-col h-full max-h-[calc(100vh-6rem)]">
@@ -338,30 +567,78 @@ const CheckoutPanel: React.FC<PanelProps> = ({
             {/* Footer: discount + totals + actions */}
             <div className="border-t border-gray-100 px-5 py-4 space-y-4 shrink-0">
 
-                {/* Discount presets */}
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-gray-500 mr-1">Sconto</span>
-                    {DISCOUNT_PRESETS.map(pct => (
-                        <button
-                            key={pct}
-                            onClick={() => onChange({ ...state, discountPct: pct })}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
-                                state.discountPct === pct
-                                    ? 'bg-primary text-white'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                        >
-                            {pct}%
-                        </button>
-                    ))}
-                    <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={state.discountPct}
-                        onChange={e => onChange({ ...state, discountPct: Math.max(0, Math.min(100, Number(e.target.value))) })}
-                        className="w-16 text-sm text-center border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
+                {/* Tessera fedeltà */}
+                <LoyaltySection state={state} onChange={onChange} earned={totals.earned} cardAmt={totals.cardAmt} loyalty={loyalty} />
+
+                {comand.paid && (
+                    <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                        Pagato online: l'incasso è già registrato nei pagamenti. Chiudendo il conto non verrà contato due volte.
+                    </p>
+                )}
+
+                {/* Sconto: percentuale oppure prezzo finale */}
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500 mr-1">Sconto</span>
+                        <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                            {([['pct', 'Percentuale'], ['final', 'Prezzo finale']] as [DiscountMode, string][]).map(([m, lbl]) => (
+                                <button key={m} onClick={() => setMode(m)}
+                                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
+                                            state.discountMode === m ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                        }`}>
+                                    {lbl}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {state.discountMode === 'pct' ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {DISCOUNT_PRESETS.map(pct => (
+                                <button
+                                    key={pct}
+                                    onClick={() => onChange({ ...state, discountPct: pct })}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
+                                        state.discountPct === pct
+                                            ? 'bg-primary text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {pct}%
+                                </button>
+                            ))}
+                            <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={state.discountPct}
+                                onChange={e => onChange({ ...state, discountPct: Math.max(0, Math.min(100, Number(e.target.value))) })}
+                                className="w-16 text-sm text-center border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-gray-400">€</span>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    autoFocus
+                                    value={state.finalPrice}
+                                    onChange={e => onChange({ ...state, finalPrice: e.target.value.replace(/[^0-9.,]/g, '') })}
+                                    className={`w-28 text-base font-bold pl-6 pr-2 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 ${finalInvalid ? 'border-red-300' : 'border-gray-200'}`}
+                                    aria-label="Prezzo finale"
+                                />
+                            </div>
+                            {roundSuggestions.map(v => (
+                                <button key={v}
+                                        onClick={() => onChange({ ...state, finalPrice: v.toFixed(2).replace('.', ',') })}
+                                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                    {formatEur(v)}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Total breakdown */}
@@ -370,10 +647,28 @@ const CheckoutPanel: React.FC<PanelProps> = ({
                         <span>Subtotale</span>
                         <span>{formatEur(subtotal)}</span>
                     </div>
-                    {state.discountPct > 0 && (
-                        <div className="flex justify-between text-sm text-red-500">
-                            <span>Sconto ({state.discountPct}%)</span>
-                            <span>− {formatEur(discountAmt)}</span>
+                    {state.discountMode === 'pct' ? (
+                        <>
+                            {totals.pctAmt > 0 && (
+                                <div className="flex justify-between text-sm text-red-500">
+                                    <span>Sconto ({state.discountPct}%)</span>
+                                    <span>− {formatEur(totals.pctAmt)}</span>
+                                </div>
+                            )}
+                            {totals.cardAmt > 0 && (
+                                <div className="flex justify-between text-sm text-red-500">
+                                    <span>Sconto tessera ({state.pointsToUse} punti)</span>
+                                    <span>− {formatEur(totals.cardAmt)}</span>
+                                </div>
+                            )}
+                        </>
+                    ) : !finalInvalid && totals.adjustment !== 0 && (
+                        <div className={`flex justify-between text-sm ${totals.adjustment > 0 ? 'text-red-500' : 'text-amber-600'}`}>
+                            <span>
+                                {totals.adjustment > 0 ? 'Sconto' : 'Maggiorazione'}
+                                {subtotal > 0 && ` (${Math.abs(totals.adjustment / subtotal * 100).toLocaleString('it-IT', { maximumFractionDigits: 1 })}%)`}
+                            </span>
+                            <span>{totals.adjustment > 0 ? '−' : '+'} {formatEur(Math.abs(totals.adjustment))}</span>
                         </div>
                     )}
                     <div className="flex justify-between font-black text-lg text-gray-900 pt-1.5 border-t border-gray-200">
@@ -392,7 +687,7 @@ const CheckoutPanel: React.FC<PanelProps> = ({
                     </button>
                     <button
                         onClick={onConfirm}
-                        disabled={confirming}
+                        disabled={confirming || finalInvalid}
                         className="flex-2 grow-[2] py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                         <CheckCircleSolid className="w-5 h-5" />
@@ -429,7 +724,15 @@ const matchesPayFilter = (p: PaymentDto, f: PayFilter) =>
 const PAYMENTS_REFRESH_DEBOUNCE_MS = 1500;
 
 const CassaPage: React.FC = () => {
-    const { comands, tablesMap, productsMap, categoriesMap, changeComandStatus, orderEventTick } = useData();
+    const { comands, tablesMap, productsMap, categoriesMap, checkoutComand, orderEventTick } = useData();
+    const [loyalty, setLoyalty] = useState<LoyaltySettings | null>(null);
+    // Comande servite ma non incassate (dal server) e quelle chiuse ora (nascoste subito, senza attendere il refresh)
+    const [served, setServed] = useState<Comand[]>([]);
+    const [closedIds, setClosedIds] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        getLoyaltySettingsApi().then(r => { if (r.success && r.data?.data) setLoyalty(r.data.data); });
+    }, []);
     const { addNotification } = useNotification();
 
     const [tab,         setTab]         = useState<Tab>('checkout');
@@ -449,9 +752,17 @@ const CassaPage: React.FC = () => {
 
     // Load payment history
     const loadPayments = useCallback(async () => {
-        const [pr, tr] = await Promise.all([getPaymentsApi(), getPaymentsTodayTotalApi()]);
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const [pr, tr, cr, toc] = await Promise.all([
+            getPaymentsApi(), getPaymentsTodayTotalApi(), getCheckoutSummaryApi(today, today), getToCheckoutApi(),
+        ]);
         if (pr.success && pr.data) setPayments((pr.data as any).data ?? pr.data);
-        if (tr.success && tr.data) setTodayCents((tr.data as any).data?.amountCents ?? 0);
+        if (toc.success && Array.isArray(toc.data)) setServed(toc.data);
+        // Incassi di oggi = online + conti chiusi in cassa (importo effettivo, sconti inclusi)
+        const online = tr.success && tr.data ? ((tr.data as any).data?.amountCents ?? 0) : 0;
+        const cassaToday = cr.success && cr.data ? cr.data.reduce((s, x) => s + x.totalCents, 0) : 0;
+        setTodayCents(tr.success || cr.success ? online + cassaToday : null);
         setPayLoading(false);
     }, []);
 
@@ -500,11 +811,14 @@ const CassaPage: React.FC = () => {
         }
     };
 
-    // Active comands for checkout (exclude DELETED and orders still waiting for payment/approval, require id)
-    const activeComands = useMemo(() =>
-        comands.filter(c => c.status !== 'DELETED' && c.status !== 'AWAIT_PAYMENT'
-            && c.status !== 'AWAIT_APPROVAL' && c.id != null),
-        [comands]);
+    // Da incassare = comande attive + comande già servite (COMPLETED dalla pagina Ordini) ma non ancora chiuse in cassa.
+    // Escluse quelle eliminate, in attesa di pagamento/approvazione o senza id.
+    const activeComands = useMemo(() => {
+        const live = comands.filter(c => c.status !== 'DELETED' && c.status !== 'AWAIT_PAYMENT'
+            && c.status !== 'AWAIT_APPROVAL' && c.id != null);
+        const ids = new Set(live.map(c => c.id));
+        return [...live, ...served.filter(c => !ids.has(c.id) && !closedIds.has(c.id as string))];
+    }, [comands, served, closedIds]);
 
     const filteredComands = useMemo(() =>
         kindFilter === 'all' ? activeComands : activeComands.filter(c => comandKind(c) === kindFilter),
@@ -523,15 +837,43 @@ const CassaPage: React.FC = () => {
         setCheckout(freshState());
     };
 
+    /**
+     * Chiusura lato server: stato COMPLETED + importo incassato e sconto salvati sulla comanda
+     * (così incassi e analytics tornano con la cassa) + movimenti tessera calcolati con le regole del locale.
+     */
     const handleConfirm = async () => {
         if (!selected?.id) return;
+        const state = checkout;
+        const subtotal = checkoutSubtotal(selected, state);
+        const t = computeTotals(subtotal, state, loyalty);
+        const toCents = (n: number) => Math.round(n * 100);
         setConfirming(true);
         try {
-            changeComandStatus(selected.id, 'COMPLETED');
-            addNotification({ type: 'success', message: 'Conto chiuso correttamente' });
+            const res = await checkoutComand(selected.id, {
+                subtotalCents: toCents(subtotal),
+                totalCents: toCents(t.total),
+                discountMode: state.discountMode === 'final' ? 'FINAL' : 'PCT',
+                discountPct: state.discountMode === 'pct' ? state.discountPct : undefined,
+                cardDiscountCents: toCents(t.cardAmt),
+                cardId: state.card?.id,
+                pointsToUse: state.card?.typePoints ? state.pointsToUse : 0,
+                redeemStamps: state.redeemStamps,
+                earn: state.earn,
+            });
+            if (!res) return;
+            const closedId = selected.id;
+            setClosedIds(prev => new Set(prev).add(closedId));
+            const co = res.checkout;
+            const parts: string[] = [];
+            if (co.pointsUsed > 0) parts.push(`−${co.pointsUsed} punti`);
+            if (co.stampRedeemed) parts.push('premio riscattato');
+            if (co.pointsEarned > 0) parts.push(res.card?.typePoints ? `+${co.pointsEarned} punti` : '+1 timbro');
+            addNotification({ type: 'success', message: 'Conto chiuso: ' + formatEurCents(co.totalCents) + (parts.length ? ` · tessera: ${parts.join(', ')}` : '') });
+            if (co.loyaltyError) {
+                addNotification({ type: 'error', message: 'Conto chiuso, ma i movimenti sulla tessera non sono riusciti: verifica dalla pagina Tessere.' });
+            }
             setSelected(null);
-        } catch {
-            addNotification({ type: 'error', message: 'Errore nella chiusura del conto' });
+            scheduleRefresh(500);
         } finally {
             setConfirming(false);
         }
@@ -633,7 +975,7 @@ const CassaPage: React.FC = () => {
                                                 isSelected
                                                     ? 'border-primary ring-2 ring-primary/20 bg-white'
                                                     : isDone
-                                                    ? 'border-gray-100 bg-gray-50 opacity-70'
+                                                    ? 'border-amber-200 bg-white hover:border-amber-300'
                                                     : 'border-gray-100 bg-white hover:border-gray-200'
                                             }`}
                                         >
@@ -694,6 +1036,7 @@ const CassaPage: React.FC = () => {
                                         confirming={confirming}
                                         productsMap={productsMap}
                                         categoriesMap={categoriesMap}
+                                        loyalty={loyalty}
                                     />
                                 </div>
                             )}

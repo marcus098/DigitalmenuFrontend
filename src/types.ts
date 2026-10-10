@@ -1,5 +1,5 @@
 import React from "react";
-import {Comand} from "./ComandType";
+import {Comand, ComandCheckout, CheckoutRequest} from "./ComandType";
 import {UserProfile} from "./Dashboard/Pages/ProfilePage";
 import {Orders} from "./Dashboard/Pages/OrderPage";
 import {Table} from "./Dashboard/Pages/TablesPage";
@@ -30,6 +30,8 @@ export interface DataContextType{
     ingredientsMap: Map<number, IngredientDto>
     comands: Comand[]
     changeComandStatus: (idComand: string, status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING') => Promise<boolean>
+    /** Chiusura conto in cassa (sconto salvato + tessera). null = errore (già notificato). */
+    checkoutComand: (idComand: string, req: CheckoutRequest) => Promise<CheckoutResult | null>
     /** Accetta un ordine "su richiesta" (AWAIT_APPROVAL → PENDING) */
     approveComand: (idComand: string) => Promise<boolean>
     /** Rifiuta un ordine "su richiesta" con motivo opzionale */
@@ -94,6 +96,10 @@ export interface UpdateStyle {
     showBooking?: boolean
     showTicker?: boolean
     landingTemplate?: string
+    heroBgColor?: string
+    heroOverlayOpacity?: number
+    secondaryColor?: string
+    secondaryTextColor?: string
 }
 
 export interface Entity{
@@ -279,7 +285,14 @@ export interface StyleDto{
     showWhyUs?: boolean,
     showBooking?: boolean,
     showTicker?: boolean,
-    landingTemplate?: 'default' | 'minimal' | 'luxury' | 'strafame',
+    /** Chiave del template (vedi Client/menuTemplates.ts). Stringa libera: valori vecchi o sconosciuti ricadono su 'default'. */
+    landingTemplate?: string,
+    /** Colore di sfondo della hero (#RRGGBB). Assente = default del template. */
+    heroBgColor?: string,
+    /** Opacità overlay hero 0..1. Assente = default del template. */
+    heroOverlayOpacity?: number,
+    secondaryColor?: string,
+    secondaryTextColor?: string,
 }
 
 export interface ImageDto{
@@ -504,6 +517,26 @@ export interface LoyaltyCard {
     stampsTotal?: number;
 
     points?: number;
+}
+
+/** Regole tessere del locale; null = non impostato (vale il valore storico della tessera). */
+export interface LoyaltySettings {
+    eurosPerPoint: number | null
+    pointValue: number | null
+    stampsForPrize: number | null
+    stampsPrize: string | null
+}
+
+export interface CheckoutResult {
+    checkout: ComandCheckout
+    card: CardDto | null
+}
+
+export interface CheckoutDaySummary {
+    date: string
+    totalCents: number
+    discountCents: number
+    count: number
 }
 
 export interface CardDto{

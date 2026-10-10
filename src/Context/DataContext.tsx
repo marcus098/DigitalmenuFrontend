@@ -8,13 +8,16 @@ import {
     ListToExport,
     ProductDto,
     StyleDto,
-    TableDto, UpdateCategory, UpdateIngredient, UpdateProduct, UpdateStyle, UpdateTables, WaiterDto
+    TableDto, UpdateCategory, UpdateIngredient, UpdateProduct, UpdateStyle, UpdateTables, WaiterDto,
+    CheckoutResult,
 } from "../types";
+import {CheckoutRequest} from "../ComandType";
 import {
     addCategoryApi,
     addIngredientApi,
     addProductApi, addTableApi,
     changeComandStatusApi,
+    checkoutComandApi,
     approveComandApi,
     rejectComandApi,
     changeOrderCategoriesApi, changeOrderProductsApi, confirmWaiterApi,
@@ -551,46 +554,48 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
 
 
     const changeOrderProducts = async (ordered: IdWithOrder[], categoryId: number) => {
+        // Aggiornamento ottimistico con rollback, come per le categorie
+        const previousProducts = productsMap
+        const previousCategories = categoriesMap
+        const tmpProducts = new Map(productsMap)
+        for(const p of ordered){
+            const product = tmpProducts.get(p.id)
+            if(product) tmpProducts.set(p.id, {...product, positionProgressive: p.order})
+        }
+        setProductsMap(tmpProducts)
+
+        const tmpCategories = new Map(categoriesMap)
+        const category = tmpCategories.get(categoryId)
+        if(category) {
+            tmpCategories.set(categoryId, {...category, products: ordered.map(p => ({longValue: p.id, intValue: p.order}))})
+        }
+        setCategoriesMap(tmpCategories)
+
         const response = await changeOrderProductsApi(ordered)
         if(response?.status === 200 && response.data){
-            const tmpProducts = new Map(productsMap)
-            for(const p of ordered){
-                const product = tmpProducts.get(p.id)
-                if(product) {
-                    product.positionProgressive = p.order
-                    tmpProducts.set(p.id, product)
-                }
-            }
-            setProductsMap(tmpProducts)
-
-            const tmpCategories = new Map(categoriesMap)
-            const category = tmpCategories.get(categoryId)
-            if(category) {
-                category.products = ordered.map(p => ({longValue: p.id, intValue: p.order}))
-                tmpCategories.set(categoryId, category)
-            }
-            setCategoriesMap(tmpCategories)
             return true
         }
+        setProductsMap(previousProducts)
+        setCategoriesMap(previousCategories)
         return false
     }
 
     const changeOrderCategories = async (ordered: IdWithOrder[]) => {
-        let response = await changeOrderCategoriesApi(ordered)
+        // Aggiornamento ottimistico: la lista resta dove l'utente l'ha lasciata,
+        // senza tornare indietro in attesa del server. Rollback se la chiamata fallisce.
+        const previous = categoriesMap
+        const orderById = new Map(ordered.map(c => [c.id, c.order]))
+        const tmp = new Map(categoriesMap)
+        for(const [id, category] of categoriesMap){
+            const order = orderById.get(id)
+            if(order !== undefined) tmp.set(id, {...category, progressiveNumber: order})
+        }
+        setCategoriesMap(tmp)
+        const response = await changeOrderCategoriesApi(ordered)
         if(response?.status === 200 && response.data){
-            const tmp = new Map()
-            for(const c of ordered){
-                if(categoriesMap.has(c.id)){
-                    const category = categoriesMap.get(c.id)
-                    if(category) {
-                        category.progressiveNumber = c.order
-                        tmp.set(c.id, category)
-                    }
-                }
-            }
-            setCategoriesMap(tmp)
             return true
         }
+        setCategoriesMap(previous)
         return false
     }
 
@@ -674,6 +679,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             addNotification({message: "Errore", type: "error"})
             return false
         }
+    }
+
+    const checkoutComand = async (idComand: string, req: CheckoutRequest): Promise<CheckoutResult | null> => {
+        const response = await checkoutComandApi(idComand, req)
+        if(response.success && response.data){
+            // Come changeComandStatus: la comanda chiusa esce dalla lista attiva
+            setComandList(comands.filter(c => c.id !== idComand))
+            return response.data
+        }
+        const msg = response.status === 409 ? "Conto già chiuso o comanda non chiudibile in questo stato"
+            : response.message && !response.message.startsWith('Request failed') ? response.message
+            : "Errore nella chiusura del conto"
+        addNotification({message: msg, type: "error"})
+        return null
     }
 
     const updateProduct = async (updateProduct: UpdateProduct, file?: File) => {
@@ -770,6 +789,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         formData.append("showBooking", (updateStyle.showBooking ?? true).toString())
         formData.append("showTicker", (updateStyle.showTicker ?? true).toString())
         formData.append("landingTemplate", updateStyle.landingTemplate || "default")
+        // Campi aspetto hero/secondario: omessi se undefined (il backend li lascia invariati),
+        // stringa vuota = reset al default del template.
+        if (updateStyle.heroBgColor !== undefined) formData.append("heroBgColor", updateStyle.heroBgColor)
+        if (typeof updateStyle.heroOverlayOpacity === "number") formData.append("heroOverlayOpacity", updateStyle.heroOverlayOpacity.toString())
+        if (updateStyle.secondaryColor !== undefined) formData.append("secondaryColor", updateStyle.secondaryColor)
+        if (updateStyle.secondaryTextColor !== undefined) formData.append("secondaryTextColor", updateStyle.secondaryTextColor)
         const response = await updateStyleApi(formData)
         if(response?.status === 200 && response.data){
             setStyles(response.data.data)
@@ -1126,6 +1151,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         addCategory,
         addProduct,
         changeComandStatus,
+        checkoutComand,
         approveComand,
         rejectComand,
         addIngredient,

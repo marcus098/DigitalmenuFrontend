@@ -10,18 +10,20 @@ interface CategoryNavBarProps {
     primaryColor: string;
 }
 
+/**
+ * Barra delle sezioni del menu: voci di testo, la sezione attiva è sottolineata
+ * nel colore d'accento (come le linguette di un menu rilegato).
+ */
 const CategoryNavBar: React.FC<CategoryNavBarProps> = ({
     categories,
     activeCategoryId,
     onSelectCategory,
-    primaryColor,
 }) => {
     const navigate = useNavigate();
     const { localname } = useParams();
-    const scrollRef = useRef<HTMLDivElement>(null);
     const activeRef = useRef<HTMLButtonElement>(null);
 
-    /* scroll active pill into view on category change */
+    /* scroll active tab into view on category change */
     useEffect(() => {
         activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }, [activeCategoryId]);
@@ -29,23 +31,19 @@ const CategoryNavBar: React.FC<CategoryNavBarProps> = ({
     const visible = categories.filter(c => c.available !== false);
 
     return (
-        <div
-            className="sticky z-20 flex items-center gap-0"
-            style={{
-                top: 57,
-                background: 'color-mix(in srgb, var(--menu-bg) 92%, transparent)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                borderBottom: '1px solid var(--menu-border)',
-            }}
+        <nav
+            aria-label="Sezioni del menu"
+            className="sticky z-20 flex items-stretch menu-page"
+            style={{ top: 57, borderBottom: '1px solid var(--menu-border)' }}
         >
             <button
+                type="button"
                 onClick={() => navigate(`/${localname}`)}
-                className="flex-shrink-0 flex items-center justify-center transition-all duration-200 active:scale-90"
+                className="menu-focus flex-shrink-0 flex items-center justify-center"
                 style={{
-                    width: 56,
-                    height: 56,
-                    color: 'var(--menu-muted)',
+                    width: 52,
+                    minHeight: 50,
+                    color: 'var(--menu-text)',
                     borderRight: '1px solid var(--menu-border)',
                 }}
                 aria-label="Torna alle categorie"
@@ -53,52 +51,35 @@ const CategoryNavBar: React.FC<CategoryNavBarProps> = ({
                 <ArrowLeft className="w-5 h-5" />
             </button>
 
-            <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-                <div style={{
-                    position: 'absolute', left: 0, top: 0, bottom: 0, width: 24, zIndex: 1,
-                    background: 'linear-gradient(to right, var(--menu-bg), transparent)',
-                    pointerEvents: 'none',
-                }} />
-                <div style={{
-                    position: 'absolute', right: 0, top: 0, bottom: 0, width: 24, zIndex: 1,
-                    background: 'linear-gradient(to left, var(--menu-bg), transparent)',
-                    pointerEvents: 'none',
-                }} />
-                <div
-                    ref={scrollRef}
-                    className="menu-nav-scroll flex items-center gap-2"
-                    style={{ overflowX: 'auto', padding: '10px 16px' }}
-                >
-                    {visible.map(cat => {
-                        const isActive = cat.id === activeCategoryId;
-                        return (
-                            <button
-                                key={cat.id}
-                                ref={isActive ? activeRef : null}
-                                onClick={() => onSelectCategory(cat.id)}
-                                className="whitespace-nowrap flex-shrink-0 rounded-full transition-all duration-200 active:scale-95"
-                                style={{
-                                    padding: '8px 20px',
-                                    fontFamily: 'var(--menu-font-body)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: isActive ? 700 : 500,
-                                    letterSpacing: '0.02em',
-                                    background: isActive ? primaryColor : 'transparent',
-                                    color: isActive ? 'var(--menu-accent-text)' : 'var(--menu-muted)',
-                                    border: isActive
-                                        ? `1px solid ${primaryColor}`
-                                        : '1px solid var(--menu-border)',
-                                    boxShadow: isActive ? `0 0 18px ${primaryColor}55` : 'none',
-                                    minHeight: 36,
-                                }}
-                            >
-                                {cat.name}
-                            </button>
-                        );
-                    })}
-                </div>
+            <div className="menu-nav-scroll flex items-stretch flex-1 min-w-0" style={{ overflowX: 'auto', padding: '0 8px' }}>
+                {visible.map(cat => {
+                    const isActive = cat.id === activeCategoryId;
+                    return (
+                        <button
+                            type="button"
+                            key={cat.id}
+                            ref={isActive ? activeRef : null}
+                            onClick={() => onSelectCategory(cat.id)}
+                            aria-current={isActive ? 'page' : undefined}
+                            className="menu-focus whitespace-nowrap flex-shrink-0 transition-colors"
+                            style={{
+                                padding: '0 12px',
+                                minHeight: 50,
+                                fontFamily: 'var(--menu-font-body)',
+                                fontSize: '0.86rem',
+                                fontWeight: isActive ? 700 : 500,
+                                letterSpacing: '0.02em',
+                                color: isActive ? 'var(--menu-text)' : 'var(--menu-muted)',
+                                borderBottom: `3px solid ${isActive ? 'var(--menu-accent)' : 'transparent'}`,
+                                borderTop: '3px solid transparent',
+                            }}
+                        >
+                            {cat.name}
+                        </button>
+                    );
+                })}
             </div>
-        </div>
+        </nav>
     );
 };
 

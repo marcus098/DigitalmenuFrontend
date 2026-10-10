@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, ShoppingCart } from 'lucide-react';
+import { ShieldAlert, ShoppingBag } from 'lucide-react';
 
 interface ClientStickyHeaderProps {
     restaurantName: string;
@@ -10,51 +10,54 @@ interface ClientStickyHeaderProps {
     primaryColor?: string;
 }
 
+/**
+ * Barra superiore del menu pubblico: nome del locale nel font dei titoli del
+ * template, filtro allergeni e carrello. Fondo pieno con un filetto sotto,
+ * come l'intestazione di una pagina di menu.
+ */
 const ClientStickyHeader: React.FC<ClientStickyHeaderProps> = ({
     restaurantName,
     onAllergenClick,
     onCartClick,
     cartItemCount = 0,
     allergenFilterCount = 0,
-    primaryColor = '#f97316',
+    primaryColor,
 }) => {
     return (
         <header
-            className="sticky top-0 z-30"
-            style={{
-                background: 'color-mix(in srgb, var(--menu-bg) 88%, transparent)',
-                backdropFilter: 'blur(24px)',
-                WebkitBackdropFilter: 'blur(24px)',
-                borderBottom: '1px solid var(--menu-border)',
-            }}
+            className="sticky top-0 z-30 menu-page"
+            style={{ borderBottom: '1px solid var(--menu-rule)', height: 57 }}
         >
-            <div className="max-w-4xl mx-auto px-5 py-3.5 flex justify-between items-center">
+            <div className="max-w-4xl mx-auto h-full px-4 flex justify-between items-center gap-3">
                 <span
-                    className="font-semibold tracking-wide leading-none truncate max-w-[55%]"
-                    style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: 'clamp(1.1rem, 4vw, 1.35rem)' }}
+                    className="menu-h truncate min-w-0"
+                    style={{ fontSize: 'clamp(1.1rem, 4.4vw, 1.4rem)', lineHeight: 1.2 }}
                 >
                     {restaurantName}
                 </span>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                     <button
+                        type="button"
                         onClick={onAllergenClick}
-                        className="relative flex items-center gap-1.5 rounded-full transition-all duration-200 active:scale-95"
+                        aria-label="Filtra per allergeni"
+                        className="menu-focus relative flex items-center gap-1.5 transition-colors active:opacity-80"
                         style={{
-                            padding: '8px 14px',
-                            background: allergenFilterCount > 0 ? 'rgba(239,68,68,0.15)' : 'var(--menu-input-bg)',
-                            color: allergenFilterCount > 0 ? '#fca5a5' : 'var(--menu-muted)',
+                            height: 40,
+                            padding: '0 12px',
+                            borderRadius: 'var(--menu-radius)',
+                            border: '1px solid var(--menu-rule)',
+                            background: allergenFilterCount > 0 ? 'color-mix(in srgb, #dc2626 14%, transparent)' : 'transparent',
+                            color: 'var(--menu-text)',
                             fontFamily: 'var(--menu-font-body)',
                         }}
                     >
-                        <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-                        <span className="hidden md:inline text-xs font-medium tracking-wide">
-                            Allergeni
-                        </span>
+                        <ShieldAlert className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                        <span className="hidden sm:inline text-xs font-semibold tracking-wide">Allergeni</span>
                         {allergenFilterCount > 0 && (
                             <span
-                                className="absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold text-white rounded-full flex items-center justify-center"
-                                style={{ background: '#ef4444' }}
+                                className="absolute -top-1.5 -right-1.5 w-4 h-4 text-[10px] font-bold text-white rounded-full flex items-center justify-center"
+                                style={{ background: '#dc2626' }}
                             >
                                 {allergenFilterCount}
                             </span>
@@ -62,24 +65,23 @@ const ClientStickyHeader: React.FC<ClientStickyHeaderProps> = ({
                     </button>
 
                     <button
+                        type="button"
                         onClick={onCartClick}
-                        className="relative flex items-center gap-1.5 rounded-full transition-all duration-200 active:scale-95"
+                        aria-label={cartItemCount > 0 ? `Ordine, ${cartItemCount} articoli` : 'Ordine'}
+                        className="menu-focus relative flex items-center gap-1.5 transition-opacity active:opacity-80"
                         style={{
-                            padding: '8px 16px',
+                            height: 40,
+                            padding: '0 14px',
+                            borderRadius: 'var(--menu-radius)',
                             background: primaryColor || 'var(--menu-accent)',
                             color: 'var(--menu-accent-text)',
                             fontFamily: 'var(--menu-font-body)',
                         }}
                     >
-                        <ShoppingCart className="w-4 h-4 flex-shrink-0" />
-                        <span className="hidden md:inline text-xs font-semibold tracking-wide">
-                            Carrello
-                        </span>
+                        <ShoppingBag className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                        <span className="hidden sm:inline text-xs font-semibold tracking-wide">Ordine</span>
                         {cartItemCount > 0 && (
-                            <span
-                                className="ml-0.5 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0"
-                                style={{ background: 'rgba(255,255,255,0.25)', color: 'var(--menu-accent-text)' }}
-                            >
+                            <span className="menu-price text-sm font-bold" style={{ color: 'var(--menu-accent-text)' }}>
                                 {cartItemCount}
                             </span>
                         )}

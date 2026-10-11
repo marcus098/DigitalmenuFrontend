@@ -12,22 +12,69 @@ export const resolveImageUrl = (path: string | undefined | null, fallback = ""):
     return path;
 };
 
+/**
+ * I 14 allergeni del Reg. UE 1169/2011 (Allegato II), con i nomi ufficiali italiani.
+ * Gli id seguono l'ordine dell'Allegato II e coincidono con quelli salvati dal backend
+ * e con allergensMap (DataContext): 1 glutine, 2 crostacei, 3 uova, 4 pesce, 5 arachidi,
+ * 6 soia, 7 latte, 8 frutta a guscio, 9 sedano, 10 senape, 11 sesamo, 12 solfiti, 13 lupini, 14 molluschi.
+ * `short` è l'etichetta breve per i marcatori compatti del menu.
+ */
 export const allergens = [
-    { id: 1, name: 'Glutine', icon: '/icons/glutine.png' },
-    { id: 2, name: 'Latte', icon: '/icons/latte.png' },
-    { id: 3, name: 'Crostacei', icon: '/icons/crostacei.png' },
-    { id: 4, name: 'Pesce', icon: '/icons/pesce.png' },
-    { id: 5, name: 'Arachidi', icon: '/icons/arachidi.png' },
-    { id: 6, name: 'Soia', icon: '/icons/soia.png' },
-    { id: 7, name: 'Fruttia a guscio', icon: '/icons/frutta.png' },
-    { id: 8, name: 'Sedano', icon: '/icons/sedano.png' },
-    { id: 9, name: 'Senape', icon: '/icons/senape.png' },
-    { id: 10, name: 'Semi di sesamo', icon: '/icons/sesamo.png' },
-    { id: 11, name: 'Anidride solforosa', icon: '/icons/anidride.png' },
-    { id: 12, name: 'Lupino', icon: '/icons/lupino.png' },
-    { id: 13, name: 'Molluschi', icon: '/icons/molluschi.png' },
-    { id: 14, name: 'Uova', icon: '/icons/uova.png' },
+    { id: 1, name: 'Cereali contenenti glutine', short: 'Glutine', icon: '/icons/glutine.png' },
+    { id: 2, name: 'Crostacei', short: 'Crostacei', icon: '/icons/crostacei.png' },
+    { id: 3, name: 'Uova', short: 'Uova', icon: '/icons/uova.png' },
+    { id: 4, name: 'Pesce', short: 'Pesce', icon: '/icons/pesce.png' },
+    { id: 5, name: 'Arachidi', short: 'Arachidi', icon: '/icons/arachidi.png' },
+    { id: 6, name: 'Soia', short: 'Soia', icon: '/icons/soia.png' },
+    { id: 7, name: 'Latte', short: 'Latte', icon: '/icons/latte.png' },
+    { id: 8, name: 'Frutta a guscio', short: 'Frutta a guscio', icon: '/icons/frutta.png' },
+    { id: 9, name: 'Sedano', short: 'Sedano', icon: '/icons/sedano.png' },
+    { id: 10, name: 'Senape', short: 'Senape', icon: '/icons/senape.png' },
+    { id: 11, name: 'Semi di sesamo', short: 'Sesamo', icon: '/icons/sesamo.png' },
+    { id: 12, name: 'Anidride solforosa e solfiti', short: 'Solfiti', icon: '/icons/anidride.png' },
+    { id: 13, name: 'Lupini', short: 'Lupini', icon: '/icons/lupino.png' },
+    { id: 14, name: 'Molluschi', short: 'Molluschi', icon: '/icons/molluschi.png' },
 ];
+
+export type AllergenInfo = typeof allergens[number];
+
+export const allergenById: Map<number, AllergenInfo> = new Map(allergens.map(a => [a.id, a]));
+
+/** Tiene solo id allergene validi (1..14), senza duplicati e ordinati. Scarta anche gli id negativi legacy. */
+export const normalizeAllergenIds = (ids?: number[] | null): number[] =>
+    Array.from(new Set((ids ?? []).map(Number).filter(id => Number.isInteger(id) && id >= 1 && id <= 14)))
+        .sort((a, b) => a - b);
+
+export interface ProductAllergenSummary {
+    /** Dichiarati direttamente sul prodotto */
+    declared: number[]
+    /** Derivati dagli ingredienti del prodotto */
+    fromIngredients: number[]
+    /** Effettivi: prodotto ∪ ingredienti */
+    effective: number[]
+    /** "Può contenere tracce di", esclusi quelli già contenuti */
+    traces: number[]
+    /** Almeno un ingrediente è surgelato/congelato all'origine */
+    frozen: boolean
+}
+
+/**
+ * Allergeni di un prodotto secondo il Reg. UE 1169/2011:
+ * effettivi = allergeni dichiarati sul prodotto ∪ allergeni dei suoi ingredienti; tracce a parte.
+ */
+export const getProductAllergens = (
+    product: { allergens?: number[]; traces?: number[]; ingredients?: number[] } | null | undefined,
+    ingredientsMap: Map<number, { allergens?: number[]; frozen?: boolean }>
+): ProductAllergenSummary => {
+    if (!product) return { declared: [], fromIngredients: [], effective: [], traces: [], frozen: false };
+    const ingredients = (product.ingredients ?? []).map(id => ingredientsMap.get(Number(id))).filter(Boolean) as { allergens?: number[]; frozen?: boolean }[];
+    const declared = normalizeAllergenIds(product.allergens);
+    const fromIngredients = normalizeAllergenIds(ingredients.flatMap(i => i.allergens ?? []));
+    const effective = normalizeAllergenIds([...declared, ...fromIngredients]);
+    const traces = normalizeAllergenIds(product.traces).filter(id => !effective.includes(id));
+    const frozen = ingredients.some(i => !!i.frozen);
+    return { declared, fromIngredients, effective, traces, frozen };
+};
 
 export const setCookie = (name: string, value: any, days: number): void => {
     let expires = "";

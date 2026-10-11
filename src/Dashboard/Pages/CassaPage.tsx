@@ -101,8 +101,8 @@ interface CheckoutState {
     discountPct: number;
     finalPrice: string;        // "Prezzo finale": quanto paga davvero il cliente (testo, accetta la virgola)
     card: CardDto | null;      // tessera fedeltà collegata al conto
-    earn: boolean;             // accumula punti / timbro alla chiusura
-    redeemStamps: boolean;     // tessera a timbri: riscatta il premio (scala `scope` timbri)
+    earn: boolean;             // accumula punti / conta la visita alla chiusura
+    redeemStamps: boolean;     // tessera a visite: riscatta il premio (scala `scope` visite)
     pointsToUse: number;       // tessera a punti: punti da scalare
     pointsValue: string;       // valore in € dei punti usati (sconto tessera)
 }
@@ -141,9 +141,11 @@ const computeTotals = (subtotal: number, state: CheckoutState, loyalty: LoyaltyS
         ? (final ?? round2(subtotal))
         : Math.max(0, round2(subtotal - pctAmt - cardAmt));
     const card = state.card;
+    // Visite: anteprima con la spesa minima del locale (il controllo "una al giorno" lo fa il server)
+    const minSpend = loyalty?.minSpendForVisit ?? 0;
     const earned = !card || !state.earn ? 0
         : card.typePoints ? (card.priceForPoint > 0 ? Math.floor(total / card.priceForPoint + 1e-9) : 0)
-        : 1;
+        : total + 1e-9 >= minSpend ? 1 : 0;
     return { pctAmt, cardAmt, final, total, adjustment: round2(subtotal - total), earned };
 };
 
@@ -249,7 +251,7 @@ const LoyaltySection: React.FC<{
                     <p className="text-xs text-gray-500">
                         {card.typePoints
                             ? `${card.actualValue} punti · 1 punto ogni ${formatEur(card.priceForPoint)}`
-                            : `${card.actualValue} / ${card.scope} timbri`}
+                            : `${card.actualValue} / ${card.scope} visite`}
                     </p>
                 </div>
                 <button onClick={unlink} title="Scollega tessera" aria-label="Scollega tessera"
@@ -266,7 +268,7 @@ const LoyaltySection: React.FC<{
                         <span className="font-semibold text-green-700">Premio disponibile: riscatta</span>
                         <span className="block text-xs text-gray-500">
                             {loyalty?.stampsPrize ? `Premio: ${loyalty.stampsPrize}. ` : ''}
-                            Scala {card.scope} timbri. Applica il premio con lo sconto o il prezzo finale.
+                            Azzera le {card.scope} visite. Applica il premio con lo sconto o il prezzo finale.
                         </span>
                     </span>
                 </label>
@@ -304,8 +306,10 @@ const LoyaltySection: React.FC<{
                     {card.typePoints
                         ? <>Accredita <b>{earned}</b> {earned === 1 ? 'punto' : 'punti'} alla chiusura</>
                         : prizeReady && !state.redeemStamps
-                            ? 'Aggiungi 1 timbro (tessera già piena)'
-                            : 'Aggiungi 1 timbro alla chiusura'}
+                            ? 'Conta la visita (tessera già completa: riscatta il premio)'
+                            : earned === 0 && loyalty?.minSpendForVisit
+                                ? `Conta la visita (spesa minima ${formatEur(loyalty.minSpendForVisit)}: non raggiunta)`
+                                : 'Conta 1 visita alla chiusura'}
                 </span>
             </label>
         </div>
@@ -867,7 +871,8 @@ const CassaPage: React.FC = () => {
             const parts: string[] = [];
             if (co.pointsUsed > 0) parts.push(`−${co.pointsUsed} punti`);
             if (co.stampRedeemed) parts.push('premio riscattato');
-            if (co.pointsEarned > 0) parts.push(res.card?.typePoints ? `+${co.pointsEarned} punti` : '+1 timbro');
+            if (co.pointsEarned > 0) parts.push(res.card?.typePoints ? `+${co.pointsEarned} punti` : '+1 visita');
+            if (co.loyaltyNote) parts.push(co.loyaltyNote.charAt(0).toLowerCase() + co.loyaltyNote.slice(1));
             addNotification({ type: 'success', message: 'Conto chiuso: ' + formatEurCents(co.totalCents) + (parts.length ? ` · tessera: ${parts.join(', ')}` : '') });
             if (co.loyaltyError) {
                 addNotification({ type: 'error', message: 'Conto chiuso, ma i movimenti sulla tessera non sono riusciti: verifica dalla pagina Tessere.' });

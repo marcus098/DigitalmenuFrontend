@@ -4,9 +4,9 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import {IngredientDto, IS_ADMIN} from "../types";
 import { useHistory } from "../Context/HistoryContext";
-import { useData } from "../Context/DataContext";
 import ToggleSwitch from "./ToggleSwitch";
 import PillToggle from "./Dashboard/PillToggle";
+import { allergenById } from "../Utilities/Utilities";
 import {useLoginContext} from "../Context/LoginContext"; // Importiamo il nuovo componente
 
 interface IngredientCardProps {
@@ -22,7 +22,6 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
                                                        }) => {
     const { localname } = useParams();
     const { navigateWithHistory } = useHistory();
-    const { allergensMap } = useData();
     const { checkVariable } = useLoginContext()
 
     return (
@@ -70,7 +69,7 @@ const IngredientCard: React.FC<IngredientCardProps> = ({
                             {ingredient.allergens.map((allergenId) => (
                                 <span key={allergenId}
                                       className="px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
-                                    {allergensMap.get(allergenId)?.name || "N/D"}
+                                    {allergenById.get(allergenId)?.name || "N/D"}
                                 </span>
                             ))}
                         </div>

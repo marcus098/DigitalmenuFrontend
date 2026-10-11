@@ -14,6 +14,8 @@ import ProductCustomizationDrawer from '../../Components/ProductCustomizationDra
 import useCartCount from '../../Utilities/useCartCount';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
 import { MenuRule } from '../../Components/Client/MenuPrimitives';
+import { MenuAllergenFooter } from '../../Components/Client/MenuAllergens';
+import { getProductAllergens } from '../../Utilities/Utilities';
 
 const ClientProductsPage: React.FC = () => {
     const [selectedDish, setSelectedDish] = useState<ProductDto | null>(null);
@@ -36,11 +38,13 @@ const ClientProductsPage: React.FC = () => {
         .filter(p => p.idCategory === currentCategoryId)
         .filter(p => {
             if (selectedAllergens.length === 0) return true;
-            const productAllergenIds = p.ingredients.flatMap(
-                ingId => ingredientsMap.get(ingId)?.allergens ?? []
-            );
-            return !selectedAllergens.some(a => productAllergenIds.includes(a));
+            // Allergeni effettivi = dichiarati sul prodotto ∪ ingredienti. Le sole tracce non
+            // nascondono il piatto: la riga mostra un avviso (vedi MenuAllergenMarkers)
+            const { effective } = getProductAllergens(p, ingredientsMap);
+            return !selectedAllergens.some(a => effective.includes(a));
         });
+
+    const hasFrozenProducts = visibleProducts.some(p => getProductAllergens(p, ingredientsMap).frozen);
 
     if (loading) return <CustomLoading />;
 
@@ -125,6 +129,12 @@ const ClientProductsPage: React.FC = () => {
                             ))}
                         </div>
                     )}
+
+                    <MenuAllergenFooter
+                        showFrozenLegend={hasFrozenProducts}
+                        align={centered ? 'center' : 'left'}
+                        className="mt-10 space-y-1"
+                    />
                 </main>
             </div>
 

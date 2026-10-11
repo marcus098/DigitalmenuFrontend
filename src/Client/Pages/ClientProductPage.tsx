@@ -9,7 +9,9 @@ import AllergenModal from '../../Components/Client/AllergenModal';
 import ProductCustomizationDrawer from '../../Components/ProductCustomizationDrawer';
 import ShimmerButton from '../../Components/ui/ShimmerButton';
 import useCartCount from '../../Utilities/useCartCount';
-import { ArrowLeft, ShieldAlert, ChefHat } from 'lucide-react';
+import { ArrowLeft, ChefHat } from 'lucide-react';
+import { FrozenMark, MenuAllergenDetails, MenuAllergenFooter } from '../../Components/Client/MenuAllergens';
+import { getProductAllergens } from '../../Utilities/Utilities';
 
 const pageVariants = {
     hidden: { opacity: 0 },
@@ -35,7 +37,7 @@ const ClientProductPage: React.FC = () => {
 
     const { idProduct, localname } = useParams();
     const navigate = useNavigate();
-    const { productsMap, ingredientsMap, allergensMap, loading, setSelectedAllergens, styles } =
+    const { productsMap, ingredientsMap, loading, setSelectedAllergens, styles } =
         useData();
     const cartCount = useCartCount();
 
@@ -69,11 +71,8 @@ const ClientProductPage: React.FC = () => {
         );
     }
 
-    const dishAllergens = Array.from(
-        new Set(dish.ingredients.flatMap(ingId => ingredientsMap.get(ingId)?.allergens || []))
-    )
-        .map(allergenId => allergensMap.get(allergenId)?.name)
-        .filter(Boolean) as string[];
+    // Surgelati: asterisco sul nome e sugli ingredienti, con legenda in fondo
+    const { frozen } = getProductAllergens(dish, ingredientsMap);
 
     const imageUrl = dish.image
         ? `${process.env.REACT_APP_BUCKET_URL}${dish.image}`
@@ -155,7 +154,7 @@ const ClientProductPage: React.FC = () => {
                                 fontSize: 'clamp(1.8rem, 6vw, 2.8rem)',
                             }}
                         >
-                            {dish.name}
+                            {dish.name}{frozen && <FrozenMark />}
                         </motion.h1>
 
                         {dish.description && (
@@ -180,43 +179,18 @@ const ClientProductPage: React.FC = () => {
                                     style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '0.85rem' }}
                                 >
                                     {dish.ingredients
-                                        .map(id => ingredientsMap.get(id)?.name)
+                                        .map(id => ingredientsMap.get(id))
                                         .filter(Boolean)
+                                        .map(ing => ing!.name + (ing!.frozen ? '*' : ''))
                                         .join(', ')}
                                 </p>
                             </motion.div>
                         )}
 
-                        {/* Allergens */}
-                        {dishAllergens.length > 0 && (
-                            <motion.div
-                                variants={slideUp}
-                                className="mt-4 flex items-start gap-3 p-3 rounded-xl"
-                                style={{
-                                    background: 'rgba(239,68,68,0.08)',
-                                    border: '1px solid rgba(239,68,68,0.2)',
-                                }}
-                            >
-                                <ShieldAlert
-                                    className="w-5 h-5 flex-shrink-0 mt-0.5"
-                                    style={{ color: '#f87171' }}
-                                />
-                                <div>
-                                    <p
-                                        className="font-nunito text-sm font-bold"
-                                        style={{ color: '#fca5a5' }}
-                                    >
-                                        Allergeni presenti
-                                    </p>
-                                    <p
-                                        className="font-nunito text-sm mt-0.5"
-                                        style={{ color: '#f87171' }}
-                                    >
-                                        {dishAllergens.join(', ')}
-                                    </p>
-                                </div>
-                            </motion.div>
-                        )}
+                        {/* Allergeni (prodotto ∪ ingredienti) e tracce */}
+                        <motion.div variants={slideUp}>
+                            <MenuAllergenDetails product={dish} className="mt-5" />
+                        </motion.div>
 
                         <motion.div
                             variants={slideUp}
@@ -269,6 +243,8 @@ const ClientProductPage: React.FC = () => {
                                 Aggiungi al carrello
                             </ShimmerButton>
                         </motion.div>
+
+                        <MenuAllergenFooter showFrozenLegend={frozen} className="mt-10 space-y-1" />
                     </div>
                 </motion.main>
             </div>

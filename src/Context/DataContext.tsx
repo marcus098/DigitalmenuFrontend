@@ -46,23 +46,10 @@ import {Comand} from "../ComandType";
 import {useNotification} from "./NotificationContext";
 import {OrderItem, Orders} from "../Dashboard/Pages/OrderPage";
 import {LoginContext} from "./LoginContext";
+import {getMenuLanguagesApi, getMenuTranslationApi, MenuLanguage, PublicMenuTranslation} from "../Utilities/translationApi";
 
-const allergensMap = new Map([
-    [1, { id: 1, name: "glutine" }],
-    [2, { id: 2, name: "crostacei" }],
-    [3, { id: 3, name: "uova" }],
-    [4, { id: 4, name: "pesce" }],
-    [5, { id: 5, name: "arachidi" }],
-    [6, { id: 6, name: "soia" }],
-    [7, { id: 7, name: "latte" }],
-    [8, { id: 8, name: "frutta a guscio" }],
-    [9, { id: 9, name: "sedano" }],
-    [10, { id: 10, name: "senape" }],
-    [11, { id: 11, name: "sesamo" }],
-    [12, { id: 12, name: "anidride solforosa" }],
-    [13, { id: 13, name: "lupini" }],
-    [14, { id: 14, name: "molluschi" }]
-]);
+// Lista canonica dei 14 allergeni (Reg. UE 1169/2011): stessi id salvati nel database
+const allergensMap = new Map(allergens.map(a => [a.id, { id: a.id, name: a.name }]));
 
 const tagsMap = new Map([
     [1, { id: 1, name: "Vegetariano" }],
@@ -130,6 +117,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     const [tablesMap, setTablesMap] = useState<Map<number, TableDto>>(new Map())
 
     const { localname } = useParams()
+
+    // ── Menu in più lingue (solo menu cliente) ─────────────────────────────
+    // Le traduzioni sono solo per la visualizzazione: gli ordini usano gli id e il server
+    // rimette i nomi italiani, quindi cucina e cassa restano in italiano.
+    const translatable = !dashboard && !waiters && !!localname
+    const langStorageKey = `menuLang:${localname ?? ''}`
+    const [menuLanguages, setMenuLanguages] = useState<MenuLanguage[]>([])
+    const [menuLang, setMenuLangState] = useState<string>('it')
+    const [menuTexts, setMenuTexts] = useState<PublicMenuTranslation | null>(null)
+
+    const setMenuLang = (lang: string) => {
+        setMenuLangState(lang)
+        try { localStorage.setItem(langStorageKey, lang) } catch { /* storage non disponibile */ }
+    }
+
+    useEffect(() => {
+        if (!translatable || !localname) return
+        let cancelled = false
+        getMenuLanguagesApi(localname).then(res => {
+            const langs = res.success && res.data?.data ? res.data.data : []
+            if (cancelled || langs.length === 0) return
+            setMenuLanguages(langs)
+            // Lingua scelta in precedenza, altrimenti quella del telefono se il locale la offre
+            let saved: string | null = null
+            try { saved = localStorage.getItem(langStorageKey) } catch { /* ignore */ }
+            const device = (navigator.language || '').slice(0, 2).toLowerCase()
+            const pick = [saved, device].find(l => l && (l === 'it' || langs.some(x => x.code === l)))
+            if (pick) setMenuLangState(pick)
+        })
+        return () => { cancelled = true }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [translatable, localname])
+
+    useEffect(() => {
+        if (!translatable || !localname || menuLang === 'it') { setMenuTexts(null); return }
+        let cancelled = false
+        getMenuTranslationApi(localname, menuLang).then(res => {
+            if (cancelled) return
+            if (res.success && res.data?.data) setMenuTexts(res.data.data)
+            else { setMenuTexts(null); setMenuLangState('it') }
+        })
+        return () => { cancelled = true }
+    }, [translatable, localname, menuLang])
     const { addNotification } = useNotification()
 
     const [loading, setLoading] = useState(true);
@@ -514,6 +544,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         addProduct.allergens.forEach(element => {
             formData.append("allergens", element.toString());
         });
+        // "0" = nessuna traccia: senza il parametro il server mantiene quelle salvate
+        const addTraces = addProduct.traces ?? []
+        if (addTraces.length === 0) formData.append("traces", "0")
+        addTraces.forEach(t => formData.append("traces", t.toString()))
 //
         addProduct.tags.forEach(element => {
             formData.append("tags", element.toString());
@@ -705,6 +739,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         updateProduct.allergens.forEach(element => {
             formData.append("allergens", element.toString());
         });
+        const updTraces = updateProduct.traces ?? []
+        if (updTraces.length === 0) formData.append("traces", "0")
+        updTraces.forEach(t => formData.append("traces", t.toString()))
         updateProduct.tags.forEach(element => {
             formData.append("tags", element.toString());
         });
@@ -1125,11 +1162,48 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     }
 
 
+    // Mappe con nomi e descrizioni nella lingua scelta (i testi non tradotti restano in italiano)
+    const shownCategories = useMemo(() => {
+        const t = menuTexts?.texts.CATEGORY
+        if (!t) return categoriesMap
+        const out = new Map(categoriesMap)
+        out.forEach((c, id) => {
+            const tr = t[String(id)]
+            if (tr) out.set(id, {...c, name: tr.NAME ?? c.name, description: tr.DESCRIPTION ?? c.description})
+        })
+        return out
+    }, [categoriesMap, menuTexts])
+
+    const shownProducts = useMemo(() => {
+        const t = menuTexts?.texts.PRODUCT
+        if (!t) return productsMap
+        const out = new Map(productsMap)
+        out.forEach((p, id) => {
+            const tr = t[String(id)]
+            if (tr) out.set(id, {...p, name: tr.NAME ?? p.name, description: tr.DESCRIPTION ?? p.description})
+        })
+        return out
+    }, [productsMap, menuTexts])
+
+    const shownIngredients = useMemo(() => {
+        const t = menuTexts?.texts.INGREDIENT
+        if (!t) return ingredientsMap
+        const out = new Map(ingredientsMap)
+        out.forEach((i, id) => {
+            const tr = t[String(id)]
+            if (tr?.NAME) out.set(id, {...i, name: tr.NAME})
+        })
+        return out
+    }, [ingredientsMap, menuTexts])
+
     const contextValue = useMemo(() => ({
-        categoriesMap,
+        categoriesMap: shownCategories,
         imagesList,
-        ingredientsMap,
-        productsMap,
+        ingredientsMap: shownIngredients,
+        productsMap: shownProducts,
+        menuLang,
+        menuLanguages,
+        setMenuLang,
         tablesMap,
         styles,
         loading,
@@ -1169,10 +1243,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         updateTablesFunc,
         updateSingleTableFunc
     }), [
-        categoriesMap,
+        shownCategories,
         imagesList,
-        ingredientsMap,
-        productsMap,
+        shownIngredients,
+        shownProducts,
+        menuLang,
+        menuLanguages,
         tablesMap,
         styles,
         loading,

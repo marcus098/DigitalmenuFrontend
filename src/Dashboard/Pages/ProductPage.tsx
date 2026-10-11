@@ -12,6 +12,8 @@ import CustomLoading from "../../Components/CustomLoading";
 import PillToggle from "../../Components/Dashboard/PillToggle";
 import ManageItemsModal from "../../Components/Dashboard/ManageItemsModal";
 import AllergenIngredientTagRow from "../../Components/AllergenIngredientTagRow";
+import ProductAllergensEditor from "../../Components/Dashboard/ProductAllergensEditor";
+import { normalizeAllergenIds } from "../../Utilities/Utilities";
 import {useNotification} from "../../Context/NotificationContext";
 
 interface ProductPageProps {
@@ -25,7 +27,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
     const [id, setId] = useState<number>(-1);
     const [idCategory, setIdCategory] = useState<number>(-1);
     const [options, setOptions] = useState<OptionInProduct[]>([]);
+    // Solo allergeni dichiarati sul prodotto: quelli degli ingredienti sono calcolati (ProductAllergensEditor)
     const [allergens, setAllergens] = useState<number[]>([]);
+    const [traces, setTraces] = useState<number[]>([]);
     const [ingredients, setIngredients] = useState<number[]>([]);
     const [tags, setTags] = useState<number[]>([]);
     const [available, setAvailable] = useState<boolean>(true);
@@ -35,12 +39,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
     const [priceMode, setPriceMode] = useState<"single" | "options">("single");
     const [singlePrice, setSinglePrice] = useState<number>(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalType, setModalType] = useState<"allergeni" | "ingredienti" | "tags" | null>(null);
+    const [modalType, setModalType] = useState<"ingredienti" | "tags" | null>(null);
 
     // CONTEXT E ROUTING
     const {
         loading,
-        allergensMap,
         tagsMap,
         productsMap,
         ingredientsMap,
@@ -67,7 +70,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                 setId(product.id);
                 setName(product.name);
                 setDescription(product.description || "");
-                setAllergens(product.allergens || []);
+                // Scarta gli id negativi legacy (copie degli allergeni degli ingredienti)
+                setAllergens(normalizeAllergenIds(product.allergens));
+                setTraces(normalizeAllergenIds(product.traces));
                 setTags(product.tags || []);
                 setIngredients(product.ingredients || []);
                 setAvailable(product.available);
@@ -95,6 +100,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         setIdCategory(-1);
         setOptions([]);
         setAllergens([]);
+        setTraces([]);
         setIngredients([]);
         setTags([]);
         setAvailable(true);
@@ -159,7 +165,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         setOptions([...options, {name: "", price: 0, isDefault: isFirstOption}]);
     };
 
-    const openModal = (type: "allergeni" | "ingredienti" | "tags") => {
+    const openModal = (type: "ingredienti" | "tags") => {
         setModalType(type);
         setIsModalOpen(true);
     };
@@ -216,6 +222,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                 image: image.startsWith("data") ? "" : image,
                 ingredients,
                 allergens,
+                traces,
                 tags,
                 options: finalOptions
             };
@@ -230,6 +237,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                 image: image.startsWith("data") ? "" : image,
                 ingredients,
                 allergens,
+                traces,
                 tags,
                 options: finalOptions,
                 positionProgressive: 1
@@ -250,56 +258,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         }
     };
 
+    // Gli allergeni degli ingredienti non vengono più copiati sul prodotto: li calcola ProductAllergensEditor
     const addRemoveIngredient = (value: number[]) => {
-        const tmp = [...ingredients]
-        const removed: number[] = []
-
-        tmp
-            .filter(i => {
-                const ings = ingredientsMap.get(i);
-                return ings && ings.allergens.length > 0 && !value.includes(i)
-            })
-            .forEach(i => (ingredientsMap.get(i)?.allergens || []).forEach(el => removed.push(el)))
-
-        const added: number[] = []
-
-        value
-            .filter(i => {
-                const ings = ingredientsMap.get(i);
-                return ings && ings.allergens.length > 0 && !tmp.includes(i)
-            })
-            .forEach(i => (ingredientsMap.get(i)?.allergens || []).forEach(el => added.push(el)))
-
-        console.log(removed)
-        console.log(added)
-
-        const currentAllergens = removed.length > 0 ? [] : [...allergens]
-
-        console.log(allergens)
-
-        if (removed.length > 0) {
-            const removedCopy = [...removed].map(e => -e)
-
-            allergens.forEach(val => {
-                const index = removedCopy.indexOf(val);
-                if (index !== -1) {
-                    removedCopy.splice(index, 1);
-                } else {
-                    currentAllergens.push(val);
-                }
-            });
-        }
-
-        if (added.length > 0) {
-            added.forEach((ad) => {
-                currentAllergens.push(-ad)
-            })
-        }
-
-        if (removed.length > 0 || added.length > 0)
-            setAllergens([...currentAllergens])
-
-        console.log(currentAllergens)
         setIngredients([...value])
     }
 
@@ -312,19 +272,6 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         },
     };
     switch (modalType) {
-        case "allergeni":
-            modalProps = {
-                title: "Gestisci Allergeni",
-                itemsMap: allergensMap,
-                selectedItems: allergens.filter((num, index, self) => {
-                    const absVal = Math.abs(num);
-                    const hasNegative = self.includes(-absVal);
-                    if (num < 0) return self.indexOf(num) === index;
-                    return !hasNegative
-                }),
-                onChange: setAllergens
-            };
-            break;
         case "ingredienti":
             modalProps = {
                 title: "Gestisci Ingredienti",
@@ -437,7 +384,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                         <h3 className="text-xl font-bold text-gray-800 mb-4">Dettagli Aggiuntivi</h3>
                         <div className="space-y-4">
                             <AllergenIngredientTagRow color={"orange"} handleAddOrRemove={() => handleAddOrRemove("ingredienti", id)} name="Ingredienti" map={ingredientsMap} elements={ingredients} openModal={() => openModal("ingredienti")} />
-                            <AllergenIngredientTagRow color={"orange"} handleAddOrRemove={() => handleAddOrRemove("allergeni", id)} name="Allergeni" map={allergensMap} elements={allergens} openModal={() => openModal("allergeni")} />
+                            <ProductAllergensEditor
+                                allergens={allergens}
+                                traces={traces}
+                                ingredients={ingredients}
+                                onChangeAllergens={setAllergens}
+                                onChangeTraces={setTraces}
+                            />
                             {//<AllergenIngredientTagRow handleAddOrRemove={() => handleAddOrRemove("tags", id)} name="Tag" map={tagsMap} elements={tags} openModal={() => openModal("tags")} />
                             }
                         </div>

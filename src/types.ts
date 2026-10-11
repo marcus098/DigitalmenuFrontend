@@ -18,6 +18,10 @@ export interface NameType{
 }
 
 export interface DataContextType{
+    /** Lingua del menu cliente ('it' = originale) e lingue offerte dal locale */
+    menuLang: string
+    menuLanguages: { code: string, label: string }[]
+    setMenuLang: (lang: string) => void
     data?: ListToExport
     /** Contatore degli eventi ordine ricevuti via SSE (dashboard): cambia a ogni aggiornamento realtime. */
     orderEventTick: number
@@ -189,7 +193,10 @@ export interface ProductDto{
     image?: string
     idCategory: number
     tags: number[]
+    /** Allergeni dichiarati direttamente sul prodotto (id 1..14); gli effettivi includono quelli degli ingredienti */
     allergens: number[]
+    /** "Può contenere tracce di" (id 1..14) */
+    traces?: number[]
     ingredients: number[]
     available: boolean
     positionProgressive: number
@@ -423,6 +430,8 @@ export interface AddProduct {
     idCategory: number
     tags: number[]
     allergens: number[]
+    /** "Può contenere tracce di" (id 1..14) */
+    traces?: number[]
     ingredients: number[]
     available: boolean
 }
@@ -436,6 +445,8 @@ export interface UpdateProduct {
     idCategory: number
     tags: number[]
     allergens: number[]
+    /** "Può contenere tracce di" (id 1..14) */
+    traces?: number[]
     ingredients: number[]
     available: boolean
     positionProgressive: number
@@ -520,11 +531,36 @@ export interface LoyaltyCard {
 }
 
 /** Regole tessere del locale; null = non impostato (vale il valore storico della tessera). */
+export type LoyaltyProgramType = 'POINTS' | 'VISITS'
+export type LoyaltyExpiryPolicy = 'NONE' | 'YEARLY' | 'INACTIVITY'
+
 export interface LoyaltySettings {
     eurosPerPoint: number | null
     pointValue: number | null
+    /** Visite (timbri) necessarie per il premio */
     stampsForPrize: number | null
     stampsPrize: string | null
+    /** Tipo di tessera emessa dal locale; null = si sceglie a ogni emissione */
+    programType: LoyaltyProgramType | null
+    expiryPolicy: LoyaltyExpiryPolicy | null
+    expiryMonth: number | null
+    expiryDay: number | null
+    inactivityMonths: number | null
+    /** Tessere a visite: spesa minima (€) perché il conto valga come visita */
+    minSpendForVisit: number | null
+    oneVisitPerDay: boolean | null
+}
+
+export type CardMovementType = 'EARN' | 'ADD' | 'CLAIM' | 'RESET' | 'EXPIRE'
+
+export interface CardMovement {
+    type: CardMovementType
+    delta: number
+    balanceAfter: number | null
+    amountCents: number | null
+    comandId: string | null
+    note: string | null
+    createdAt: string | null
 }
 
 export interface CheckoutResult {
@@ -548,12 +584,37 @@ export interface CardDto{
     priceForPoint: number
     qrCodeUrl: string
     createdAt: string
+    holderName?: string | null
+    holderContact?: string | null
+    note?: string | null
+    /** Conti chiusi con la tessera collegata */
+    visitsCount?: number
+    totalSpentCents?: number
+    lastVisitAt?: string | null
+    /** Quando verrà azzerato il saldo attuale (regole del locale); null = non scade */
+    expiresAt?: string | null
+}
+
+/** Saldo della tessera visibile al cliente (pagina /cardStatus) */
+export interface PublicCardStatus {
+    code: string
+    typePoints: boolean
+    actualValue: number
+    scope: number
+    priceForPoint: number
+    createdAt: string
+    expiresAt: string | null
+    prize: string | null
+    localName: string | null
 }
 
 export interface AddCard {
     typePoints: boolean
     scope: number
     priceForPoint: number
+    holderName?: string
+    holderContact?: string
+    note?: string
 }
 
 export interface FileDto {

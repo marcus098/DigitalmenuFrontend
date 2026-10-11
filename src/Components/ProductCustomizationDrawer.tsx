@@ -6,7 +6,8 @@ import { useData } from "../Context/DataContext";
 import { addProductToCart } from "../Utilities/Utilities";
 import { useNotification } from "../Context/NotificationContext";
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Plus, Minus, ChevronDown, Search, ShieldAlert } from 'lucide-react'; // Aggiunto ShieldAlert
+import { X, Plus, Minus, ChevronDown, Search } from 'lucide-react';
+import { MenuAllergenDetails } from './Client/MenuAllergens';
 
 // ... Componente IngredientRow (invariato)
 const IngredientRow: React.FC<{ name: string; price?: number; isSelected: boolean; onToggle: () => void; }> = ({ name, price, isSelected, onToggle }) => (
@@ -48,7 +49,7 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
     const [totalPrice, setTotalPrice] = useState(0);
     const [isExtrasOpen, setIsExtrasOpen] = useState(true);
     const [extraSearchTerm, setExtraSearchTerm] = useState('');
-    const { ingredientsMap, allergensMap } = useData(); // Aggiunto allergensMap
+    const { ingredientsMap } = useData();
     const { addNotification } = useNotification();
 
     // ... useEffect e funzioni (invariate) ...
@@ -85,17 +86,6 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
         }
     };
 
-    // --- 1. NUOVO: Calcolo e memorizzazione degli allergeni del prodotto ---
-    const productAllergens = useMemo(() => {
-        if (!dish) return [];
-        const allergenIds = new Set<number>();
-        dish.ingredients.forEach(ingId => {
-            const ingredient = ingredientsMap.get(ingId);
-            ingredient?.allergens?.forEach(allergenId => allergenIds.add(allergenId));
-        });
-        return Array.from(allergenIds).map(id => allergensMap.get(id)).filter(Boolean) as {id: number, name: string, icon: string}[];
-    }, [dish, ingredientsMap, allergensMap]);
-
     const includedIngredients = useMemo(() => dish?.ingredients.map(id => ingredientsMap.get(id)).filter(Boolean) as IngredientDto[] || [], [dish, ingredientsMap]);
     const allExtraIngredients = useMemo(() => Array.from(ingredientsMap.values()).filter(i => i.addable && i.available && !dish?.ingredients.includes(i.id)), [dish, ingredientsMap]);
     const filteredExtraIngredients = useMemo(() => allExtraIngredients.filter(ing => ing.name.toLowerCase().includes(extraSearchTerm.toLowerCase())), [allExtraIngredients, extraSearchTerm]);
@@ -126,23 +116,8 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
                         </div>
 
                         <div className="p-6 space-y-6 overflow-y-auto">
-                            {/* --- 2. NUOVO: Visualizzazione degli allergeni come "pills" --- */}
-                            {productAllergens.length > 0 && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                                    <h4 className="font-semibold text-red-800 flex items-center gap-2 mb-2">
-                                        <ShieldAlert size={18} />
-                                        <span>Contiene Allergeni</span>
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {productAllergens.map(allergen => (
-                                            <div key={allergen.id} className="flex items-center gap-1.5 text-xs font-semibold bg-red-100 text-red-700 px-2 py-1 rounded-full">
-                                                <img src={allergen.icon} alt={allergen.name} className="w-4 h-4" />
-                                                <span>{allergen.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            {/* Allergeni effettivi (prodotto ∪ ingredienti) e tracce, Reg. UE 1169/2011 */}
+                            <MenuAllergenDetails product={dish} />
 
                             {/* --- 3. GIÀ PRESENTE: Sezione per la scelta delle opzioni --- */}
                             {dish.options && dish.options.length > 1 && dish.options[0].name !== 'default' && (
@@ -173,7 +148,7 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
                                 <div className="rounded-lg" style={{ border: '1px solid var(--menu-border)' }}>
                                     {includedIngredients.map((ing, idx) => (
                                         <div key={`incl-${ing.id}`} style={idx > 0 ? { borderTop: '1px solid var(--menu-border)' } : undefined}>
-                                            <IngredientRow name={ing.name} isSelected={selectedIngredients.includes(ing.id)} onToggle={() => handleToggleIngredient(ing.id)} />
+                                            <IngredientRow name={ing.name + (ing.frozen ? "*" : "")} isSelected={selectedIngredients.includes(ing.id)} onToggle={() => handleToggleIngredient(ing.id)} />
                                         </div>
                                     ))}
                                 </div>

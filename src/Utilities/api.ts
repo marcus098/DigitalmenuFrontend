@@ -4,7 +4,7 @@ import {
     AddComandOrder,
     AddComandWaiter,
     AddIngredient, AddTable,
-    ApiResponse, CardDto, CheckoutDaySummary, CheckoutResult, LoyaltySettings,
+    ApiResponse, CardDto, CardMovement, PublicCardStatus, CheckoutDaySummary, CheckoutResult, LoyaltySettings,
     CategoryDto, FileDto, FolderDto, IdWithOrder,
     IngredientDto,
     JoinResponse,
@@ -78,6 +78,9 @@ const ADD_POINT_TO_CARD = (id: number, quantity: number) =>  "/api/cards/addPoin
 const SEND_CARD_BY_EMAIL = (id: number, email: string) => "/api/cards/send/" + id + "/" + email
 const DELETE_CARD = (id: number) => "/api/cards/delete/" + id
 const LOYALTY_SETTINGS = "/api/cards/settings"
+const CARD_MOVEMENTS = (id: number) => `/api/cards/${id}/movements`
+const CARD_DETAILS = (id: number) => `/api/cards/${id}/details`
+const RESET_ALL_CARDS = "/api/cards/reset-all"
 const CHECKOUT_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/checkout`
 const CHECKOUT_SUMMARY = (from: string, to: string) => `/api/orders/checkout-summary?from=${from}&to=${to}`
 const GET_FILES = (folderId: number) => "/api/filemanager/files/" + folderId
@@ -423,6 +426,20 @@ export const getLoyaltySettingsApi = async () =>
 
 export const updateLoyaltySettingsApi = async (settings: LoyaltySettings) =>
     apiCall<Response<LoyaltySettings>>({method: PUT, fixed: true, url: LOYALTY_SETTINGS, data: settings})
+
+/** Pubblico: saldo della tessera per il cliente, senza login */
+export const getPublicCardStatusApi = async (code: string) =>
+    clientApiCall<Response<PublicCardStatus>>({method: GET, fixed: true, url: `/api/public/cards/${encodeURIComponent(code)}`})
+
+export const getCardMovementsApi = async (id: number) =>
+    apiCall<Response<CardMovement[]>>({method: GET, fixed: true, url: CARD_MOVEMENTS(id)})
+
+export const updateCardDetailsApi = async (id: number, details: {holderName: string, holderContact: string, note: string}) =>
+    apiCall<Response<CardDto>>({method: PUT, fixed: true, url: CARD_DETAILS(id), data: details})
+
+/** Azzera il saldo di tutte le tessere; restituisce quante avevano un saldo */
+export const resetAllCardsApi = async () =>
+    apiCall<Response<number>>({method: POST, fixed: true, url: RESET_ALL_CARDS})
 
 /** Chiusura conto in cassa: salva incasso/sconto sulla comanda e muove la tessera. */
 export const checkoutComandApi = async (comandId: string, req: CheckoutRequest) =>

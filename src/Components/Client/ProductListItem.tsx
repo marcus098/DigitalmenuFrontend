@@ -3,6 +3,8 @@ import { ProductDto } from '../../types';
 import { Plus } from 'lucide-react';
 import { useMenuLook } from './MenuThemeProvider';
 import { MenuPrice, MenuTags } from './MenuPrimitives';
+import { FrozenMark, MenuAllergenMarkers, useProductAllergens } from './MenuAllergens';
+import { allergenById } from '../../Utilities/Utilities';
 
 interface ProductListItemProps {
     product: ProductDto;
@@ -27,7 +29,13 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
     const price = product.options && product.options.length > 0 ? product.options[0].price : 0;
     const from = !!product.options && product.options.length > 1;
     const number = look.productNumbers && index ? String(index).padStart(2, '0') : null;
-    const ariaLabel = `${product.name}, ${from ? 'da ' : ''}${price.toFixed(2)} euro. Apri per aggiungere`;
+    const { effective, frozen, filteredTraces } = useProductAllergens(product);
+    const allergenNames = (ids: number[]) => ids.map(id => allergenById.get(id)?.name).filter(Boolean).join(', ');
+    // L'aria-label sostituisce il contenuto del bottone: gli allergeni vanno ripetuti qui
+    const ariaLabel = `${product.name}${frozen ? " (surgelato o congelato all'origine)" : ''}, ${from ? 'da ' : ''}${price.toFixed(2)} euro.`
+        + (effective.length > 0 ? ` Allergeni: ${allergenNames(effective)}.` : '')
+        + (filteredTraces.length > 0 ? ` Attenzione: può contenere tracce di ${allergenNames(filteredTraces)}.` : '')
+        + ' Apri per aggiungere';
 
     const hideBrokenImg = (e: React.SyntheticEvent<HTMLImageElement>) => {
         (e.target as HTMLImageElement).style.display = 'none';
@@ -44,7 +52,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
                 style={{ borderRadius: 'var(--menu-radius)' }}
             >
                 <h3 className="menu-h" style={{ fontSize: 'clamp(1.35rem, 4.6vw, 1.6rem)', lineHeight: 1.15 }}>
-                    {product.name}
+                    {product.name}{frozen && <FrozenMark />}
                 </h3>
                 {product.description && (
                     <p
@@ -55,6 +63,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
                     </p>
                 )}
                 <MenuTags tags={product.tags} align="center" />
+                <MenuAllergenMarkers product={product} align="center" />
                 <div className="mt-3" style={{ letterSpacing: '0.08em' }}>
                     <MenuPrice value={price} from={from} size="0.95rem" />
                 </div>
@@ -93,7 +102,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
                 )}
                 <div className="flex-1 min-w-0 flex flex-col p-3.5">
                     <h3 className="menu-h" style={{ fontSize: 'clamp(1.08rem, 3.6vw, 1.25rem)', lineHeight: 1.15 }}>
-                        {product.name}
+                        {product.name}{frozen && <FrozenMark />}
                     </h3>
                     {product.description && (
                         <p className="mt-1 line-clamp-2" style={{ color: 'var(--menu-muted)', fontSize: '0.82rem', lineHeight: 1.45 }}>
@@ -101,6 +110,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
                         </p>
                     )}
                     <MenuTags tags={product.tags} />
+                    <MenuAllergenMarkers product={product} />
                     <div className="mt-auto pt-2.5 flex items-center justify-between gap-3">
                         <MenuPrice value={price} from={from} />
                         <span
@@ -152,7 +162,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
                             ...(look.headingCase === 'uppercase' ? { letterSpacing: '0.05em' } : {}),
                         }}
                     >
-                        {product.name}
+                        {product.name}{frozen && <FrozenMark />}
                     </h3>
                     {look.leaders ? <span className="menu-leader" aria-hidden="true" /> : <span className="flex-1 min-w-[1rem]" />}
                     <MenuPrice value={price} from={from} />
@@ -172,6 +182,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
                     </p>
                 )}
                 <MenuTags tags={product.tags} />
+                <MenuAllergenMarkers product={product} />
             </div>
             {imageUrl && (
                 <div

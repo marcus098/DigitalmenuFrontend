@@ -84,6 +84,8 @@ export interface ComandCheckout {
     pointsEarned: number
     stampRedeemed: boolean
     loyaltyError: boolean
+    /** Perché non è stato accreditato nulla (es. visita già conteggiata oggi) */
+    loyaltyNote?: string | null
     paidOnline: boolean
     closedAt: string
     closedBy?: number

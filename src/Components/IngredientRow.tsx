@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { IngredientDto } from "../types";
 import ToggleSwitch from "./ToggleSwitch";
 import { useData } from "../Context/DataContext";
+import { allergenById } from "../Utilities/Utilities";
 
 interface IngredientRowProps {
     ingredient: IngredientDto;
@@ -53,7 +54,7 @@ const IngredientRow: React.FC<IngredientRowProps> = ({
                     Prezzo: €{ingredient.price.toFixed(2)} | {ingredient.frozen ? "Surgelato" : "Fresco"}
                 </p>
                 <p className="text-sm text-gray-500">
-                    Allergeni: {ingredient.allergens.length > 0 ? ingredient.allergens.join(", ") : "Nessuno"}
+                    Allergeni: {ingredient.allergens.length > 0 ? ingredient.allergens.map(id => allergenById.get(id)?.name ?? id).join(", ") : "Nessuno"}
                 </p>
             </div>
 

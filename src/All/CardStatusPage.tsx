@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import QrScanner from 'react-qr-scanner';
 import QRCode from 'react-qr-code'; // <-- 1. Importa il componente QR Code
 import { QrCodeIcon, MagnifyingGlassIcon, StarIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
-import { CardDto } from "../types";
-import { getInfoCardApi } from "../Utilities/api";
+import { PublicCardStatus } from "../types";
+import { getPublicCardStatusApi } from "../Utilities/api";
 
 
 // --- Componente per Visualizzare la Carta Trovata (CON MODIFICHE) ---
-const CardDisplay: React.FC<{ card: CardDto }> = ({ card }) => {
+const CardDisplay: React.FC<{ card: PublicCardStatus }> = ({ card }) => {
     // Stato per decidere se mostrare o nascondere il QR code
     const [showQr, setShowQr] = useState(false);
 
@@ -17,7 +17,7 @@ const CardDisplay: React.FC<{ card: CardDto }> = ({ card }) => {
     return (
         <div className="w-full max-w-sm mx-auto bg-slate-800 text-white rounded-2xl shadow-2xl p-6 transform transition-all duration-500">
             <div className="flex justify-between items-center mb-4">
-                <span className="font-semibold text-lg">Carta Fedeltà</span>
+                <span className="font-semibold text-lg">{card.localName ? `Tessera ${card.localName}` : 'Carta Fedeltà'}</span>
                 {card.typePoints
                     ? <StarIcon className="w-8 h-8 text-yellow-400"/>
                     : <CheckBadgeIcon className="w-8 h-8 text-green-400"/>
@@ -35,11 +35,16 @@ const CardDisplay: React.FC<{ card: CardDto }> = ({ card }) => {
                 )}
                 {!card.typePoints && card.actualValue !== undefined && card.scope !== undefined && (
                     <div>
-                        <p className="text-sm text-slate-400">Progresso Timbri</p>
+                        <p className="text-sm text-slate-400">Visite</p>
                         <p className="text-3xl font-bold">{card.actualValue} / {card.scope}</p>
                         <div className="w-full bg-slate-600 rounded-full h-2 mt-2">
-                            <div className="bg-green-400 h-2 rounded-full" style={{ width: `${(card.actualValue / card.scope) * 100}%` }}></div>
+                            <div className="bg-green-400 h-2 rounded-full" style={{ width: `${Math.min(100, (card.actualValue / card.scope) * 100)}%` }}></div>
                         </div>
+                        {card.prize && (
+                            <p className="text-sm text-slate-300 mt-3">
+                                {card.actualValue >= card.scope ? `Premio pronto: ${card.prize}! Chiedilo al prossimo conto.` : `Premio: ${card.prize}`}
+                            </p>
+                        )}
                     </div>
                 )}
             </div>
@@ -68,8 +73,11 @@ const CardDisplay: React.FC<{ card: CardDto }> = ({ card }) => {
             </div>
             {/* --- FINE SEZIONE AGGIUNTA --- */}
 
-            <div className="text-xs text-slate-500 text-center mt-6">
-                Carta emessa il {new Date(card.createdAt).toLocaleDateString('it-IT')}
+            <div className="text-xs text-slate-500 text-center mt-6 space-y-1">
+                {card.expiresAt && card.actualValue > 0 && (
+                    <p className="text-amber-300">{card.typePoints ? 'Punti validi' : 'Visite valide'} fino al {new Date(card.expiresAt).toLocaleDateString('it-IT')}</p>
+                )}
+                <p>Carta emessa il {new Date(card.createdAt).toLocaleDateString('it-IT')}</p>
             </div>
         </div>
     )
@@ -79,7 +87,7 @@ const CardDisplay: React.FC<{ card: CardDto }> = ({ card }) => {
 // --- Pagina Principale (invariata) ---
 const CardStatusPage: React.FC = () => {
     const [codeInput, setCodeInput] = useState('');
-    const [foundCard, setFoundCard] = useState<CardDto | null>(null);
+    const [foundCard, setFoundCard] = useState<PublicCardStatus | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isScanning, setIsScanning] = useState(false);
@@ -101,7 +109,7 @@ const CardStatusPage: React.FC = () => {
         setFoundCard(null);
         setIsScanning(false);
 
-        const response = await getInfoCardApi(code);
+        const response = await getPublicCardStatusApi(code.trim().toUpperCase());
 
         if (response && response.success && response.data?.data) {
             setFoundCard(response.data.data);

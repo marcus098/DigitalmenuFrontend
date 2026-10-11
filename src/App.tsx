@@ -44,6 +44,7 @@ const CategoriesPage       = lazy(() => import("./Dashboard/Pages/CategoriesPage
 const DocumentsPage        = lazy(() => import("./Dashboard/Pages/DocumentsPage"));
 const LoyaltyCardsPage     = lazy(() => import("./Dashboard/Pages/LoyaltyCardsPage"));
 const LayoutPage           = lazy(() => import("./Dashboard/Pages/LayoutPage"));
+const MenuLanguagesPage    = lazy(() => import("./Dashboard/Pages/MenuLanguagesPage"));
 const TakeawaySlotsPage    = lazy(() => import("./Dashboard/Pages/TakeawaySlotsPage"));
 const PrintersPage         = lazy(() => import("./Dashboard/Pages/PrintersPage"));
 const ReservationsPage     = lazy(() => import("./Dashboard/Pages/ReservationsPage"));
@@ -146,6 +147,7 @@ const DashboardRoutes = () => (
                 <Route path={"Documents"} element={<DocumentsPage />} />
                 <Route path={"Cards"} element={<LoyaltyCardsPage />} />
                 <Route path={"Layout"} element={<LayoutPage />} />
+                <Route path={"Languages"} element={<MenuLanguagesPage />} />
                 <Route path={"Slots"} element={<TakeawaySlotsPage />} />
                 <Route path={"Printers"} element={<PrintersPage />} />
                 <Route path={"Tables"} element={<TablesPage />} />

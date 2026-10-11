@@ -10,6 +10,7 @@ import {useHistory} from "../../Context/HistoryContext";
 import {useNotification} from "../../Context/NotificationContext";
 import ManageItemsModal from "../../Components/Dashboard/ManageItemsModal";
 import AllergenIngredientTagRow from "../../Components/AllergenIngredientTagRow";
+import { allergenById } from "../../Utilities/Utilities";
 import PillToggle from "../../Components/Dashboard/PillToggle";
 
 interface IngredientPageProps {
@@ -34,7 +35,7 @@ const IngredientPage: React.FC<IngredientPageProps> = ({ isNew }) => {
     const [myLoading, setMyLoading] = useState<boolean>(true);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-    const { loading, ingredientsMap, addIngredient, updateIngredient, allergensMap } = useData();
+    const { loading, ingredientsMap, addIngredient, updateIngredient } = useData();
     const { idIngredient, localname } = useParams();
     const { navigateWithHistory, previousPath } = useHistory();
     const { addNotification } = useNotification();
@@ -118,7 +119,7 @@ const IngredientPage: React.FC<IngredientPageProps> = ({ isNew }) => {
             {isModalOpen && (
                 <ManageItemsModal
                     title="Gestisci Allergeni"
-                    itemsMap={allergensMap}
+                    itemsMap={allergenById}
                     selectedItems={allergens}
                     onChange={setAllergens}
                     onClose={() => setIsModalOpen(false)}
@@ -171,7 +172,7 @@ const IngredientPage: React.FC<IngredientPageProps> = ({ isNew }) => {
                                 color="orange"
                                 handleAddOrRemove={(type, id) => handleAddOrRemove(id)}
                                 name={"Allergeni"}
-                                map={allergensMap}
+                                map={allergenById}
                                 elements={allergens}
                                 openModal={() => setIsModalOpen(true)}
                             />

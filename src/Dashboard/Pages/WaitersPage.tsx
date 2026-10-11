@@ -42,7 +42,7 @@ const WaitersPage: React.FC = () => {
         if(tmp === null)
             addNotification({message: "Errore", type: "error"})
         else
-            return 'http://localhost:3000/urlInvite/' + (user?.idAgency || 0) + "/" + tmp
+            return window.location.origin + '/urlInvite/' + (user?.idAgency || 0) + "/" + tmp
         return ""
     };
 

@@ -275,6 +275,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                 return next;
             });
         }
+        if (Array.isArray(data?.availability) && data.availability.length) {
+            applyAvailability(data.availability)
+        }
+    };
+
+    // "Esaurito" in tempo reale. Dashboard: si aggiorna il flag. Menu cliente: il catalogo pubblico contiene
+    // solo elementi disponibili, quindi un esaurito sparisce e un ritorno disponibile ricarica il menu.
+    const applyAvailability = (events: { kind: 'PRODUCT' | 'CATEGORY' | 'INGREDIENT', id: number, available: boolean }[]) => {
+        const apply = <T extends { available?: boolean }>(kind: string, setter: React.Dispatch<React.SetStateAction<Map<number, T>>>) => {
+            const list = events.filter(e => e.kind === kind)
+            if (!list.length) return
+            setter(prev => {
+                const next = new Map(prev)
+                for (const e of list) {
+                    const current = next.get(e.id)
+                    if (dashboard || waiters) {
+                        if (current) next.set(e.id, { ...current, available: e.available })
+                    } else if (!e.available) {
+                        next.delete(e.id)
+                    }
+                }
+                return next
+            })
+        }
+        apply<ProductDto>('PRODUCT', setProductsMap)
+        apply<CategoryDto>('CATEGORY', setCategoriesMap)
+        apply<IngredientDto>('INGREDIENT', setIngredientsMap)
+        // Menu cliente: un elemento tornato disponibile non è nel catalogo pubblico, va ricaricato
+        if (!dashboard && !waiters && events.some(e => e.available)) refreshAll()
     };
 
     // Gli eventi ordine sono stub {id, status, idAgency, paid?}: si aggiorna lo stato

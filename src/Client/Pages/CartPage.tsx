@@ -14,6 +14,7 @@ import ModernCartItem from '../../Components/Client/ModernCartItem';
 import CartPopupWaiter from '../../Components/Waiters/CartPopupWaiter';
 import ShimmerButton from '../../Components/ui/ShimmerButton';
 import useCartCount from '../../Utilities/useCartCount';
+import { localIsoDate } from '../../Utilities/dates';
 import { ArrowLeft, ShoppingBasket, CheckCircle } from 'lucide-react';
 
 interface CartPageProps {
@@ -92,7 +93,7 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                 const dt = new Date();
                 dt.setDate(dt.getDate() + d);
                 return {
-                    iso: dt.toISOString().split('T')[0],
+                    iso: localIsoDate(dt),
                     label: d === 0 ? 'Oggi' : d === 1 ? 'Domani' : dt.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' }),
                 };
             });

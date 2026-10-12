@@ -14,6 +14,7 @@ import {
     type SlotConfig, type Slot, type TimeRange, type TakeawayClosure, type TakeawayPauseStatus,
 } from '../../Utilities/api';
 import CustomLoading from '../../Components/CustomLoading';
+import { localIsoDate, localIsoDatePlusDays } from '../../Utilities/dates';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -27,12 +28,9 @@ const DAYS: { key: string; short: string; label: string }[] = [
     { key: 'SUNDAY',    short: 'Dom', label: 'Domenica' },
 ];
 
-const todayIso = () => new Date().toISOString().split('T')[0];
-const addDaysIso = (days: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return d.toISOString().split('T')[0];
-};
+// Date locali (non UTC): tra mezzanotte e le 2 toISOString darebbe ancora ieri
+const todayIso = () => localIsoDate();
+const addDaysIso = (days: number) => localIsoDatePlusDays(days);
 const itDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });

@@ -45,6 +45,8 @@ services:
     ports:
       - "${BIND_ADDR:-127.0.0.1}:8085:8085"
     environment:
+      # Ore di business italiane (vedi docs/SERVER_DEPLOY.md del backend, "Fuso orario")
+      TZ: Europe/Rome
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -99,6 +101,7 @@ services:
     ports:
       - "${BIND_ADDR:-127.0.0.1}:8081:8081"
     environment:
+      TZ: Europe/Rome
       SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_R2DBC_USERNAME: ${POSTGRES_USER}
       SPRING_R2DBC_PASSWORD: ${POSTGRES_PASSWORD}

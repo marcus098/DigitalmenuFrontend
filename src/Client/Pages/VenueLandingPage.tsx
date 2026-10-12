@@ -7,6 +7,7 @@ import { createReservationPublicApi } from '../../Utilities/api';
 import { CategoryDto, FeatureCard } from '../../types';
 import { MapPin, Clock, MessageCircle, Phone, CheckCircle2, Loader2 } from 'lucide-react';
 import { FEATURE_ICON_MAP } from '../../Utilities/featureIcons';
+import { localIsoDate } from '../../Utilities/dates';
 import { usePreviewStyles } from '../usePreviewStyles';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
 import { MenuRule } from '../../Components/Client/MenuPrimitives';
@@ -169,7 +170,7 @@ const BookingForm: React.FC<{ localname: string }> = ({ localname }) => {
             </Field>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <Field id="bk-date" label="Data *">
-                    <input id="bk-date" required type="date" value={form.date} onChange={set('date')} min={new Date().toISOString().split('T')[0]} className="dark-input" style={inputStyle} />
+                    <input id="bk-date" required type="date" value={form.date} onChange={set('date')} min={localIsoDate()} className="dark-input" style={inputStyle} />
                 </Field>
                 <Field id="bk-time" label="Orario *">
                     <select id="bk-time" required value={form.time} onChange={set('time')} className="dark-input appearance-none" style={inputStyle}>

@@ -7,6 +7,7 @@ import {useNotification} from "../../Context/NotificationContext";
 import CustomLoading from "../../Components/CustomLoading";
 import {reprintComandApi} from "../../Utilities/printApi";
 import {getTakeawayPauseApi, pauseTakeawayApi, resumeTakeawayApi, TakeawayPauseStatus} from "../../Utilities/api";
+import {localIsoDate} from "../../Utilities/dates";
 import {LoginContext} from "../../Context/LoginContext";
 import {useTabletPrinting} from "../../Hooks/useTabletPrinting";
 
@@ -70,7 +71,7 @@ const OrdersPage: React.FC = () => {
     const [singleOrder, setSingleOrder] = useState<Orders | null>(null)
     const [ordersList, setOrdersList] = useState<Orders[]>([]);
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'AWAIT' | 'PENDING' | 'PROGRESS' | 'COMPLETED' | 'DELETED'>('ALL');
-    const [filterDate, setFilterDate] = useState<string>(new Date().toISOString().split('T')[0])
+    const [filterDate, setFilterDate] = useState<string>(localIsoDate())
     const [myLoading, setMyLoading] = useState<boolean>(false)
     const [historicalOrders, setHistoricalOrders] = useState<Orders[]>([]);
 

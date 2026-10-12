@@ -69,7 +69,10 @@ export const apiCall = async <T>(apiCallInterface: ApiCallInterface): Promise<Ap
         };
     } catch (error: any) {
         const status = error.response?.status ?? -1;
-        const message = error.response?.data?.message || error.message || "Unknown error";
+        // Alcuni errori 400 del backend arrivano come testo semplice (messaggio già leggibile)
+        const body = error.response?.data;
+        const textMessage = typeof body === 'string' && body.length > 0 && body.length < 300 ? body : undefined;
+        const message = body?.message || textMessage || error.message || "Unknown error";
 
         return {
             success: false,

@@ -726,6 +726,8 @@ const matchesPayFilter = (p: PaymentDto, f: PayFilter) =>
     f === 'ALL' || p.status === f || (f === 'REFUNDED' && p.status === 'PARTIALLY_REFUNDED');
 
 const PAYMENTS_REFRESH_DEBOUNCE_MS = 1500;
+/** Giorni di storico pagamenti caricati nella scheda Storico (oggi compreso). */
+const PAYMENTS_HISTORY_DAYS = 30;
 
 const CassaPage: React.FC = () => {
     const { comands, tablesMap, productsMap, categoriesMap, checkoutComand, orderEventTick } = useData();
@@ -757,9 +759,12 @@ const CassaPage: React.FC = () => {
     // Load payment history
     const loadPayments = useCallback(async () => {
         const d = new Date();
-        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+        const today = iso(d);
+        // Storico: solo gli ultimi PAYMENTS_HISTORY_DAYS giorni (si ricarica a ogni evento ordine)
+        const since = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (PAYMENTS_HISTORY_DAYS - 1));
         const [pr, tr, cr, toc] = await Promise.all([
-            getPaymentsApi(), getPaymentsTodayTotalApi(), getCheckoutSummaryApi(today, today), getToCheckoutApi(),
+            getPaymentsApi(iso(since), today), getPaymentsTodayTotalApi(), getCheckoutSummaryApi(today, today), getToCheckoutApi(),
         ]);
         if (pr.success && pr.data) setPayments((pr.data as any).data ?? pr.data);
         if (toc.success && Array.isArray(toc.data)) setServed(toc.data);
@@ -1058,8 +1063,8 @@ const CassaPage: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                             {[
                                 { label: 'Incassi Oggi',       value: todayCents !== null ? formatEurCents(todayCents) : '—', icon: CurrencyEuroIcon, color: 'bg-emerald-500' },
-                                { label: 'Totale Completati',  value: formatEurCents(totalCompleted), icon: CheckCircleIcon, color: 'bg-blue-500' },
-                                { label: 'Totale Transazioni', value: formatEurCents(totalAll),       icon: ClockIcon,       color: 'bg-violet-500' },
+                                { label: `Completati (${PAYMENTS_HISTORY_DAYS} giorni)`,  value: formatEurCents(totalCompleted), icon: CheckCircleIcon, color: 'bg-blue-500' },
+                                { label: `Transazioni (${PAYMENTS_HISTORY_DAYS} giorni)`, value: formatEurCents(totalAll),       icon: ClockIcon,       color: 'bg-violet-500' },
                             ].map(({ label, value, icon: Icon, color }) => (
                                 <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4">
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}>

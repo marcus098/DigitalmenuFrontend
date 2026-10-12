@@ -2,16 +2,21 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     CalendarDaysIcon, PhoneIcon, UserGroupIcon, TrashIcon,
     CheckIcon, XMarkIcon, MagnifyingGlassIcon, ListBulletIcon,
-    ChevronLeftIcon, ChevronRightIcon,
+    ChevronLeftIcon, ChevronRightIcon, PlusIcon, PencilSquareIcon, ArrowRightEndOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import CustomLoading from '../../Components/CustomLoading';
 import { useNotification } from '../../Context/NotificationContext';
-import { ReservationDto } from '../../types';
-import { deleteReservationApi, getReservationsApi, updateReservationStatusApi } from '../../Utilities/api';
+import { ReservationDto, StaffReservationRequest } from '../../types';
+import {
+    createReservationStaffApi, deleteReservationApi, getReservationsApi,
+    updateReservationStaffApi, updateReservationStatusApi,
+} from '../../Utilities/api';
+import { localIsoDate } from '../../Utilities/dates';
 
 const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
     PENDING:   { label: 'In attesa',      cls: 'bg-yellow-100 text-yellow-800' },
     CONFIRMED: { label: 'Confermata',     cls: 'bg-green-100 text-green-800' },
+    ARRIVED:   { label: 'Arrivato',       cls: 'bg-blue-100 text-blue-800' },
     CANCELLED: { label: 'Annullata',      cls: 'bg-red-100 text-red-800' },
     NO_SHOW:   { label: 'Non presentato', cls: 'bg-gray-100 text-gray-600' },
 };
@@ -19,6 +24,7 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 const DOT_COLOR: Record<string, string> = {
     PENDING:   'bg-yellow-400',
     CONFIRMED: 'bg-green-500',
+    ARRIVED:   'bg-blue-500',
     CANCELLED: 'bg-red-400',
     NO_SHOW:   'bg-gray-400',
 };
@@ -56,7 +62,7 @@ const CalendarGrid: React.FC<CalendarProps> = ({ reservations, onDayClick, selec
     const prevMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
     const nextMonth = () => setViewDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = localIsoDate();
     const emptyStart = firstDow === 0 ? 6 : firstDow - 1; // Monday-first grid
 
     return (
@@ -143,6 +149,8 @@ const ReservationsPage: React.FC = () => {
     const [filterStatus, setFilterStatus]   = useState<string>('ALL');
     const [view, setView]                   = useState<'list' | 'calendar'>('list');
     const [selectedDay, setSelectedDay]     = useState<string | null>(null);
+    // Modale nuova/modifica: null = chiusa, 'new' = nuova, altrimenti la prenotazione da modificare
+    const [editing, setEditing]             = useState<ReservationDto | 'new' | null>(null);
     const { addNotification } = useNotification();
 
     useEffect(() => { load(); }, []);
@@ -167,6 +175,12 @@ const ReservationsPage: React.FC = () => {
             addNotification({ type: 'error', message: 'Impossibile aggiornare lo stato' });
         }
         setActionLoading(false);
+    };
+
+    const handleSaved = (saved: ReservationDto, isNew: boolean) => {
+        setReservations(prev => isNew ? [saved, ...prev] : prev.map(r => r.id === saved.id ? saved : r));
+        setEditing(null);
+        addNotification({ type: 'success', message: isNew ? 'Prenotazione inserita' : 'Prenotazione aggiornata' });
     };
 
     const handleDelete = async (id: number) => {
@@ -195,7 +209,7 @@ const ReservationsPage: React.FC = () => {
     }, [reservations, search, filterStatus, selectedDay]);
 
     const counts = useMemo(() => {
-        const c = { ALL: reservations.length, PENDING: 0, CONFIRMED: 0, CANCELLED: 0 };
+        const c = { ALL: reservations.length, PENDING: 0, CONFIRMED: 0, ARRIVED: 0, CANCELLED: 0 };
         reservations.forEach(r => { if (r.status in c) (c as any)[r.status]++; });
         return c;
     }, [reservations]);
@@ -227,19 +241,26 @@ const ReservationsPage: React.FC = () => {
                     </div>
                     <button
                         onClick={load}
-                        className="bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:opacity-90 font-semibold text-sm"
+                        className="bg-white border border-gray-300 text-gray-700 px-5 py-2.5 rounded-lg shadow-sm hover:bg-gray-50 font-semibold text-sm"
                     >
                         Aggiorna
+                    </button>
+                    <button
+                        onClick={() => setEditing('new')}
+                        className="flex items-center gap-1.5 bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:opacity-90 font-semibold text-sm"
+                    >
+                        <PlusIcon className="w-4 h-4" /> Nuova prenotazione
                     </button>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                 {[
                     { key: 'ALL',       label: 'Totali',     color: 'bg-blue-50 text-blue-700' },
                     { key: 'PENDING',   label: 'In attesa',  color: 'bg-yellow-50 text-yellow-700' },
                     { key: 'CONFIRMED', label: 'Confermate', color: 'bg-green-50 text-green-700' },
+                    { key: 'ARRIVED',   label: 'Arrivati',   color: 'bg-blue-50 text-blue-700' },
                     { key: 'CANCELLED', label: 'Annullate',  color: 'bg-red-50 text-red-700' },
                 ].map(({ key, label, color }) => (
                     <button
@@ -306,6 +327,9 @@ const ReservationsPage: React.FC = () => {
                                         <div className="flex items-center gap-3 flex-wrap">
                                             <span className="font-bold text-gray-900 text-lg truncate">{r.customerName}</span>
                                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${statusInfo.cls}`}>{statusInfo.label}</span>
+                                            {r.source === 'STAFF' && (
+                                                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500">Inserita dallo staff</span>
+                                            )}
                                         </div>
                                         <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-gray-500">
                                             <span className="flex items-center gap-1.5">
@@ -316,10 +340,12 @@ const ReservationsPage: React.FC = () => {
                                                 <UserGroupIcon className="w-4 h-4" />
                                                 {r.partySize} {r.partySize === 1 ? 'persona' : 'persone'}
                                             </span>
-                                            <span className="flex items-center gap-1.5">
-                                                <PhoneIcon className="w-4 h-4" />
-                                                <a href={`tel:${r.customerPhone}`} className="hover:text-primary">{r.customerPhone}</a>
-                                            </span>
+                                            {r.customerPhone && (
+                                                <span className="flex items-center gap-1.5">
+                                                    <PhoneIcon className="w-4 h-4" />
+                                                    <a href={`tel:${r.customerPhone}`} className="hover:text-primary">{r.customerPhone}</a>
+                                                </span>
+                                            )}
                                             {r.customerEmail && (
                                                 <span className="text-gray-400 text-xs">{r.customerEmail}</span>
                                             )}
@@ -329,7 +355,15 @@ const ReservationsPage: React.FC = () => {
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                                        {(r.status === 'PENDING' || r.status === 'CONFIRMED') && (
+                                            <button
+                                                onClick={() => handleStatus(r.id, 'ARRIVED')}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                                            >
+                                                <ArrowRightEndOnRectangleIcon className="w-4 h-4" /> Segna arrivato
+                                            </button>
+                                        )}
                                         {r.status === 'PENDING' && (
                                             <>
                                                 <button
@@ -354,6 +388,22 @@ const ReservationsPage: React.FC = () => {
                                                 Non presentato
                                             </button>
                                         )}
+                                        {r.status === 'ARRIVED' && (
+                                            <button
+                                                onClick={() => handleStatus(r.id, 'CONFIRMED')}
+                                                className="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors"
+                                            >
+                                                Annulla arrivo
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setEditing(r)}
+                                            title="Modifica"
+                                            aria-label="Modifica prenotazione"
+                                            className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                        >
+                                            <PencilSquareIcon className="w-4 h-4" />
+                                        </button>
                                         <button
                                             onClick={() => handleDelete(r.id)}
                                             className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -367,6 +417,175 @@ const ReservationsPage: React.FC = () => {
                     </div>
                 )
             )}
+
+            {editing && (
+                <ReservationFormModal
+                    reservation={editing === 'new' ? null : editing}
+                    defaultDate={selectedDay || todayIso()}
+                    onClose={() => setEditing(null)}
+                    onSaved={handleSaved}
+                />
+            )}
+        </div>
+    );
+};
+
+// ── Modale nuova/modifica prenotazione (staff) ────────────────────────────────
+const pad2 = (n: number) => String(n).padStart(2, '0');
+/** Data locale del browser (non UTC) */
+const todayIso = () => localIsoDate();
+const nowHHmm = () => { const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+
+interface FormProps {
+    reservation: ReservationDto | null;
+    defaultDate: string;
+    onClose: () => void;
+    onSaved: (saved: ReservationDto, isNew: boolean) => void;
+}
+
+const ReservationFormModal: React.FC<FormProps> = ({ reservation, defaultDate, onClose, onSaved }) => {
+    const isNew = reservation == null;
+    const [name, setName]     = useState(reservation?.customerName ?? '');
+    const [phone, setPhone]   = useState(reservation?.customerPhone ?? '');
+    const [email, setEmail]   = useState(reservation?.customerEmail ?? '');
+    const [people, setPeople] = useState(reservation?.partySize ?? 2);
+    const [date, setDate]     = useState(reservation?.reservationDate ?? (defaultDate < todayIso() ? todayIso() : defaultDate));
+    const [time, setTime]     = useState(reservation?.reservationTime?.slice(0, 5) ?? '20:00');
+    const [notes, setNotes]   = useState(reservation?.specialRequests ?? '');
+    const [walkIn, setWalkIn] = useState(false);
+    const [notify, setNotify] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError]   = useState<string | null>(null);
+
+    // Walk-in: oggi, adesso, già arrivato
+    const toggleWalkIn = (on: boolean) => {
+        setWalkIn(on);
+        if (on) { setDate(todayIso()); setTime(nowHHmm()); setNotify(false); }
+    };
+
+    const submit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        if (!name.trim()) { setError('Inserisci il nome del cliente'); return; }
+        if (!people || people < 1) { setError('Numero di persone non valido'); return; }
+        if (!date || !/^\d{2}:\d{2}/.test(time)) { setError('Data e ora obbligatorie'); return; }
+        setSaving(true);
+        const body: StaffReservationRequest = {
+            customerName: name.trim(),
+            customerPhone: phone.trim(),
+            customerEmail: email.trim(),
+            partySize: people,
+            reservationDate: date,
+            reservationTime: time.slice(0, 5),
+            specialRequests: notes.trim(),
+            notifyCustomer: notify && !!phone.trim(),
+        };
+        if (isNew) body.status = walkIn ? 'ARRIVED' : 'CONFIRMED';
+        const res = isNew ? await createReservationStaffApi(body) : await updateReservationStaffApi(reservation!.id, body);
+        setSaving(false);
+        const saved = (res.data as any)?.data as ReservationDto | undefined;
+        if (res.success && saved) {
+            onSaved(saved, isNew);
+        } else if (res.status === 400) {
+            setError(res.message && !res.message.startsWith('Request failed')
+                ? res.message
+                : 'Dati non validi: controlla data (non nel passato), ora e persone.');
+        } else {
+            setError('Salvataggio non riuscito, riprova.');
+        }
+    };
+
+    const input = 'w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:bg-gray-50 disabled:text-gray-400';
+    const label = 'block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1';
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+            <form onSubmit={submit} onClick={e => e.stopPropagation()}
+                  className="w-full max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+                <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900">{isNew ? 'Nuova prenotazione' : 'Modifica prenotazione'}</h2>
+                    <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600" aria-label="Chiudi">
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="p-5 space-y-4">
+                    {isNew && (
+                        <label className="flex items-center gap-3 rounded-xl bg-blue-50 px-4 py-3 cursor-pointer">
+                            <input type="checkbox" checked={walkIn} onChange={e => toggleWalkIn(e.target.checked)} className="w-4 h-4" />
+                            <span className="text-sm text-blue-800">
+                                <span className="font-bold">Cliente al tavolo adesso</span> (walk-in: oggi, ora attuale, segnato come arrivato)
+                            </span>
+                        </label>
+                    )}
+
+                    <div>
+                        <label className={label}>Nome *</label>
+                        <input className={input} value={name} onChange={e => setName(e.target.value)} autoFocus maxLength={120} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className={label}>Telefono</label>
+                            <input className={input} type="tel" value={phone} onChange={e => setPhone(e.target.value)} maxLength={40} />
+                        </div>
+                        <div>
+                            <label className={label}>Email</label>
+                            <input className={input} type="email" value={email} onChange={e => setEmail(e.target.value)} maxLength={120} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className={label}>Persone *</label>
+                        <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => setPeople(p => Math.max(1, p - 1))}
+                                    className="w-10 h-10 rounded-lg border border-gray-300 text-xl font-bold hover:bg-gray-50" aria-label="Una persona in meno">−</button>
+                            <input className={`${input} w-20 text-center`} type="number" min={1} max={500} value={people}
+                                   onChange={e => setPeople(parseInt(e.target.value, 10) || 0)} />
+                            <button type="button" onClick={() => setPeople(p => Math.min(500, p + 1))}
+                                    className="w-10 h-10 rounded-lg border border-gray-300 text-xl font-bold hover:bg-gray-50" aria-label="Una persona in più">+</button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className={label}>Data *</label>
+                            <input className={input} type="date" value={date} min={isNew ? todayIso() : undefined}
+                                   onChange={e => setDate(e.target.value)} disabled={walkIn} />
+                        </div>
+                        <div>
+                            <label className={label}>Ora *</label>
+                            <input className={input} type="time" value={time} onChange={e => setTime(e.target.value)} disabled={walkIn} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className={label}>Note</label>
+                        <textarea className={input} rows={2} value={notes} onChange={e => setNotes(e.target.value)} maxLength={1000}
+                                  placeholder="Allergie, seggiolone, tavolo preferito…" />
+                    </div>
+
+                    {!walkIn && (
+                        <label className={`flex items-center gap-3 text-sm ${phone.trim() ? 'text-gray-700' : 'text-gray-400'}`}>
+                            <input type="checkbox" className="w-4 h-4" checked={notify && !!phone.trim()} disabled={!phone.trim()}
+                                   onChange={e => setNotify(e.target.checked)} />
+                            Invia SMS di conferma al cliente
+                        </label>
+                    )}
+
+                    {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
+                </div>
+
+                <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-4 flex justify-end gap-3">
+                    <button type="button" onClick={onClose}
+                            className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50">
+                        Annulla
+                    </button>
+                    <button type="submit" disabled={saving}
+                            className="px-5 py-2.5 rounded-lg bg-primary text-white font-semibold text-sm shadow-md hover:opacity-90 disabled:opacity-50">
+                        {saving ? 'Salvataggio…' : isNew ? 'Inserisci' : 'Salva'}
+                    </button>
+                </div>
+            </form>
         </div>
     );
 };

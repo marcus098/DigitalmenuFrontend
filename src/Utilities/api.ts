@@ -12,7 +12,8 @@ import {
     LoginResponse,
     OpenTableSessionResponse,
     PaymentDto, PaymentIntentResponse, PublicPaymentsConfig, ProviderSettings, PaymentProvider, SumUpSyncResponse, PrepaymentSettings, CreatedOrderResponse,
-    ProductDto, ReservationDto, Response, SignupWaiter, StyleDto, TableDto, TableLookup, TableSessionState, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto, WaiterSessionState,
+    ProductDto, ReservationDto, Response, StaffReservationRequest, SignupWaiter, StyleDto, TableDto, TableLookup, TableSessionState, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto, WaiterSessionState,
+    TopProductDto,
 } from "../types";
 import {deleteCookie, getCookie} from "./Utilities";
 import {apiCall, ApiCallResult, clientApiCall} from "./helper";
@@ -83,6 +84,7 @@ const CARD_DETAILS = (id: number) => `/api/cards/${id}/details`
 const RESET_ALL_CARDS = "/api/cards/reset-all"
 const CHECKOUT_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/checkout`
 const CHECKOUT_SUMMARY = (from: string, to: string) => `/api/orders/checkout-summary?from=${from}&to=${to}`
+const TOP_PRODUCTS = (from: string, to: string, limit: number) => `/api/orders/top-products?from=${from}&to=${to}&limit=${limit}`
 const GET_FILES = (folderId: number) => "/api/filemanager/files/" + folderId
 const DOWNLOAD_FILE = (id: number) => "/api/filemanager/files/download/" + id
 const ADD_FILE = "/api/filemanager/files/add"
@@ -97,6 +99,8 @@ const GET_RESERVATIONS = "/api/reservations"
 const GET_RESERVATIONS_RANGE = (from: string, to: string) => `/api/reservations/range?from=${from}&to=${to}`
 const UPDATE_RESERVATION_STATUS = (id: number) => `/api/reservations/${id}/status`
 const DELETE_RESERVATION = (id: number) => `/api/reservations/${id}`
+const CREATE_RESERVATION_STAFF = "/api/reservations"
+const UPDATE_RESERVATION_STAFF = (id: number) => `/api/reservations/${id}`
 const CREATE_RESERVATION_PUBLIC = (localname: string) => `/api/public/reservations/${localname}`
 const CREATE_PAYMENT_INTENT_PUBLIC = (localname: string) => `/api/public/payments/intent/${localname}`
 const SEND_TAKEAWAY_ORDER = (localname: string) => `/api/public/orders/takeaway/${localname}`
@@ -449,6 +453,10 @@ export const checkoutComandApi = async (comandId: string, req: CheckoutRequest) 
 export const getCheckoutSummaryApi = async (from: string, to: string) =>
     apiCall<CheckoutDaySummary[]>({method: GET, fixed: true, url: CHECKOUT_SUMMARY(from, to)})
 
+/** Più venduti tra le comande servite create nel periodo (yyyy-MM-dd, estremi inclusi, massimo un anno). */
+export const getTopProductsApi = async (from: string, to: string, limit = 10) =>
+    apiCall<TopProductDto[]>({method: GET, fixed: true, url: TOP_PRODUCTS(from, to, limit)})
+
 /** Comande servite (COMPLETED) ma non ancora incassate in cassa. */
 export const getToCheckoutApi = async () =>
     apiCall<Comand[]>({method: GET, fixed: true, url: "/api/orders/to-checkout"})
@@ -513,6 +521,16 @@ export const updateReservationStatusApi = async (id: number, status: string) => 
 
 export const deleteReservationApi = async (id: number) => {
     return apiCall<boolean>({ method: 'DELETE', fixed: true, url: DELETE_RESERVATION(id) })
+}
+
+/** Staff: prenotazione da telefonata/walk-in (default CONFIRMED, nessun SMS salvo notifyCustomer) */
+export const createReservationStaffApi = async (data: StaffReservationRequest) => {
+    return apiCall<Response<ReservationDto>>({ method: POST, fixed: true, url: CREATE_RESERVATION_STAFF, data })
+}
+
+/** Staff: modifica prenotazione (i campi assenti restano invariati) */
+export const updateReservationStaffApi = async (id: number, data: Partial<StaffReservationRequest>) => {
+    return apiCall<Response<ReservationDto>>({ method: 'PUT', fixed: true, url: UPDATE_RESERVATION_STAFF(id), data })
 }
 
 // takeaway
@@ -613,8 +631,9 @@ export const createPaymentIntentPublicApi = async (
     return clientApiCall<PaymentIntentResponse>({ method: POST, fixed: true, url: CREATE_PAYMENT_INTENT_PUBLIC(localname), data })
 }
 
-export const getPaymentsApi = async () => {
-    return apiCall<PaymentDto[]>({ method: GET, fixed: true, url: GET_PAYMENTS })
+/** Pagamenti del locale dal più recente, creati tra from e to (yyyy-MM-dd, estremi inclusi, massimo un anno). */
+export const getPaymentsApi = async (from: string, to: string, limit = 2000) => {
+    return apiCall<PaymentDto[]>({ method: GET, fixed: true, url: `${GET_PAYMENTS}?from=${from}&to=${to}&limit=${limit}` })
 }
 
 export const getPaymentsTodayTotalApi = async () => {

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getCompletedApi, getWaitersApi } from '../../Utilities/api';
+import { localIsoDate } from '../../Utilities/dates';
 import { WaiterDto } from '../../types';
 import { Comand } from '../../ComandType';
 import CustomLoading from '../../Components/CustomLoading';
@@ -25,7 +26,8 @@ const formatMin = (min: number): string => {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-const isoDate = (d: Date) => d.toISOString().split('T')[0];
+// Data locale (non UTC), come le date delle comande inviate dal backend
+const isoDate = (d: Date) => localIsoDate(d);
 
 const getDates = (days: number): string[] =>
     Array.from({ length: days }, (_, i) => {

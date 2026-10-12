@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../../Context/DataContext';
-import { getCheckoutSummaryApi, getPaymentsApi } from '../../Utilities/api';
-import { CheckoutDaySummary, PaymentDto } from '../../types';
+import { getCheckoutSummaryApi, getPaymentsApi, getTopProductsApi } from '../../Utilities/api';
+import { CheckoutDaySummary, PaymentDto, TopProductDto } from '../../types';
 import CustomLoading from '../../Components/CustomLoading';
 import {
     ArrowTrendingUpIcon, ShoppingCartIcon, ReceiptPercentIcon, CurrencyEuroIcon,
@@ -36,16 +36,21 @@ const AnalyticsPage: React.FC = () => {
     const [payments, setPayments] = useState<PaymentDto[]>([]);
     const [cassa, setCassa] = useState<CheckoutDaySummary[]>([]);
     const [paymentsLoading, setPaymentsLoading] = useState(true);
+    const [topProducts, setTopProducts] = useState<TopProductDto[]>([]);
 
     const days = useMemo(() => last7Days(), []);
 
     useEffect(() => {
+        const from = days[0].iso, to = days[days.length - 1].iso;
+        // Solo i pagamenti dei 7 giorni mostrati, non tutto lo storico
         Promise.all([
-            getPaymentsApi(),
-            getCheckoutSummaryApi(days[0].iso, days[days.length - 1].iso),
-        ]).then(([pr, cr]) => {
+            getPaymentsApi(from, to),
+            getCheckoutSummaryApi(from, to),
+            getTopProductsApi(from, to, 8),
+        ]).then(([pr, cr, tr]) => {
             if (pr.success && pr.data) setPayments((pr.data as any).data ?? pr.data);
             if (cr.success && cr.data) setCassa(cr.data);
+            if (tr.success && Array.isArray(tr.data)) setTopProducts(tr.data);
             setPaymentsLoading(false);
         });
     }, [days]);
@@ -174,6 +179,32 @@ const AnalyticsPage: React.FC = () => {
                 </div>
             </div>
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Più venduti (comande servite, calcolati dal backend) */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-5">Più venduti — ultimi 7 giorni</h2>
+                {topProducts.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-8">Nessun ordine servito in questi giorni</p>
+                ) : (
+                    <div className="space-y-3">
+                        {topProducts.map((p, i) => (
+                            <div key={p.idProduct}>
+                                <div className="flex justify-between gap-3 text-sm mb-1">
+                                    <span className="font-semibold text-gray-700 truncate">
+                                        {i + 1}. {productsMap.get(p.idProduct)?.name ?? p.name ?? `Prodotto ${p.idProduct}`}
+                                    </span>
+                                    <span className="text-gray-400 whitespace-nowrap">{p.quantity}× · {formatEur(p.revenueCents)}</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-2">
+                                    <div className="h-2 rounded-full bg-emerald-500 transition-all"
+                                         style={{ width: `${Math.max(4, (p.quantity / Math.max(1, topProducts[0].quantity)) * 100)}%` }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             {/* Top categories */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-5">Prodotti per Categoria</h2>
@@ -200,6 +231,7 @@ const AnalyticsPage: React.FC = () => {
                         })}
                     </div>
                 )}
+            </div>
             </div>
         </div>
     );

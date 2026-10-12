@@ -575,6 +575,15 @@ export interface CheckoutDaySummary {
     count: number
 }
 
+/** GET /api/orders/top-products: più venduti tra le comande servite del periodo, per quantità decrescente. */
+export interface TopProductDto {
+    idProduct: number
+    name: string | null
+    categoryName: string | null
+    quantity: number
+    revenueCents: number
+}
+
 export interface CardDto{
     id: number
     code: string
@@ -785,9 +794,26 @@ export interface ReservationDto {
     reservationDate: string
     reservationTime: string
     specialRequests?: string
+    /** PENDING | CONFIRMED | ARRIVED | CANCELLED | NO_SHOW */
     status: string
+    /** PUBLIC (modulo cliente) | STAFF (telefonata/walk-in); null = PUBLIC */
+    source?: string | null
     createdAt: string
     updatedAt: string
+}
+
+/** POST /api/reservations e PUT /api/reservations/{id} (staff) */
+export interface StaffReservationRequest {
+    customerName: string
+    customerPhone?: string
+    customerEmail?: string
+    partySize: number
+    reservationDate: string   // yyyy-MM-dd
+    reservationTime: string   // HH:mm
+    specialRequests?: string
+    notifyCustomer?: boolean
+    /** solo in creazione: PENDING | CONFIRMED (default) | ARRIVED */
+    status?: string
 }
 
 export interface EslConfigDto {

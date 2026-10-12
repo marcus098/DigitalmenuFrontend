@@ -14,6 +14,7 @@ import {
     ArrowTrendingUpIcon, ClockIcon,
 } from '@heroicons/react/24/outline';
 import { getPaymentsTodayTotalApi, getReservationsRangeApi } from '../../Utilities/api';
+import { localIsoDate } from '../../Utilities/dates';
 
 // ── Animation variants ────────────────────────────────────────────────────────
 const pageVariants = {
@@ -166,7 +167,7 @@ const HomePage: React.FC = () => {
 
     useEffect(() => {
         if (!isAdmin && !isWaiter) return;
-        const today = new Date().toISOString().split('T')[0];
+        const today = localIsoDate();
         getPaymentsTodayTotalApi().then(r => {
             if (r.success && r.data)
                 setTodayRevenueCents((r.data as any).data?.amountCents ?? 0);

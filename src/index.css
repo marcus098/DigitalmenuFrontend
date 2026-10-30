@@ -233,3 +233,30 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .menu-marquee, .menu-fade-up, .menu-fade-in, .menu-hero-img { animation: none !important; opacity: 1 !important; }
 }
+
+/* ─── Sito vetrina a sezioni: animazioni allo scroll ───────────────────────── */
+/* Gli elementi si nascondono SOLO quando la pagina ha la classe .lp-anim (messa da JS dopo
+   aver avviato l'IntersectionObserver): senza JS o se l'observer non parte, tutto resta visibile. */
+.lp-anim { --lp-dur: 650ms; --lp-dist: 18px; --lp-zoom: 0.97; }
+.lp-anim[data-lp-intensity="lively"] { --lp-dur: 900ms; --lp-dist: 46px; --lp-zoom: 0.9; }
+.lp-anim [data-reveal]:not([data-reveal="stagger"]),
+.lp-anim [data-reveal="stagger"] .lp-item {
+  opacity: 0;
+  transition: opacity var(--lp-dur) ease, transform var(--lp-dur) cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: opacity, transform;
+}
+.lp-anim [data-reveal="slide-up"],
+.lp-anim [data-reveal="stagger"] .lp-item { transform: translateY(var(--lp-dist)); }
+.lp-anim [data-reveal="slide-side"] { transform: translateX(calc(var(--lp-dist) * -1.6)); }
+.lp-anim [data-reveal="zoom"] { transform: scale(var(--lp-zoom)); }
+.lp-anim [data-reveal="stagger"] .lp-item { transition-delay: calc(var(--i, 0) * 90ms); }
+.lp-anim [data-reveal].lp-visible,
+.lp-anim [data-reveal="stagger"].lp-visible .lp-item { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-anim [data-reveal],
+  .lp-anim [data-reveal] .lp-item { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .lp-slide { transition: none !important; }
+}
+.lp-slide { transition: opacity 1.1s ease; }
+.lp-scroll-snap { scroll-snap-type: x mandatory; scrollbar-width: thin; }
+.lp-scroll-snap > * { scroll-snap-align: start; }

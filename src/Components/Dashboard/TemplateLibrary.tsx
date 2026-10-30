@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Sparkles } from 'lucide-react';
 import { StyleDto } from '../../types';
 import {
     MENU_TEMPLATES, MenuTemplateDef, VENUE_FILTERS, VenueTag,
     buildTemplateFontsHref, resolveTemplateKey,
 } from '../../Client/menuTemplates';
 import { getMenuTokens, tokensToCssVars, TEMPLATE_FONT_KEY } from '../../Client/menuTheme';
+import { LandingConfig, SECTION_META } from '../../Client/landing/landingConfig';
+import { applyPreset, LANDING_PRESETS, LandingPreset } from '../../Client/landing/landingPresets';
 
 /**
  * Libreria template (Dashboard → Personalizza Aspetto → Template).
@@ -141,9 +143,11 @@ const TemplateThumb: React.FC<{ def: MenuTemplateDef }> = ({ def }) => {
 interface TemplateLibraryProps {
     draftTheme: StyleDto;
     updateThemeValue: (k: keyof StyleDto | string, v: any) => void;
+    /** Aggiornamento funzionale del sito a sezioni (per i "Siti completi"). */
+    updateLanding?: (fn: (cfg: LandingConfig) => LandingConfig) => void;
 }
 
-const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThemeValue }) => {
+const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThemeValue, updateLanding }) => {
     const [filter, setFilter] = useState<VenueTag | 'all'>('all');
     const [applyPalette, setApplyPalette] = useState(true);
     const current = resolveTemplateKey((draftTheme as any).landingTemplate);
@@ -181,8 +185,49 @@ const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThe
         updateThemeValue('cardStyle', 'soft');
     };
 
+    // Sito completo: sezioni + stile globale + template grafico. Foto e testi già inseriti restano
+    // nelle sezioni dello stesso tipo.
+    const applySite = (preset: LandingPreset) => {
+        if (!updateLanding) return;
+        if (!window.confirm(`Applicare il modello "${preset.label}"?\n\nSezioni, ordine e stile del sito verranno sostituiti. Foto e testi già inseriti restano nelle sezioni dello stesso tipo. Puoi annullare non salvando.`)) return;
+        const def = MENU_TEMPLATES.find(t => t.key === preset.templateKey);
+        if (def) choose(def);
+        updateLanding(cfg => applyPreset(preset, cfg));
+    };
+
     return (
         <div className="space-y-4">
+            {updateLanding && (
+                <div className="space-y-3">
+                    <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1.5"><Sparkles className="w-4 h-4" /> Siti completi</p>
+                        <p className="text-xs text-gray-500 leading-relaxed">
+                            Un modello pronto per tipo di locale: sezioni, animazioni e template grafico. Poi personalizzi tutto dal tab Sezioni.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
+                        {LANDING_PRESETS.map(preset => {
+                            const def = MENU_TEMPLATES.find(t => t.key === preset.templateKey);
+                            const types = preset.build().filter(x => x.enabled).map(x => SECTION_META[x.type].label);
+                            return (
+                                <div key={preset.key} className="p-2 rounded-lg border-2 border-gray-200 bg-white flex flex-col">
+                                    {def && <TemplateThumb def={def} />}
+                                    <div className="px-1 pt-2.5 pb-1 flex-1">
+                                        <p className="font-bold text-sm text-gray-900">{preset.label}</p>
+                                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">{preset.description}</p>
+                                        <p className="text-[11px] text-gray-400 mt-1.5 leading-snug">{types.join(' · ')}</p>
+                                    </div>
+                                    <button type="button" onClick={() => applySite(preset)} className="btn-secondary text-sm w-full justify-center mt-2">
+                                        Usa questo modello
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <hr />
+                </div>
+            )}
+
             <div>
                 <p className="text-sm font-semibold text-gray-700 mb-1">Libreria template</p>
                 <p className="text-xs text-gray-500 leading-relaxed">

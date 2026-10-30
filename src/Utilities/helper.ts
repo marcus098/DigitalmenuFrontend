@@ -7,6 +7,8 @@ export interface RequestConfig {
     headers?: {
         'Content-Type'?: string;
     };
+    timeout?: number;
+    onUploadProgress?: (e: { loaded: number; total?: number }) => void;
 }
 
 interface ApiCallInterface {
@@ -16,6 +18,10 @@ interface ApiCallInterface {
     isFormData?: boolean,
     fixed?: boolean
     webflux?: boolean
+    /** Timeout in millisecondi (default: nessuno) */
+    timeout?: number
+    /** Avanzamento dell'upload in percentuale (0-100), per i form con file. */
+    onUploadProgress?: (percent: number) => void
 }
 
 interface ClientApiCallInterface {
@@ -48,6 +54,9 @@ export const apiCall = async <T>(apiCallInterface: ApiCallInterface): Promise<Ap
             url: localApiUrl + apiCallInterface.url,
             data: apiCallInterface.data
         };
+        if (apiCallInterface.timeout) config.timeout = apiCallInterface.timeout;
+        const onProgress = apiCallInterface.onUploadProgress;
+        if (onProgress) config.onUploadProgress = e => { if (e.total) onProgress(Math.round((e.loaded / e.total) * 100)); };
 
         if (apiCallInterface.isFormData) {
             config.headers = {

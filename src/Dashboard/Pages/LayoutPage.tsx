@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Save, Paintbrush, FileText, Settings, Eye, Pencil, Image, X, Loader, Trash2, Layout, Smartphone, Monitor, RefreshCw, ExternalLink } from 'lucide-react';
+import { Save, Paintbrush, FileText, Settings, Eye, Pencil, Image, Trash2, Layout, Smartphone, Monitor, RefreshCw, ExternalLink, Layers } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useData } from '../../Context/DataContext';
 import { FeatureCard, StyleDto, UpdateStyle } from "../../types";
@@ -8,6 +8,11 @@ import CustomLoading from "../../Components/CustomLoading";
 import { FEATURE_ICONS } from "../../Utilities/featureIcons";
 import { AVAILABLE_FONTS } from "../../Utilities/fonts";
 import TemplateLibrary from "../../Components/Dashboard/TemplateLibrary";
+import LandingEditor, { LandingUpdater } from "../../Components/Dashboard/landing/LandingEditor";
+import { ColorInput, ToggleInput } from "../../Components/Dashboard/landing/EditorFields";
+import {
+    buildInitialConfig, cleanConfigForSave, configByteSize, LANDING_MAX_BYTES, parseLandingConfig,
+} from "../../Client/landing/landingConfig";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -19,29 +24,6 @@ const DEFAULT_FEATURES: FeatureCard[] = [
 ];
 
 // ─── Reusable sub-components ──────────────────────────────────────────────────
-
-const ColorInput: React.FC<{ label: string; value: string; onChange: (v: string) => void; onRemove?: () => void }> = ({ label, value, onChange, onRemove }) => (
-    <div>
-        <label className="label-style text-sm">{label}</label>
-        <div className="flex items-center gap-3 mt-1">
-            <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-10 h-10 p-0 border-none rounded-md cursor-pointer" />
-            <input type="text" value={value} onChange={e => onChange(e.target.value)} className="input-style flex-grow" />
-            {onRemove && <button onClick={onRemove} className="p-2 text-gray-400 hover:text-red-500 rounded-full"><X className="w-5 h-5" /></button>}
-        </div>
-    </div>
-);
-
-const ToggleInput: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) => void; description?: string }> = ({ label, checked, onChange, description }) => (
-    <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border">
-        <div>
-            <label className="font-semibold text-gray-700 text-sm">{label}</label>
-            {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
-        </div>
-        <div onClick={() => onChange(!checked)} className={`relative w-11 h-6 rounded-full cursor-pointer transition-colors shrink-0 ml-3 ${checked ? 'bg-primary' : 'bg-gray-300'}`}>
-            <span className={`absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
-        </div>
-    </div>
-);
 
 const ImageUploader: React.FC<{ label: string; imageUrl: string | null; onImageChange: (f: File) => void; onImageRemove?: () => void }> = ({ label, imageUrl, onImageChange, onImageRemove }) => {
     const uid = `file-upload-${label.replace(/\s+/g, '-')}`;
@@ -96,7 +78,7 @@ const MockCategoryCard: React.FC<{ theme: StyleDto; name: string }> = ({ theme, 
 
 // ─── ControlPanel ─────────────────────────────────────────────────────────────
 
-type ActiveTab = 'colors' | 'content' | 'layout' | 'template';
+type ActiveTab = 'sections' | 'colors' | 'content' | 'layout' | 'template';
 
 // @ts-ignore
 const ControlPanel: React.FC<{
@@ -112,11 +94,12 @@ const ControlPanel: React.FC<{
     removeLogo: () => void;
     removeHero: () => void;
     updateFeature: (i: number, k: keyof FeatureCard, v: string) => void;
+    updateLanding: LandingUpdater;
 }> = ({
     activeTab, setActiveTab, draftTheme, updateThemeValue,
     handleBgColorChange, removeBgColor, addBgColor,
     handleLogoSelect, handleHeroSelect, removeLogo, removeHero,
-    updateFeature,
+    updateFeature, updateLanding,
 }) => {
     const features: FeatureCard[] = draftTheme.features?.length ? draftTheme.features : DEFAULT_FEATURES;
 
@@ -128,6 +111,7 @@ const ControlPanel: React.FC<{
         : null;
 
     const tabs: { key: ActiveTab; label: string; icon: React.FC<any> }[] = [
+        { key: 'sections', label: 'Sezioni',   icon: Layers },
         { key: 'colors',   label: 'Colori',    icon: Paintbrush },
         { key: 'content',  label: 'Contenuti', icon: FileText },
         { key: 'layout',   label: 'Layout',    icon: Settings },
@@ -152,6 +136,11 @@ const ControlPanel: React.FC<{
                     </button>
                 ))}
             </div>
+
+            {/* ── Sezioni del sito vetrina ── */}
+            {activeTab === 'sections' && (
+                <LandingEditor draftTheme={draftTheme} updateThemeValue={updateThemeValue} updateLanding={updateLanding} />
+            )}
 
             {/* ── Colors ── */}
             {activeTab === 'colors' && (
@@ -236,6 +225,9 @@ const ControlPanel: React.FC<{
                 <div className="space-y-4">
                     <ImageUploader label="Logo Ristorante" imageUrl={logoPreview} onImageChange={handleLogoSelect} onImageRemove={removeLogo} />
                     <ImageUploader label="Immagine Hero (Sito Vetrina)" imageUrl={heroPreview} onImageChange={handleHeroSelect} onImageRemove={removeHero} />
+                    {parseLandingConfig((draftTheme as any).landingConfig) && (
+                        <p className="text-[11px] text-gray-500 -mt-2">Con il sito a sezioni le foto dell'intestazione si scelgono nel tab Sezioni → Intestazione.</p>
+                    )}
                     <hr />
                     <div>
                         <label className="label-style">Nome Ristorante</label>
@@ -339,6 +331,11 @@ const ControlPanel: React.FC<{
                         </select>
                     </div>
                     <hr />
+                    {parseLandingConfig((draftTheme as any).landingConfig) && (
+                        <p className="text-xs bg-sky-50 border border-sky-200 text-sky-900 rounded-lg p-2">
+                            Il sito usa le sezioni: visibilità e titoli qui sotto valgono solo per il sito classico. Modificali dal tab Sezioni.
+                        </p>
+                    )}
                     <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Sezioni visibili</p>
                     <ToggleInput label='Sezione "Perché noi"' checked={(draftTheme as any).showWhyUs ?? true} onChange={v => updateThemeValue('showWhyUs', v)} description="I 4 box highlights sotto la hero" />
                     <ToggleInput label="Ticker colorato" checked={(draftTheme as any).showTicker ?? true} onChange={v => updateThemeValue('showTicker', v)} description="La barra animata con le categorie" />
@@ -362,7 +359,7 @@ const ControlPanel: React.FC<{
 
             {/* ── Template ── */}
             {activeTab === 'template' && (
-                <TemplateLibrary draftTheme={draftTheme} updateThemeValue={updateThemeValue} />
+                <TemplateLibrary draftTheme={draftTheme} updateThemeValue={updateThemeValue} updateLanding={updateLanding} />
             )}
         </div>
     );
@@ -506,7 +503,7 @@ const LayoutPage: React.FC = () => {
         showWhyUs: true, showBooking: true, showTicker: true, landingTemplate: 'default',
     });
 
-    const [activeTab,        setActiveTab]        = useState<ActiveTab>('colors');
+    const [activeTab,        setActiveTab]        = useState<ActiveTab>('sections');
     const [activeMobileView, setActiveMobileView] = useState<'edit' | 'preview'>('edit');
     const [logoFile,         setLogoFile]         = useState<File | null>(null);
     const [heroFile,         setHeroFile]         = useState<File | null>(null);
@@ -527,6 +524,24 @@ const LayoutPage: React.FC = () => {
         setDraftTheme(prev => ({ ...prev, [key]: value }));
         setIsDirty(true);
     }, []);
+
+    // Sito a sezioni: aggiornamento funzionale (gli upload delle foto sono asincroni e non devono
+    // sovrascrivere le modifiche fatte nel frattempo). Senza config si parte dal sito classico.
+    const updateLanding: LandingUpdater = useCallback((fn) => {
+        setDraftTheme(prev => {
+            const current = parseLandingConfig((prev as any).landingConfig) ?? buildInitialConfig(prev);
+            return { ...prev, landingConfig: fn(current) };
+        });
+        setIsDirty(true);
+    }, []);
+
+    // Avviso se si chiude la pagina con modifiche non salvate
+    useEffect(() => {
+        if (!isDirty) return;
+        const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [isDirty]);
 
     const updateFeature = useCallback((idx: number, key: keyof FeatureCard, val: string) => {
         const features = draftTheme.features?.length ? [...draftTheme.features] : [...DEFAULT_FEATURES];
@@ -562,6 +577,21 @@ const LayoutPage: React.FC = () => {
     const handleSaveTheme = async () => {
         const d = draftTheme as any;
         const features: FeatureCard[] = d.features?.length ? d.features : DEFAULT_FEATURES;
+
+        // Sito a sezioni: inviato ripulito (link/colori non validi svuotati); "" = torna al sito classico.
+        let landingConfig: string | undefined;
+        const cfg = parseLandingConfig(d.landingConfig);
+        if (cfg) {
+            const clean = cleanConfigForSave(cfg);
+            if (configByteSize(clean) > LANDING_MAX_BYTES) {
+                addNotification({ message: "Il sito vetrina è troppo grande (massimo 200 KB): riduci testi o sezioni", type: "error" });
+                return;
+            }
+            landingConfig = JSON.stringify(clean);
+        } else if (parseLandingConfig((styles as any)?.landingConfig)) {
+            landingConfig = "";
+        }
+
         const payload: UpdateStyle = {
             ...draftTheme,
             backgroundGradient: draftTheme.backgroundGradient.join(";"),
@@ -583,15 +613,17 @@ const LayoutPage: React.FC = () => {
             secondaryColor: d.secondaryColor || "#0e0e0e",
             secondaryTextColor: d.secondaryTextColor || "#ffffff",
             font: d.font || "template",
+            landingConfig,
         } as any;
-        const ok = await updateStyle(payload, logoFile, heroFile);
+        let serverMessage: string | null = null;
+        const ok = await updateStyle(payload, logoFile, heroFile, m => { serverMessage = m; });
         if (ok) {
             addNotification({ message: "Stile modificato", type: "success" });
             setLogoFile(null);
             setHeroFile(null);
             setIsDirty(false);
         } else {
-            addNotification({ message: "Errore durante il salvataggio dello stile", type: "error" });
+            addNotification({ message: serverMessage || "Errore durante il salvataggio dello stile", type: "error" });
         }
     };
 
@@ -602,7 +634,7 @@ const LayoutPage: React.FC = () => {
         activeTab, setActiveTab, draftTheme, updateThemeValue,
         handleBgColorChange, removeBgColor, addBgColor,
         handleLogoSelect, handleHeroSelect, removeLogo, removeHero,
-        updateFeature,
+        updateFeature, updateLanding,
     };
 
     return (
@@ -613,13 +645,21 @@ const LayoutPage: React.FC = () => {
                     <h1 className="text-3xl font-bold text-gray-800">Personalizza Aspetto</h1>
                     <p className="text-gray-500 mt-1">Modifica l'aspetto del menu e della landing page.</p>
                 </div>
-                <button
-                    onClick={handleSaveTheme}
-                    disabled={!isDirty || loading}
-                    className="btn-primary flex-shrink-0 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <Save className="w-5 h-5" /><span>Salva Modifiche</span>
-                </button>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                    {isDirty && (
+                        <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1" role="status">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" /> Modifiche non salvate
+                        </span>
+                    )}
+                    <button
+                        onClick={handleSaveTheme}
+                        disabled={!isDirty || loading}
+                        className="btn-primary flex-shrink-0 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={isDirty ? 'Ci sono modifiche non salvate' : undefined}
+                    >
+                        <Save className="w-5 h-5" /><span>Salva Modifiche{isDirty ? ' *' : ''}</span>
+                    </button>
+                </div>
             </div>
 
             <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow">

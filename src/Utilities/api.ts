@@ -13,7 +13,8 @@ import {
     OpenTableSessionResponse,
     PaymentDto, PaymentIntentResponse, PublicPaymentsConfig, ProviderSettings, PaymentProvider, SumUpSyncResponse, PrepaymentSettings, CreatedOrderResponse,
     ProductDto, ReservationDto, Response, StaffReservationRequest, SignupWaiter, StyleDto, TableDto, TableLookup, TableSessionState, UpdateIngredient, UpdateStyle, UpdateTables, WaiterDto, WaiterSessionState,
-    TopProductDto,
+    TopProductDto, AiInsight, AiInsightRefreshKind, AiInsightsResponse, AiProductDescriptionRequest,
+    AiLandingTextRequest, AiLandingTextResponse,
 } from "../types";
 import {deleteCookie, getCookie} from "./Utilities";
 import {apiCall, ApiCallResult, clientApiCall} from "./helper";
@@ -456,6 +457,49 @@ export const getCheckoutSummaryApi = async (from: string, to: string) =>
 /** Più venduti tra le comande servite create nel periodo (yyyy-MM-dd, estremi inclusi, massimo un anno). */
 export const getTopProductsApi = async (from: string, to: string, limit = 10) =>
     apiCall<TopProductDto[]>({method: GET, fixed: true, url: TOP_PRODUCTS(from, to, limit)})
+
+// AxiomAI (solo titolare)
+const AI_STATUS = "/api/ai/status"
+const AI_INSIGHTS = "/api/ai/insights"
+const AI_INSIGHT_REFRESH = (kind: AiInsightRefreshKind) => `/api/ai/insights/${kind}/refresh`
+const AI_PRODUCT_DESCRIPTION = "/api/ai/product-description"
+const AI_LANDING_TEXT = "/api/ai/landing-text"
+const UPLOAD_STYLE_IMAGE = "/api/style/upload-image"
+
+/** Se l'assistente AI (Ollama) è attivo sul backend. */
+export const getAiStatusApi = async () =>
+    apiCall<{ aiEnabled: boolean }>({method: GET, fixed: true, url: AI_STATUS})
+
+/** Riepiloghi ieri / settimana / consigli sul menu. Una voce null = non ancora generata. */
+export const getAiInsightsApi = async () =>
+    apiCall<AiInsightsResponse>({method: GET, fixed: true, url: AI_INSIGHTS})
+
+/** Rigenera in background il periodo corrente (202 con status PENDING, 429 se richiesto da poco). */
+export const refreshAiInsightApi = async (kind: AiInsightRefreshKind) =>
+    apiCall<AiInsight>({method: POST, fixed: true, url: AI_INSIGHT_REFRESH(kind)})
+
+/** Descrizione del piatto scritta dall'AI: sincrona, può impiegare fino a un minuto su CPU. */
+export const generateProductDescriptionApi = async (body: AiProductDescriptionRequest) => {
+    const r = await apiCall<{ description: string }>({method: POST, fixed: true, url: AI_PRODUCT_DESCRIPTION, data: body, timeout: 150000})
+    if (!r.success && r.status === -1 && /timeout/i.test(r.message ?? ""))
+        return {...r, message: "L'assistente AI ci sta mettendo troppo, riprova tra poco"}
+    return r
+}
+
+/** Testi del sito vetrina scritti dall'AI (hero, chi siamo, avviso): sincrono come la descrizione dei piatti. */
+export const generateLandingTextApi = async (body: AiLandingTextRequest) => {
+    const r = await apiCall<AiLandingTextResponse>({method: POST, fixed: true, url: AI_LANDING_TEXT, data: body, timeout: 150000})
+    if (!r.success && r.status === -1 && /timeout/i.test(r.message ?? ""))
+        return {...r, message: "L'assistente AI ci sta mettendo troppo, riprova tra poco"}
+    return r
+}
+
+/** Foto del sito vetrina: la carica nel bucket del locale e restituisce il percorso da salvare. */
+export const uploadLandingImageApi = async (file: File, onProgress?: (percent: number) => void) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    return apiCall<Response<{ path: string }>>({method: POST, fixed: true, isFormData: true, data: formData, url: UPLOAD_STYLE_IMAGE, timeout: 120000, onUploadProgress: onProgress})
+}
 
 /** Comande servite (COMPLETED) ma non ancora incassate in cassa. */
 export const getToCheckoutApi = async () =>

@@ -3,6 +3,10 @@ import { useData } from '../../Context/DataContext';
 import { getCheckoutSummaryApi, getPaymentsApi, getTopProductsApi } from '../../Utilities/api';
 import { CheckoutDaySummary, PaymentDto, TopProductDto } from '../../types';
 import CustomLoading from '../../Components/CustomLoading';
+import AiInsightCard from '../../Components/Dashboard/AiInsightCard';
+import { useAiInsights } from '../../Hooks/useAiInsights';
+import { useLoginContext } from '../../Context/LoginContext';
+import { IS_ADMIN } from '../../types';
 import {
     ArrowTrendingUpIcon, ShoppingCartIcon, ReceiptPercentIcon, CurrencyEuroIcon,
 } from '@heroicons/react/24/outline';
@@ -37,6 +41,10 @@ const AnalyticsPage: React.FC = () => {
     const [cassa, setCassa] = useState<CheckoutDaySummary[]>([]);
     const [paymentsLoading, setPaymentsLoading] = useState(true);
     const [topProducts, setTopProducts] = useState<TopProductDto[]>([]);
+    const { checkVariable } = useLoginContext();
+    const isAdmin = checkVariable(IS_ADMIN);
+    // Riepilogo settimanale e consigli sul menu (AxiomAI): solo per il titolare
+    const ai = useAiInsights(isAdmin, ['weekly', 'menuTips']);
 
     const days = useMemo(() => last7Days(), []);
 
@@ -178,6 +186,31 @@ const AnalyticsPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {isAdmin && ai.available && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <AiInsightCard
+                        title="La settimana"
+                        insight={ai.data?.weekly ?? null}
+                        loading={ai.loading}
+                        error={ai.errors.weekly ?? ai.loadError}
+                        refreshing={ai.refreshing.weekly}
+                        pollTimedOut={ai.pollTimedOut}
+                        onRefresh={() => ai.refresh('weekly')}
+                        onReload={ai.reload}
+                    />
+                    <AiInsightCard
+                        title="Consigli sul menu"
+                        insight={ai.data?.menuTips ?? null}
+                        loading={ai.loading}
+                        error={ai.errors.menuTips ?? ai.loadError}
+                        refreshing={ai.refreshing.menuTips}
+                        pollTimedOut={ai.pollTimedOut}
+                        onRefresh={() => ai.refresh('menuTips')}
+                        onReload={ai.reload}
+                    />
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Più venduti (comande servite, calcolati dal backend) */}

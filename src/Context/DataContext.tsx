@@ -821,7 +821,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return false
     }
 
-    const updateStyle = async (updateStyle: UpdateStyle, logoFile: File | null, heroFile: File | null) => {
+    const updateStyle = async (updateStyle: UpdateStyle, logoFile: File | null, heroFile: File | null, onError?: (message: string) => void) => {
         const formData: FormData = new FormData()
         if(logoFile)
             formData.append("logoFile", logoFile)
@@ -861,11 +861,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         if (typeof updateStyle.heroOverlayOpacity === "number") formData.append("heroOverlayOpacity", updateStyle.heroOverlayOpacity.toString())
         if (updateStyle.secondaryColor !== undefined) formData.append("secondaryColor", updateStyle.secondaryColor)
         if (updateStyle.secondaryTextColor !== undefined) formData.append("secondaryTextColor", updateStyle.secondaryTextColor)
+        // Sito vetrina a sezioni: omesso = invariato, "" = torna al sito classico.
+        if (updateStyle.landingConfig !== undefined) formData.append("landingConfig", updateStyle.landingConfig)
         const response = await updateStyleApi(formData)
         if(response?.status === 200 && response.data){
             setStyles(response.data.data)
             return true
         }
+        // 400 del backend (es. sito vetrina non valido): il messaggio è già leggibile
+        if (response?.status === 400 && response.message) onError?.(response.message)
         return false
     }
 

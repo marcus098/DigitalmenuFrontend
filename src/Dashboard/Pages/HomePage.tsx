@@ -15,6 +15,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { getPaymentsTodayTotalApi, getReservationsRangeApi } from '../../Utilities/api';
 import { localIsoDate } from '../../Utilities/dates';
+import AiInsightCard from '../../Components/Dashboard/AiInsightCard';
+import { useAiInsights } from '../../Hooks/useAiInsights';
 
 // ── Animation variants ────────────────────────────────────────────────────────
 const pageVariants = {
@@ -164,6 +166,8 @@ const HomePage: React.FC = () => {
 
     const [todayRevenueCents, setTodayRevenueCents]   = useState<number | null>(null);
     const [todayReservations, setTodayReservations]   = useState<number | null>(null);
+    // Riepilogo di ieri (AxiomAI): solo per il titolare
+    const ai = useAiInsights(isAdmin, ['daily']);
 
     useEffect(() => {
         if (!isAdmin && !isWaiter) return;
@@ -280,6 +284,22 @@ const HomePage: React.FC = () => {
                     glowColor="rgba(16,185,129,0.15)"
                 />
             </motion.div>
+
+            {/* Com'è andata ieri (AxiomAI, solo titolare) */}
+            {isAdmin && ai.available && (
+                <motion.div variants={cardVariant} className="mb-6">
+                    <AiInsightCard
+                        title="Com'è andata ieri"
+                        insight={ai.data?.daily ?? null}
+                        loading={ai.loading}
+                        error={ai.errors.daily ?? ai.loadError}
+                        refreshing={ai.refreshing.daily}
+                        pollTimedOut={ai.pollTimedOut}
+                        onRefresh={() => ai.refresh('daily')}
+                        onReload={ai.reload}
+                    />
+                </motion.div>
+            )}
 
             {/* Quick Actions + Recent Orders */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

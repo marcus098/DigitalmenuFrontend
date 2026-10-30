@@ -1,20 +1,23 @@
 // src/pages/ProductPage.tsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useData } from "../../Context/DataContext";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Save, Plus, Trash2, Camera } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Camera, Loader2 } from "lucide-react";
 
 import { useHistory } from "../../Context/HistoryContext";
-import { AddProduct, UpdateProduct, OptionInProduct } from "../../types";
+import { AddProduct, UpdateProduct, OptionInProduct, AiDescriptionTone, IS_ADMIN } from "../../types";
 
 import CustomLoading from "../../Components/CustomLoading";
 import PillToggle from "../../Components/Dashboard/PillToggle";
 import ManageItemsModal from "../../Components/Dashboard/ManageItemsModal";
 import AllergenIngredientTagRow from "../../Components/AllergenIngredientTagRow";
 import ProductAllergensEditor from "../../Components/Dashboard/ProductAllergensEditor";
-import { normalizeAllergenIds } from "../../Utilities/Utilities";
+import { allergenById, getProductAllergens, normalizeAllergenIds } from "../../Utilities/Utilities";
 import {useNotification} from "../../Context/NotificationContext";
+import { useLoginContext } from "../../Context/LoginContext";
+import { useAiEnabled } from "../../Hooks/useAiInsights";
+import { generateProductDescriptionApi } from "../../Utilities/api";
 
 interface ProductPageProps {
     isNew: boolean;
@@ -40,6 +43,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
     const [singlePrice, setSinglePrice] = useState<number>(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState<"ingredienti" | "tags" | null>(null);
+    const [aiTone, setAiTone] = useState<AiDescriptionTone>("classico");
+    const [aiWriting, setAiWriting] = useState<boolean>(false);
+    // Descrizione corrente: la generazione può durare un minuto e nel frattempo il campo può cambiare
+    const descriptionRef = useRef(description);
+    descriptionRef.current = description;
 
     // CONTEXT E ROUTING
     const {
@@ -54,6 +62,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
     const {idProduct, localname} = useParams();
     const {previousPath, navigateWithHistory} = useHistory();
     const {addNotification} = useNotification();
+    const { checkVariable } = useLoginContext();
+    // "Scrivi con AI": solo titolare e solo se l'assistente AI è attivo sul backend
+    const aiEnabled = useAiEnabled(checkVariable(IS_ADMIN));
 
     useEffect(() => {
         try{
@@ -258,6 +269,45 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         }
     };
 
+    const handleAiDescription = async () => {
+        if (!name.trim()) {
+            addNotification({message: "Indica il nome del piatto", type: "warning"});
+            return;
+        }
+        const clip = (v: string) => v.trim().slice(0, 200);
+        const ingredientNames = ingredients
+            .map(i => ingredientsMap.get(i)?.name)
+            .filter((n): n is string => !!n && n.trim() !== "")
+            .map(clip)
+            .slice(0, 30);
+        const allergenNames = getProductAllergens({ allergens, traces, ingredients }, ingredientsMap).effective
+            .map(a => allergenById.get(a)?.short.toLowerCase())
+            .filter((n): n is string => !!n)
+            .slice(0, 30);
+        const categoryName = categoriesMap.get(idCategory)?.name;
+
+        setAiWriting(true);
+        const r = await generateProductDescriptionApi({
+            name: clip(name),
+            categoryName: categoryName ? clip(categoryName) : undefined,
+            ingredients: ingredientNames,
+            allergens: allergenNames,
+            tone: aiTone,
+        });
+        setAiWriting(false);
+
+        const generated = r.success ? r.data?.description?.trim() : undefined;
+        if (!generated) {
+            addNotification({message: r.message || "L'assistente AI non è disponibile in questo momento", type: "error"});
+            return;
+        }
+        const current = descriptionRef.current.trim();
+        if (current !== "" && current !== generated
+            && !window.confirm("Sostituire la descrizione attuale con quella scritta dall'AI?")) return;
+        setDescription(generated);
+        addNotification({message: "Descrizione scritta: rileggila prima di salvare", type: "success"});
+    };
+
     // Gli allergeni degli ingredienti non vengono più copiati sul prodotto: li calcola ProductAllergensEditor
     const addRemoveIngredient = (value: number[]) => {
         setIngredients([...value])
@@ -336,7 +386,33 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                                 <input type="text" id="product-name" value={name} onChange={e => setName(e.target.value)} className="input-style" placeholder="Es. Pizza Margherita"/>
                             </div>
                             <div>
-                                <label htmlFor="product-desc" className="label-style">Descrizione</label>
+                                <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                                    <label htmlFor="product-desc" className="label-style">Descrizione</label>
+                                    {aiEnabled && (
+                                        <div className="flex items-center gap-1.5">
+                                            <select
+                                                aria-label="Tono della descrizione"
+                                                value={aiTone}
+                                                onChange={e => setAiTone(e.target.value as AiDescriptionTone)}
+                                                disabled={aiWriting}
+                                                className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-400/50"
+                                            >
+                                                <option value="classico">Classico</option>
+                                                <option value="elegante">Elegante</option>
+                                                <option value="semplice">Semplice</option>
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={handleAiDescription}
+                                                disabled={aiWriting}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+                                                title="Scrive una descrizione a partire da nome, categoria, ingredienti e allergeni"
+                                            >
+                                                {aiWriting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Sto scrivendo…</> : <>✨ Scrivi con AI</>}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                                 <textarea id="product-desc" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="input-style" placeholder="Ingredienti e dettagli..."/>
                             </div>
                             <div>

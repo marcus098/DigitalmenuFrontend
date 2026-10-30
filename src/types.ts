@@ -61,7 +61,7 @@ export interface DataContextType{
     freeTableContext: (id: number) => Promise<string>
     forceFreeTableContext: (id: number) => Promise<boolean>
     setBusyTable: (id: number, seats: number) => Promise<boolean>
-    updateStyle: (updateStyle: UpdateStyle, logoFile: File | null, heroFile: File | null) => Promise<boolean>
+    updateStyle: (updateStyle: UpdateStyle, logoFile: File | null, heroFile: File | null, onError?: (message: string) => void) => Promise<boolean>
     getWaiters: () => Promise<WaiterDto[] | null>
     deleteWaiter: (id: number) => Promise<boolean>
     confirmWaiter: (id: number) => Promise<boolean>
@@ -102,6 +102,8 @@ export interface UpdateStyle {
     landingTemplate?: string
     heroBgColor?: string
     heroOverlayOpacity?: number
+    /** JSON del sito vetrina a sezioni. undefined = invariato, "" = torna al sito classico. */
+    landingConfig?: string
     secondaryColor?: string
     secondaryTextColor?: string
 }
@@ -300,6 +302,11 @@ export interface StyleDto{
     heroOverlayOpacity?: number,
     secondaryColor?: string,
     secondaryTextColor?: string,
+    /**
+     * Sito vetrina a sezioni (vedi Client/landing/landingConfig.ts). Arriva dal backend già come oggetto;
+     * null/assente = sito classico costruito dai campi qui sopra.
+     */
+    landingConfig?: import('./Client/landing/landingConfig').LandingConfig | null,
 }
 
 export interface ImageDto{
@@ -582,6 +589,69 @@ export interface TopProductDto {
     categoryName: string | null
     quantity: number
     revenueCents: number
+}
+
+// ── AxiomAI (riepiloghi e testi generati da Ollama sul backend) ─────────────
+export type AiInsightKind = 'DAILY' | 'WEEKLY' | 'MENU_TIPS'
+export type AiInsightStatus = 'READY' | 'PENDING' | 'FAILED' | 'NO_DATA'
+/** Tipo usato nell'URL di refresh */
+export type AiInsightRefreshKind = 'daily' | 'weekly' | 'menu-tips'
+
+/** Numero chiave già formattato in italiano dal backend (mai inventato dall'AI) */
+export interface AiHighlight {
+    label: string
+    value: string
+    trend: 'up' | 'down' | 'flat' | null
+    detail: string | null
+}
+
+export interface AiInsight {
+    kind: AiInsightKind
+    /** yyyy-MM-dd */
+    periodFrom: string
+    /** yyyy-MM-dd */
+    periodTo: string
+    status: AiInsightStatus
+    /** false: testo deterministico scritto dal backend (AI spenta o non raggiungibile) */
+    aiGenerated: boolean
+    /** Paragrafi separati da 
+, punti elenco con "- " a inizio riga */
+    text: string | null
+    highlights: AiHighlight[]
+    generatedAt: string | null
+}
+
+export interface AiInsightsResponse {
+    aiEnabled: boolean
+    daily: AiInsight | null
+    weekly: AiInsight | null
+    menuTips: AiInsight | null
+}
+
+export type AiDescriptionTone = 'classico' | 'elegante' | 'semplice'
+
+export type AiLandingTextKind = 'hero' | 'about' | 'announcement'
+export type AiLandingTone = 'classico' | 'elegante' | 'semplice' | 'giovane'
+
+export interface AiLandingTextRequest {
+    kind: AiLandingTextKind
+    venueName: string
+    notes?: string
+    tone?: AiLandingTone
+}
+
+export interface AiLandingTextResponse {
+    title: string
+    text: string
+}
+
+export interface AiProductDescriptionRequest {
+    name: string
+    categoryName?: string
+    ingredients?: string[]
+    allergens?: string[]
+    notes?: string
+    tone?: AiDescriptionTone
 }
 
 export interface CardDto{

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useNotification } from '../../Context/NotificationContext';
 import { useData } from '../../Context/DataContext';
@@ -29,15 +29,30 @@ const TableSessionWaitingPage: React.FC = () => {
         }
     }, [stored, localname, navigate]);
 
+    // Comande mie già presenti all'arrivo (giri precedenti): dopo l'invio la sessione resta OPEN,
+    // quindi il segnale che il MIO giro è partito è la comparsa di una nuova comanda mia.
+    const knownComandsRef = useRef<Set<string> | null>(null);
+
     const onState = useCallback((s: TableSessionState) => {
         setState(s);
         setLoaded(true);
-        if (s.status === 'SUBMITTED') {
+        const mine = (s.comands ?? []).filter(c => c.clientSessionId === clientSessionId).map(c => c.comandId);
+        if (knownComandsRef.current === null) {
+            knownComandsRef.current = new Set(mine);
+            // giro già inviato prima del primo caricamento: non sono più "pronto" ma ho comande
+            const me = (s.clients ?? []).find(c => c.clientSessionId === clientSessionId);
+            if (me && !me.ready && mine.length > 0) {
+                navigate(`/${localname}/table-live`);
+                return;
+            }
+        } else if (mine.some(id => !knownComandsRef.current!.has(id))) {
             navigate(`/${localname}/table-live`);
-        } else if (s.status === 'CLOSED') {
+            return;
+        }
+        if (s.status === 'SUBMITTED' || s.status === 'CLOSED') {
             navigate(`/${localname}/table-live`);
         }
-    }, [localname, navigate]);
+    }, [localname, navigate, clientSessionId]);
 
     useTableSessionSSE(stored?.sessionId ?? null, clientSessionId, onState);
 

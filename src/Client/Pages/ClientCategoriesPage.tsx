@@ -99,7 +99,7 @@ const ClientCategoriesPage: React.FC = () => {
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || localname || ''}
                     onAllergenClick={() => setIsAllergenModalOpen(true)}
-                    onCartClick={() => navigate(`/${localname}/cart`)}
+                    onCartClick={() => navigate(waiters ? `/Waiters/${localname}/cart` : `/${localname}/cart`)}
                     cartItemCount={cartCount}
                     primaryColor={primaryColor}
                 />

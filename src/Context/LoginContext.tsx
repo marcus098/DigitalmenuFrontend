@@ -238,7 +238,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         deleteCookie("rf_token")
         setAuthorized(false)
         setUser(null)
-        window.location.href = (process.env.REACT_APP_URL || "") + "/login"
+        window.location.href = "/login"
     };
 
     return (

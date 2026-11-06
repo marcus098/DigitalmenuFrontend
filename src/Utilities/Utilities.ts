@@ -1,5 +1,6 @@
 import {AddComandWaiter, AddProductToOrder, ProductCard, ProductToOrder} from "../types";
 import {Orders} from "../Dashboard/Pages/OrderPage";
+import {Comand, Product as ComandProduct} from "../ComandType";
 
 export const MOBILE_WIDTH = 350
 
@@ -170,8 +171,14 @@ const generateCartKey = (productCart: ProductCard): string => {
 
 export const CART_UPDATED_EVENT = 'restaurantflow:cart-updated';
 
+// Nome del cookie del carrello: "cart_tmp0" (cliente) o "cart_<nome>" (es. "cart_waiter").
+// Unico punto di verità: prima alcune funzioni usavano "cart_cart_tmp0" come default e
+// svuotavano/salvavano un cookie diverso da quello letto (badge del carrello che restava pieno).
+const cartCookieName = (cartName?: string): string =>
+    cartName ? (cartName.startsWith("cart") ? "" : "cart_") + cartName : "cart_tmp0";
+
 export const addProductToCart = (productCart: ProductCard, cartName?: string) => {
-    const nameCart = "cart_" + (cartName ?? "tmp0");
+    const nameCart = cartCookieName(cartName);
     const cartMap = getCartMap(nameCart);
 
     const key = generateCartKey(productCart);
@@ -187,7 +194,7 @@ export const addProductToCart = (productCart: ProductCard, cartName?: string) =>
 };
 
 export const getCartMap = (cartName?: string): { [key: string]: ProductCard } => {
-    const nameCart = cartName ? (cartName.startsWith("cart") ? "" : "cart_") + cartName : "cart_tmp0";
+    const nameCart = cartCookieName(cartName);
     const cookie = getCookie(nameCart) || "{}";
 
     try {
@@ -203,7 +210,7 @@ export const getCartMap = (cartName?: string): { [key: string]: ProductCard } =>
 };
 
 export const removeProductFromCart = (productCart: ProductCard, cartName?: string): boolean => {
-    const nameCart = "cart_" + (cartName ?? "cart_tmp0");
+    const nameCart = cartCookieName(cartName);
     const cartMap = getCartMap(nameCart);
     const key = generateCartKey(productCart);
 
@@ -217,7 +224,7 @@ export const removeProductFromCart = (productCart: ProductCard, cartName?: strin
 };
 
 export const updateProductQuantity = (productCart: ProductCard, delta: number, cartName?: string) => {
-    const nameCart = "cart_" + (cartName ?? "cart_tmp0");
+    const nameCart = cartCookieName(cartName);
     const cartMap = getCartMap(nameCart);
     const key = generateCartKey(productCart);
 
@@ -236,8 +243,8 @@ export const updateProductQuantity = (productCart: ProductCard, delta: number, c
 };
 
 export const emptyCart = (cartName?: string) => {
-    const nameCart = "cart_" + (cartName ?? "cart_tmp0");
-    deleteCookie(nameCart);
+    deleteCookie(cartCookieName(cartName));
+    window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
 };
 
 export const convertCartToAddComandWaiterOrder = (products: ProductCard[]): AddComandWaiter => {
@@ -259,7 +266,7 @@ export const convertCartToAddComandWaiterOrder = (products: ProductCard[]): AddC
 
 export function saveCart(productCard: ProductCard[], name: string | undefined){
     try {
-        const nameCart = "cart_" + (name ?? "cart_tmp0");
+        const nameCart = cartCookieName(name);
         if(productCard.length === 0){
             deleteCookie(nameCart)
         }else {
@@ -353,6 +360,19 @@ export const cartToAddComandOrders = (cart: ProductCard[]) => {
             ingredientsPlus: item.ingredientsPlus,
         }],
     }));
+};
+
+/** Prezzo unitario di una riga di comanda (€): snapshot del server, altrimenti opzione + extra salvati. */
+export const comandProductUnitPrice = (p: ComandProduct): number => {
+    if (p.unitPriceCents != null) return p.unitPriceCents / 100;
+    return (p.productOption?.price ?? 0) + (p.ingredientsPlus ?? []).reduce((s, i) => s + (i?.price ?? 0), 0);
+};
+
+/** Totale della comanda (€): totalCents del server se presente, altrimenti somma delle righe (extra inclusi). */
+export const comandTotal = (c: Comand): number => {
+    if (c.totalCents != null) return c.totalCents / 100;
+    return (c.orders ?? []).reduce((acc, o) =>
+        acc + (o.products ?? []).reduce((s, p) => s + comandProductUnitPrice(p) * p.quantity, 0), 0);
 };
 
 export function formatDateTime(isoString: string): string {

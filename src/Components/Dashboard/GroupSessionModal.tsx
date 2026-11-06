@@ -14,9 +14,11 @@ interface GroupSessionModalProps {
     tableId: number;
     tableName: string;
     onClose: () => void;
+    /** Chiamato dopo apertura/chiusura del tavolo: la Sala aggiorna subito lo stato (rosso/verde) */
+    onChanged?: () => void;
 }
 
-const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableName, onClose }) => {
+const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableName, onClose, onChanged }) => {
     const { addNotification } = useNotification();
     const [loading, setLoading] = useState<boolean>(true);
     const [busy, setBusy] = useState<boolean>(false);
@@ -49,6 +51,7 @@ const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableNam
         setBusy(false);
         if (result.success && result.data) {
             addNotification({ type: 'success', message: 'Tavolo aperto!' });
+            onChanged?.();
             await fetchSession();
         } else if (result.status === 409) {
             addNotification({ type: 'warning', message: 'Tavolo già aperto.' });
@@ -64,6 +67,7 @@ const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableNam
         setBusy(false);
         if (result.success) {
             addNotification({ type: 'success', message: 'Tavolo chiuso.' });
+            onChanged?.();
             onClose();
         } else {
             addNotification({ type: 'error', message: 'Errore nella chiusura del tavolo.' });
@@ -106,7 +110,7 @@ const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableNam
                         <Users className="w-5 h-5 text-primary" />
                         <h2 className="text-lg font-bold text-zinc-800">Sessione gruppo · {tableName}</h2>
                     </div>
-                    <button onClick={onClose} className="p-1 text-zinc-500 hover:text-zinc-700">
+                    <button onClick={onClose} aria-label="Chiudi" className="p-1 text-zinc-500 hover:text-zinc-700">
                         <X className="w-5 h-5" />
                     </button>
                 </div>

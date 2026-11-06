@@ -25,6 +25,8 @@ export interface Product {
     ingredientsMinus: Ingredient[];
     ingredientsPlus: Ingredient[];
     note: string;
+    /** Prezzo unitario (opzione + extra) in centesimi, calcolato dal server all'ordine */
+    unitPriceCents?: number | null;
 }
 
 export interface Order {

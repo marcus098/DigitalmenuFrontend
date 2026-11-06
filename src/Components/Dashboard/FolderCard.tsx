@@ -102,7 +102,7 @@ export const FolderCard: React.FC<FolderCardProps> = ({ folder, onOpen, onRename
 
             {/* Contenitore per il pulsante del menu e il menu stesso */}
             <div ref={menuRef} className="relative">
-                <button onClick={handleMenuToggle} className="p-2 rounded-full hover:bg-gray-100 text-gray-500">
+                <button onClick={handleMenuToggle} aria-label="Altre azioni" className="p-2 rounded-full hover:bg-gray-100 text-gray-500">
                     <EllipsisVerticalIcon className="w-5 h-5" />
                 </button>
 

@@ -7,6 +7,7 @@ import {useData} from '../Context/DataContext';
 const STRINGS = {
     allergens: {it: 'Allergeni', en: 'Allergens', de: 'Allergene', fr: 'Allergènes', es: 'Alérgenos', nl: 'Allergenen', pl: 'Alergeny', pt: 'Alergénios', zh: '过敏原'},
     allergensFilter: {it: 'Filtra per allergeni', en: 'Filter by allergens', de: 'Nach Allergenen filtern', fr: 'Filtrer par allergènes', es: 'Filtrar por alérgenos', nl: 'Filteren op allergenen', pl: 'Filtruj alergeny', pt: 'Filtrar por alergénios', zh: '按过敏原筛选'},
+    myOrders: {it: 'I miei ordini', en: 'My orders', de: 'Meine Bestellungen', fr: 'Mes commandes', es: 'Mis pedidos', nl: 'Mijn bestellingen', pl: 'Moje zamówienia', pt: 'Os meus pedidos', zh: '我的订单'},
     order: {it: 'Ordine', en: 'Order', de: 'Bestellung', fr: 'Commande', es: 'Pedido', nl: 'Bestelling', pl: 'Zamówienie', pt: 'Pedido', zh: '订单'},
     language: {it: 'Lingua del menu', en: 'Menu language', de: 'Sprache der Speisekarte', fr: 'Langue du menu', es: 'Idioma del menú', nl: 'Taal van het menu', pl: 'Język menu', pt: 'Idioma do menu', zh: '菜单语言'},
     mayContainTraces: {it: 'Può contenere tracce di', en: 'May contain traces of', de: 'Kann Spuren enthalten von', fr: 'Peut contenir des traces de', es: 'Puede contener trazas de', nl: 'Kan sporen bevatten van', pl: 'Może zawierać śladowe ilości', pt: 'Pode conter vestígios de', zh: '可能含有微量'},

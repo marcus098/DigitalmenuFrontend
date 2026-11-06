@@ -11,8 +11,8 @@ import EditTableModal from "../../Components/Dashboard/EditTableModal";
 import DeletePopup from "../../Components/DeletePopup";
 import { Plus, Check } from "lucide-react";
 import {useNotification} from "../../Context/NotificationContext";
-import {AddTable, UpdateTableRow, UpdateTables} from "../../types";
-import {all} from "axios";
+import {AddTable, IS_ADMIN, UpdateTableRow, UpdateTables} from "../../types";
+import {useLoginContext} from "../../Context/LoginContext";
 import CustomLoading from "../../Components/CustomLoading";
 import FreeBusyTableModal from "../../Components/Dashboard/FreeBusyTableModal";
 import GroupSessionModal from "../../Components/Dashboard/GroupSessionModal";
@@ -22,8 +22,15 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const TablesPage: React.FC = () => {
     // STATI COMPLETI
-    const { loading, tablesMap, mapRawOrderToOrder, setBusyTable, freeTableContext, forceFreeTableContext, addTableFunc, updateTablesFunc, updateSingleTableFunc, deleteTable, forceDeleteTable } = useData();
+    const { loading, tablesMap, setBusyTable, freeTableContext, forceFreeTableContext, addTableFunc, updateTablesFunc, updateSingleTableFunc, deleteTable, forceDeleteTable, refreshTables } = useData();
     const { addNotification } = useNotification();
+    // Modifica della sala (aggiungi/modifica tavoli, sposta/ridimensiona) solo per il titolare
+    const { checkVariable } = useLoginContext();
+    const isAdmin = checkVariable(IS_ADMIN);
+    // Le posizioni si salvano solo sulla griglia desktop (24 colonne): sugli schermi piccoli
+    // la libreria ricompatta i tavoli e salvare quelle coordinate rovinerebbe la piantina.
+    const [breakpoint, setBreakpoint] = useState<string>("lg");
+    const canEditLayout = isAdmin && breakpoint === "lg";
     const [rooms, setRooms] = useState<Room[]>([]);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [layouts, setLayouts] = useState<Layouts>({});
@@ -36,6 +43,8 @@ const TablesPage: React.FC = () => {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isBusyModalOpen, setIsBusyModalOpen] = useState<boolean>(false)
     const [isGroupSessionModalOpen, setIsGroupSessionModalOpen] = useState<boolean>(false)
+    // Tavolo appena aperto: si mostra subito il codice d'accesso da dare ai clienti
+    const [openedTable, setOpenedTable] = useState<{ id: number, name: string } | null>(null)
 
     const [showBusyMessage, setShowBusyMessage] = useState(false);
     const [tableOrders, setTableOrders] = useState<Record<OrderStatus, Item[]>>({ PENDING: [], PROGRESS: [], COMPLETED: [], CONFIRMED: [] });
@@ -81,7 +90,13 @@ const TablesPage: React.FC = () => {
     const handleLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
         setLayouts(allLayouts);
         setLayoutCurrent([...currentLayout])
-        if (!isModified) setIsModified(true);
+    };
+
+    // "Modificato" solo dopo un trascinamento/ridimensionamento reale dell'utente
+    // (onLayoutChange scatta anche al primo render e al cambio di breakpoint).
+    const handleUserLayoutChange = (currentLayout: Layout[]) => {
+        setLayoutCurrent([...currentLayout])
+        setIsModified(true);
     };
 
     // LOGICA DI FETCH DEGLI ORDINI
@@ -124,7 +139,7 @@ const TablesPage: React.FC = () => {
 
     const handleRoomChange = (room: Room) => { setSelectedRoom(room); window.location.hash = room.name; };
     const handleInfoClick = (table: Table) => { setSelectedTable(table); setIsDetailModalOpen(true); };
-    const handleEditClick = (table: Table) => { setSelectedTable(table); setIsEditModalOpen(true); };
+    const handleEditClick = (table: Table) => { if (!isAdmin) return; setSelectedTable(table); setIsEditModalOpen(true); };
     const handleRemoveClick = (table: Table) => { setSelectedTable(table); setIsDeletePopupOpen(true); };
 
     const handleConfirmDelete = async () => {
@@ -199,10 +214,18 @@ const TablesPage: React.FC = () => {
     const setBusy = async (id: number, seats?: number) => {
         if(!seats) return
         const response = await setBusyTable(id, seats)
-        if(response)
-            addNotification({message: "Tavolo occupato!", type: "success"})
-        else
-            addNotification({message: "Errore", type: "error"})
+        const name = tablesMap.get(id)?.name || ""
+        switch (response.result) {
+            case "SUCCESS":
+                addNotification({message: response.code ? `Tavolo aperto! Codice per i clienti: ${response.code}` : "Tavolo aperto!", type: "success"})
+                setOpenedTable({ id, name })
+                break
+            case "ALREADY_OPEN":
+                addNotification({message: `${name || "Il tavolo"} è già aperto: aggiorno la sala.`, type: "warning"})
+                break
+            default:
+                addNotification({message: "Impossibile aprire il tavolo, riprova.", type: "error"})
+        }
     };
 
     const onAdd = async(name: string, location: string) => {
@@ -264,7 +287,7 @@ const TablesPage: React.FC = () => {
             </header>
 
             {/* AREA PRINCIPALE */}
-            <main className="flex-1 relative p-4 overflow-y-auto">
+            <main className={`flex-1 relative p-4 overflow-y-auto ${isAdmin ? "pb-32" : ""}`}>
                 {selectedRoom ? (
                     <ResponsiveGridLayout
                         layouts={layouts}
@@ -273,6 +296,11 @@ const TablesPage: React.FC = () => {
                         cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }}
                         rowHeight={30}
                         draggableCancel=".non-draggable" // Regola chiave
+                        isDraggable={canEditLayout}
+                        isResizable={canEditLayout}
+                        onBreakpointChange={(bp: string) => { setBreakpoint(bp); setIsModified(false); }}
+                        onDragStop={handleUserLayoutChange}
+                        onResizeStop={handleUserLayoutChange}
                     >
                         {selectedRoom.tables.map(table => (
                             <TableItem
@@ -280,7 +308,8 @@ const TablesPage: React.FC = () => {
                                 table={table}
                                 isSelected={selectedTable?.id === table.id}
                                 onInfo={handleInfoClick}
-                                onEdit={handleEditClick}
+                                onEdit={isAdmin ? handleEditClick : undefined}
+                                editable={canEditLayout}
                                 onRemove={() => handleRemoveClick(table)}
                                 onFree={(table: Table)        => {setSelectedTable(table); freeTable(Number(table.id))}}
                                 onOccupy={(table: Table)      => {setSelectedTable(table); setIsBusyModalOpen(true)}}
@@ -294,14 +323,24 @@ const TablesPage: React.FC = () => {
             </main>
 
             {/* BOTTONI FLOTTANTI */}
-            <div className="absolute bottom-6 right-6 flex flex-col gap-4 z-40">
-                {isModified && <button onClick={handleSaveLayout} className="btn-primary p-4 rounded-full shadow-lg"><Check className="w-7 h-7"/></button>}
-                <button onClick={() => setIsAddModalOpen(true)} className="bg-primary text-white p-4 rounded-full shadow-lg"><Plus className="w-7 h-7" /></button>
-            </div>
+            {isAdmin && (
+                <div className="fixed bottom-6 right-6 flex flex-col items-center gap-3 z-30">
+                    {isModified && canEditLayout && (
+                        <button onClick={handleSaveLayout} aria-label="Salva disposizione tavoli" title="Salva disposizione"
+                                className="bg-primary text-white p-4 rounded-full shadow-lg hover:opacity-90">
+                            <Check className="w-6 h-6"/>
+                        </button>
+                    )}
+                    <button onClick={() => setIsAddModalOpen(true)} aria-label="Aggiungi tavolo" title="Aggiungi tavolo"
+                            className="bg-primary text-white p-4 rounded-full shadow-lg hover:opacity-90">
+                        <Plus className="w-6 h-6" />
+                    </button>
+                </div>
+            )}
 
             {/* MODALI E POPUP */}
-            {isAddModalOpen && <AddTableModal rooms={rooms} onClose={() => setIsAddModalOpen(false)} onAdd={onAdd} />}
-            {isEditModalOpen && selectedTable && <EditTableModal table={selectedTable} onClose={() => setIsEditModalOpen(false)} onSave={handleEdit} onDelete={() => setIsDeletePopupOpen(true)} />}
+            {isAdmin && isAddModalOpen && <AddTableModal rooms={rooms} onClose={() => setIsAddModalOpen(false)} onAdd={onAdd} />}
+            {isAdmin && isEditModalOpen && selectedTable && <EditTableModal table={selectedTable} onClose={() => setIsEditModalOpen(false)} onSave={handleEdit} onDelete={() => setIsDeletePopupOpen(true)} />}
             {isDeletePopupOpen && selectedTable && <DeletePopup itemName={selectedTable.name} onConfirm={handleConfirmDelete} onCancel={() => setIsDeletePopupOpen(false)}/>}
             {isForceDeletePopupOpen && selectedTable && <DeletePopup itemName={"free_table"} onConfirm={handleForceConfirmDelete} onCancel={() => setIsForceDeletePopupOpen(false)}/>}
             {isBusyModalOpen && selectedTable && <FreeBusyTableModal table={selectedTable} onClose={() => {setIsBusyModalOpen(false); setSelectedTable(null)}} onSave={setBusy} />}
@@ -310,7 +349,16 @@ const TablesPage: React.FC = () => {
                 <GroupSessionModal
                     tableId={Number(selectedTable.id)}
                     tableName={selectedTable.name}
+                    onChanged={refreshTables}
                     onClose={() => { setIsGroupSessionModalOpen(false); setSelectedTable(null); }}
+                />
+            )}
+            {openedTable && !isGroupSessionModalOpen && (
+                <GroupSessionModal
+                    tableId={openedTable.id}
+                    tableName={openedTable.name}
+                    onChanged={refreshTables}
+                    onClose={() => setOpenedTable(null)}
                 />
             )}
             {loading && <CustomLoading isFullPage={true} isTransparent={true} />}

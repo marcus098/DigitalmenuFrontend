@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {Orders} from "../Dashboard/Pages/OrderPage";
 import {formatDateTime} from "../Utilities/Utilities";
+import {tableLabel} from "../Dashboard/tableLabel";
 
 const STATUS_LABEL: Record<string, string> = {
     AWAIT: "Nuovo",
@@ -83,7 +84,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                 )}
             </div>
             {order.createdAt && <p className="text-sm text-black-500">{formatDateTime(order.createdAt)}</p>}
-            {order.tableName && <p className="text-sm text-gray-500">Tavolo: {order.tableName}</p>}
+            {order.tableName && <p className="text-sm text-gray-500">{tableLabel(order.tableName)}</p>}
             {order.name && <p className="text-sm text-gray-500">Nome: {order.name}</p>}
             {order.address && <p className="text-sm text-gray-500">Indirizzo: {order.address}</p>}
             {order.phone && <p className="text-sm text-gray-500">Tel: {order.phone}</p>}

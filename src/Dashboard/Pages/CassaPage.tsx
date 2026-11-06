@@ -8,6 +8,7 @@ import { useNotification } from '../../Context/NotificationContext';
 import { CardDto, LoyaltySettings, PaymentDto, OptionInProduct, ProductDto } from '../../types';
 import { Comand, Product } from '../../ComandType';
 import CustomLoading from '../../Components/CustomLoading';
+import { tableLabel } from '../tableLabel';
 import {
     CurrencyEuroIcon, CheckCircleIcon, ClockIcon, ShoppingBagIcon,
     TableCellsIcon, HomeIcon, XMarkIcon, PlusIcon, MinusIcon,
@@ -40,15 +41,16 @@ const formatTime = (iso: string) =>
 type ComandKind = 'table' | 'takeaway' | 'home';
 
 const comandKind = (c: Comand): ComandKind => {
-    if (c.idTable) return 'table';
+    // idTable -1 = nessun tavolo (asporto/domicilio)
+    if (c.idTable && c.idTable > 0) return 'table';
     if (c.comandWaiterType === 'HOME' || c.address) return 'home';
     return 'takeaway';
 };
 
 const comandLabel = (c: Comand, tablesMap: Map<number, { name: string }>): string => {
-    if (c.idTable) {
+    if (c.idTable && c.idTable > 0) {
         const t = tablesMap.get(c.idTable);
-        return t ? `Tavolo ${t.name}` : `Tavolo ${c.idTable}`;
+        return tableLabel(t?.name, c.idTable);
     }
     if (c.comandWaiterType === 'HOME' || c.address) return `Domicilio${c.name ? ` · ${c.name}` : ''}`;
     return `Asporto${c.name ? ` · ${c.name}` : ''}`;
@@ -64,12 +66,13 @@ const comandItems = (c: Comand) =>
 // ─── Status UI ───────────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, string> = {
+    AWAIT:     'bg-yellow-100 text-yellow-700',
     PENDING:   'bg-yellow-100 text-yellow-700',
     PROGRESS:  'bg-blue-100   text-blue-700',
     COMPLETED: 'bg-amber-100  text-amber-800',
 };
 const STATUS_LABEL: Record<string, string> = {
-    PENDING: 'In attesa', PROGRESS: 'In preparazione', COMPLETED: 'Servito · da incassare',
+    AWAIT: 'In attesa', PENDING: 'In attesa', PROGRESS: 'In preparazione', COMPLETED: 'Servito · da incassare',
 };
 
 const KIND_ICON: Record<ComandKind, React.FC<{ className?: string }>> = {
@@ -417,7 +420,7 @@ const CheckoutPanel: React.FC<PanelProps> = ({
                     <h2 className="text-lg font-black text-gray-900">{label}</h2>
                     <p className="text-xs text-gray-400">{formatTime(comand.createdAt)}</p>
                 </div>
-                <button onClick={onClose}
+                <button onClick={onClose} aria-label="Chiudi"
                         className="p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700">
                     <XMarkIcon className="w-5 h-5" />
                 </button>
@@ -1119,7 +1122,7 @@ const CassaPage: React.FC = () => {
                                                 </p>
                                                 <p className="text-xs text-gray-400 mt-0.5">
                                                     {p.createdAt ? formatTime(p.createdAt) : ''}
-                                                    {p.idTable ? ` · Tavolo ${p.idTable}` : ''}
+                                                    {p.idTable && p.idTable > 0 ? ` · ${tableLabel(tablesMap.get(p.idTable)?.name, p.idTable)}` : ''}
                                                 </p>
                                             </div>
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${(PAY_STATUS[p.status] ?? PAY_STATUS.PENDING).badge}`}>

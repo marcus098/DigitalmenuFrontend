@@ -186,7 +186,7 @@ const Header: React.FC = () => {
                             </button>
 
                             {/* Bell */}
-                            <button className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                            <button aria-label="Notifiche" className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
                                 <Bell className="w-5 h-5" />
                             </button>
 

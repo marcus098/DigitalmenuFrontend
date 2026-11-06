@@ -99,26 +99,26 @@ const ContactForm: React.FC = () => {
 
     if (status === 'sent') {
         return (
-            <div ref={successRef} tabIndex={-1} role="status" className="border-[1.5px] border-[var(--ink)] bg-[var(--card)] p-6 sm:p-8">
-                <div className="eyebrow">Richiesta inviata</div>
-                <p className="f-display text-[28px] leading-tight mt-2">Grazie, ti rispondiamo a breve.</p>
+            <div ref={successRef} tabIndex={-1} role="status" className="border border-[var(--ink)] p-6 sm:p-8">
+                <div className="label flex items-center gap-2"><span className="inline-block h-[6px] w-[6px] bg-[var(--accent)]" aria-hidden="true" />Richiesta inviata</div>
+                <p className="text-[26px] font-semibold tracking-[-0.03em] leading-tight mt-3">Grazie, ti rispondiamo a breve.</p>
                 <p className="mt-3 text-[var(--ink-2)]">
                     Abbiamo ricevuto il tuo messaggio. Ti scriviamo all'indirizzo che ci hai lasciato
                     (o ti chiamiamo, se hai indicato un numero).
                 </p>
-                <button type="button" className="btn btn-ghost mt-6" onClick={() => setStatus('idle')}>
+                <button type="button" className="btn btn-line mt-6" onClick={() => setStatus('idle')}>
                     Invia un'altra richiesta
                 </button>
             </div>
         );
     }
 
-    const label = 'block text-[14px] font-semibold mb-1.5';
-    const errText = 'mt-1.5 text-[13px] font-medium text-[var(--accent)]';
+    const label = 'f-label';
+    const errText = 'mt-1.5 text-[13px] text-[var(--accent-text)]';
     const describedBy = (k: keyof Fields) => (errors[k] ? id(`${k}-err`) : undefined);
 
     return (
-        <form ref={formRef} onSubmit={onSubmit} noValidate className="relative grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5">
+        <form ref={formRef} onSubmit={onSubmit} noValidate className="relative grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
             <div>
                 <label htmlFor={id('name')} className={label}>Nome e cognome</label>
                 <input id={id('name')} className="field" autoComplete="name" value={fields.name}
@@ -142,7 +142,7 @@ const ContactForm: React.FC = () => {
             </div>
             <div>
                 <label htmlFor={id('phone')} className={label}>
-                    Telefono <span className="font-normal text-[var(--muted)]">(facoltativo)</span>
+                    Telefono <span className="normal-case tracking-normal text-[var(--muted)]">· facoltativo</span>
                 </label>
                 <input id={id('phone')} type="tel" inputMode="tel" className="field" autoComplete="tel" value={fields.phone}
                        onChange={e => set('phone', e.target.value)} maxLength={30}
@@ -179,7 +179,7 @@ const ContactForm: React.FC = () => {
                 <div className="flex items-start gap-3">
                     <input id={id('privacyAccepted')} type="checkbox" checked={fields.privacyAccepted}
                            onChange={e => set('privacyAccepted', e.target.checked)}
-                           className="mt-1 h-[18px] w-[18px] shrink-0 accent-[#1a1713]"
+                           className="check mt-[2px]"
                            aria-invalid={!!errors.privacyAccepted} aria-describedby={describedBy('privacyAccepted')} />
                     <label htmlFor={id('privacyAccepted')} className="text-[14px] leading-snug text-[var(--ink-2)]">
                         Ho letto l'<Link to="/privacy" target="_blank" className="link-u">informativa sulla privacy</Link> e
@@ -190,9 +190,9 @@ const ContactForm: React.FC = () => {
             </div>
 
             <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-4">
-                <button type="submit" className="btn btn-ink justify-center disabled:opacity-60" disabled={status === 'sending'}>
+                <button type="submit" className="btn btn-ink disabled:opacity-60" disabled={status === 'sending'}>
                     {status === 'sending' ? 'Invio in corso…' : 'Invia richiesta'}
-                    <span aria-hidden="true">→</span>
+                    <span className="arr" aria-hidden="true">→</span>
                 </button>
                 <p className="text-[13px] text-[var(--muted)]">
                     Oppure scrivici a <a href={`mailto:${CONTACT_EMAIL}`} className="link-u">{CONTACT_EMAIL}</a>
@@ -201,7 +201,7 @@ const ContactForm: React.FC = () => {
 
             <div aria-live="polite" className="sm:col-span-2 empty:hidden">
                 {status === 'error' && (
-                    <p className="border-l-[3px] border-[var(--accent)] bg-[var(--card)] px-4 py-3 text-[14px]">
+                    <p className="border-l-2 border-[var(--accent)] bg-[var(--bg-2)] px-4 py-3 text-[14px]">
                         {serverMessage}
                     </p>
                 )}

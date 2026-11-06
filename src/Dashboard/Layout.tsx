@@ -6,16 +6,23 @@ import FooterNavbar from "./FooterNavbar";
 import {MOBILE_WIDTH} from "../Utilities/Utilities";
 import Sidebar from "./Sidebar";
 import NotificationDisplay from "../Components/NotificationDisplay";
-import {Navigate, Outlet} from "react-router-dom";
+import {Navigate, Outlet, useLocation, useParams} from "react-router-dom";
+import {IS_ADMIN, IS_WAITER} from "../types";
 import ImpersonationBanner from "../Components/ImpersonationBanner";
 import {useUtilitiesContext} from "../Context/UtilitiesContext";
 import {useEffect} from "react";
 import Header from "../Components/Header";
 import Footer from "../Components/Footer";
 
+// Pagine della dashboard aperte al cameriere: tutto il resto (menu in modifica, cassa, analytics,
+// camerieri, impostazioni...) è solo del titolare e il backend risponderebbe comunque con un errore.
+const WAITER_PAGES = ["home", "menu", "tables", "orders", "reservations", "profile"];
+
 const Layout: React.FC = () => {
-    const { loading, isSuperadmin } = useLoginContext()
+    const { loading, isSuperadmin, checkVariable } = useLoginContext()
     const { screen } = useUtilitiesContext()
+    const { localname } = useParams()
+    const location = useLocation()
 
     useEffect(() => {
 
@@ -23,6 +30,12 @@ const Layout: React.FC = () => {
 
     // Il superadmin (fuori da una sessione di supporto) non ha un locale: torna alla console
     if (!loading && isSuperadmin) return <Navigate to="/superadmin" replace />
+
+    // Cameriere su una pagina riservata al titolare → torna alla Home
+    if (!loading && checkVariable(IS_WAITER) && !checkVariable(IS_ADMIN)) {
+        const page = (location.pathname.split("/Dashboard/")[1] || "").split("/")[0].toLowerCase()
+        if (page && !WAITER_PAGES.includes(page)) return <Navigate to={`/${localname}/Dashboard/Home`} replace />
+    }
 
     return (
         <>

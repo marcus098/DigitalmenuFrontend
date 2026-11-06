@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '../../Context/DataContext';
-import { clearTableSession, getOrCreateClientSessionId, getTableSession } from '../../Utilities/Utilities';
+import { clearTableSession, emptyCart, getOrCreateClientSessionId, getTableSession } from '../../Utilities/Utilities';
 import { useTableSessionSSE } from '../../Hooks/useTableSessionSSE';
 import { TableSessionState } from '../../types';
-import { Check, ChefHat, Clock, PartyPopper } from 'lucide-react';
+import { Check, ChefHat, Clock, PartyPopper, ReceiptText } from 'lucide-react';
 
 const COMAND_STATUS_LABEL: Record<string, string> = {
     AWAIT: 'Inviato',
@@ -15,6 +15,9 @@ const COMAND_STATUS_LABEL: Record<string, string> = {
     AWAIT_APPROVAL: 'In attesa di conferma',
     DELETED: 'Annullato',
 };
+
+/** Comande per cui il carrello è già stato svuotato dopo l'invio. */
+const CART_CLEARED_KEY = 'rf_cart_cleared_comands';
 
 const TableLivePage: React.FC = () => {
     const { localname } = useParams();
@@ -38,7 +41,22 @@ const TableLivePage: React.FC = () => {
     const onState = useCallback((s: TableSessionState) => {
         setState(s);
         setLoaded(true);
-    }, []);
+        // La mia bozza è diventata una comanda: svuoto il carrello UNA volta per comanda
+        // (se poi il cliente aggiunge altro, tornando qui non deve perdere il nuovo carrello)
+        const mine = (s.comands ?? []).filter(c => c.clientSessionId === clientSessionId).map(c => c.comandId);
+        if (mine.length > 0) {
+            try {
+                const handled: string[] = JSON.parse(localStorage.getItem(CART_CLEARED_KEY) || '[]');
+                const fresh = mine.filter(id => !handled.includes(id));
+                if (fresh.length > 0) {
+                    emptyCart();
+                    localStorage.setItem(CART_CLEARED_KEY, JSON.stringify([...handled, ...fresh].slice(-50)));
+                }
+            } catch {
+                /* noop */
+            }
+        }
+    }, [clientSessionId]);
 
     useTableSessionSSE(stored?.sessionId ?? null, clientSessionId, onState);
 
@@ -201,6 +219,21 @@ const TableLivePage: React.FC = () => {
                     }}
                 >
                     Aggiungi altro ordine
+                </button>
+
+                <button
+                    onClick={() => navigate(`/${localname}/history`)}
+                    className="w-full mt-3 py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2"
+                    style={{
+                        background: 'transparent',
+                        color: 'var(--menu-text)',
+                        fontFamily: 'var(--menu-font-body)',
+                        border: '1px solid var(--menu-border)',
+                        cursor: 'pointer',
+                    }}
+                >
+                    <ReceiptText className="w-4 h-4" aria-hidden="true" />
+                    Dettaglio ordini
                 </button>
             </div>
         </div>

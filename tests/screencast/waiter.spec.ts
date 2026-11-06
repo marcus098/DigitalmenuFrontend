@@ -2,6 +2,8 @@ import { test, expect, Page } from '@playwright/test';
 import fs from 'fs';
 import { Screencast } from './helpers';
 
+test.use({ launchOptions: { slowMo: 120 } });
+
 /**
  * Guida video per il CAMERIERE (mobile). Usa solo Tavolo 5 e Tavolo 6.
  * Avvio: SC_ROLE=waiter npx playwright test -c playwright.screencast.config.ts tests/screencast/waiter.spec.ts
@@ -11,7 +13,8 @@ const SLUG = 'trattoriadamarco';
 const INVITE = `${BASE}/urlInvite/3/EED9HP3Y793620721389016064`;
 const EMAIL = 'demo-waiter@restaurantflow.test';
 const PASSWORD = 'Demo#Cameriere2026';
-const SHOTS = 'screencast-output/waiter';
+const ORDER_MARK = 'Tavolo 5';
+const SHOTS = 'screencast-shots/waiter';
 
 const tableCard = (page: Page, name: string) =>
     page.locator('div.rounded-xl').filter({ has: page.getByText(name, { exact: true }) }).first();
@@ -25,6 +28,32 @@ test('guida cameriere', async ({ page }) => {
             state: { necessary: true, functional: true, analytics: false, marketing: false },
         }));
     });
+    page.setDefaultTimeout(20_000);
+    // Preflight (contesto separato, non registrato): Tavolo 5 e 6 devono essere liberi.
+    {
+        const ctx = await page.context().browser()!.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+        await ctx.addInitScript(() => {
+            localStorage.setItem('cookieConsent', JSON.stringify({ version: 1, timestamp: new Date().toISOString(), state: { necessary: true, functional: true, analytics: false, marketing: false } }));
+        });
+        const q = await ctx.newPage();
+        q.setDefaultTimeout(20_000);
+        await q.goto(`${BASE}/login`);
+        await q.fill('input[type=email]', EMAIL);
+        await q.fill('input[type=password]', PASSWORD);
+        await q.click('button[type=submit]');
+        await q.waitForURL(/Dashboard\/Home/);
+        await q.goto(`${BASE}/${SLUG}/Dashboard/Tables`);
+        await q.waitForTimeout(2500);
+        for (const n of ['Tavolo 5', 'Tavolo 6']) {
+            await tableCard(q, n).locator('[title="Sessione gruppo"]').click();
+            await q.waitForTimeout(1200);
+            const close = q.getByRole('button', { name: 'Chiudi tavolo' });
+            if (await close.count()) { await close.click(); await q.waitForTimeout(1500); }
+            await q.mouse.click(195, 30);
+            await q.waitForTimeout(500);
+        }
+        await ctx.close();
+    }
     const sc = new Screencast(page, 'waiter');
     await sc.setup();
     const shot = (n: string) => page.screenshot({ path: `${SHOTS}/${n}.png` });
@@ -63,8 +92,6 @@ test('guida cameriere', async ({ page }) => {
     // ---- 3. Home ----
     await sc.scene('La tua home', 'Questa è la tua home: in alto vedi i tavoli occupati, gli ordini in coda, le prenotazioni e gli incassi di oggi.', 7000);
     await shot('03-home');
-    await scrollBy(500, 8);
-    await sc.scene('Azioni rapide', 'Più in basso trovi le azioni rapide per raggiungere subito sala, ordini e prenotazioni.', 5000);
     await page.evaluate(() => window.scrollTo(0, 0));
 
     // ---- 4. Sala ----
@@ -89,9 +116,8 @@ test('guida cameriere', async ({ page }) => {
     await sc.click(page.getByRole('button', { name: 'Apri tavolo' }), 1500);
     await expect(page.getByText('Password', { exact: true })).toBeVisible();
     await page.mouse.move(195, 330, { steps: 10 });
-    await sc.scene('Il codice di accesso', 'Ecco il codice di quattro caratteri: consegnalo ai clienti, che lo inseriscono dal telefono dopo aver inquadrato il QR del tavolo.', 9000);
+    await sc.scene('Il codice di accesso', 'Ecco il codice di quattro caratteri: consegnalo ai clienti, che lo inseriscono dal telefono dopo aver inquadrato il QR. Qui sotto vedrai chi si collega.', 8500);
     await shot('05-codice');
-    await sc.scene('Clienti collegati', 'Qui sotto vedrai chi si collega al tavolo e se è ancora in scelta oppure pronto a ordinare.', 5500);
     await page.keyboard.press('Escape');
     await page.mouse.click(195, 30); // chiude toccando fuori dal riquadro
     await sc.pause(900);
@@ -132,22 +158,21 @@ test('guida cameriere', async ({ page }) => {
 
     // ---- 7. Carrello ----
     await sc.scene('Apri il carrello', 'Quando hai finito, tocca il carrello in alto a destra per rivedere l\'ordine.', 4500);
-    // BUG app: il pulsante carrello in alto porta al carrello cliente (vuoto) invece di /Waiters/.../cart.
-    const bag = page.locator('header button, header a').last();
-    const bb = await bag.boundingBox();
-    if (bb) await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2, { steps: 12 });
-    await sc.pause(1200);
-    await page.goto(`${BASE}/Waiters/${SLUG}/cart`);
+    await sc.click(page.locator('header button, header a').last(), 1500);
+    await page.waitForURL(/Waiters\/.*\/cart/i);
     await settle();
     await sc.scene('Controlla il riepilogo', 'Controlla piatti, extra e totale, poi conferma l\'ordine.', 5000);
     await shot('11-carrello');
     await sc.click(page.getByRole('button', { name: /Conferma Ordine/ }), 1500);
-    await sc.scene('Ordine da tavolo', 'Scegli Da Tavolo, poi seleziona il tavolo giusto.', 4500);
+    await sc.scene('Tipo di ordine', 'Scegli il tipo di ordine: da tavolo, asporto o domicilio. Qui scegliamo Da Tavolo e selezioniamo il Tavolo 5.', 6500);
+    await shot('12-tipo-ordine');
     await sc.click(page.getByText('Da Tavolo', { exact: true }), 1200);
-    await shot('12-tavolo-popup');
-    await page.locator('select').selectOption({ label: 'Tavolo 5 (occupato)' });
+    const sel = page.locator('select');
+    const optLabel = await sel.locator('option').evaluateAll(os => (os as HTMLOptionElement[]).map(o => o.textContent || '').find(t => t.startsWith('Tavolo 5')) || '');
+    await sc.click(sel, 600);
+    await sel.selectOption({ label: optLabel });
     await sc.pause(1200);
-    await shot('13-tavolo-scelto');
+    await shot('13-dati-ordine');
     await sc.scene('Invia in cucina', 'Tocca Conferma: l\'ordine parte subito in cucina e viene stampato.', 4500);
     await sc.click(page.getByRole('button', { name: 'Conferma', exact: true }), 1500);
     await page.waitForURL(/Dashboard\/Home/, { timeout: 15000 });
@@ -158,7 +183,7 @@ test('guida cameriere', async ({ page }) => {
     await page.goto(`${BASE}/${SLUG}/Dashboard/Orders`);
     await settle();
     await sc.scene('Gli ordini', 'Nella sezione Ordini trovi tutte le comande: le nuove, quelle in preparazione e quelle completate.', 5500);
-    const orderCard = page.locator('div').filter({ hasText: 'Tavolo: Tavolo 5' })
+    const orderCard = page.locator('div').filter({ hasText: ORDER_MARK })
         .filter({ has: page.getByRole('button', { name: /In Cucina|Completa/ }) }).last();
     await orderCard.scrollIntoViewIfNeeded();
     await sc.pause(1200);
@@ -168,11 +193,10 @@ test('guida cameriere', async ({ page }) => {
     if (await inCucina.count()) await sc.click(inCucina.first(), 1800);
     await shot('15-in-cucina');
     await sc.scene('Piatti serviti', 'E quando i piatti sono stati serviti, tocca Completa.', 4500);
-    const completa = page.locator('div').filter({ hasText: 'Tavolo: Tavolo 5' })
+    const completa = page.locator('div').filter({ hasText: ORDER_MARK })
         .filter({ has: page.getByRole('button', { name: 'Completa' }) }).last();
     await sc.click(completa.getByRole('button', { name: 'Completa' }).first(), 1800);
     await shot('16-completato');
-
     // ---- 9. Prenotazioni ----
     await page.goto(`${BASE}/${SLUG}/Dashboard/Reservations`);
     await settle();
@@ -211,16 +235,7 @@ test('guida cameriere', async ({ page }) => {
     await sc.scene('Di nuovo disponibile', 'Quando torna disponibile, basta toccare Sì.', 4000);
     await sc.click(cannolo.getByRole('button', { name: 'Sì', exact: true }), 1500);
 
-    // ---- 11. Report ----
-    await page.goto(`${BASE}/${SLUG}/Dashboard/WaiterAnalytics`);
-    await settle();
-    await sc.scene('Il report camerieri', 'Nel report vedi gli ordini presi e i prodotti serviti dal personale, per oggi, gli ultimi sette o trenta giorni.', 6500);
-    await sc.click(page.getByRole('button', { name: 'Oggi' }), 1500);
-    await scrollBy(600, 8);
-    await shot('20-report');
-    await page.evaluate(() => window.scrollTo(0, 0));
-
-    // ---- 12. Chiudi tavolo ----
+    // ---- 11. Chiudi tavolo ---- (il report camerieri è riservato al titolare)
     await page.goto(`${BASE}/${SLUG}/Dashboard/Tables`);
     await settle();
     await tableCard(page, 'Tavolo 5').scrollIntoViewIfNeeded();

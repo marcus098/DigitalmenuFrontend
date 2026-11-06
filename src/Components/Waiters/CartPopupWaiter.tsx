@@ -29,6 +29,7 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     const { localname } = useParams()
     const { tablesMap } = useData()
     const tables = Array.from(tablesMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name, 'it', { numeric: true, sensitivity: 'base' }))
     const selectedTable = tables.find(t => t.id === tableNumber)
 
     const resetForm = () => {
@@ -55,7 +56,7 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                 if(response.success){
                     saveCart([], "waiter")
                     addNotification({message: "Ordine aggiunto!", type: "success"})
-                    window.location.href = (process.env.REACT_APP_URL || "") + "/" + localname + "/Dashboard/Home"
+                    window.location.href = "/" + localname + "/Dashboard/Home"
                     resetForm();
                 }else{
                     addNotification({message: "Errore", type: "error"})
@@ -63,7 +64,8 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             }
         } else if (selected === 2) {
             if (customerName.trim() === "" || phone.trim() === "" || time.trim() === ""){
-                addNotification({message: "Inserire tutti i capi", type: "error"})
+                addNotification({message: "Inserire tutti i campi", type: "error"})
+                return
             }
             order.comandWaiterType = "TAKE_AWAY"
             order.name = customerName
@@ -73,14 +75,15 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             if(response.success){
                 saveCart([], "waiter")
                 addNotification({message: "Ordine aggiunto!", type: "success"})
-                window.location.href = (process.env.REACT_APP_URL || "") + "/" + localname + "/Dashboard/Home"
+                window.location.href = "/" + localname + "/Dashboard/Home"
                 resetForm();
             }else{
                 addNotification({message: "Errore", type: "error"})
             }
         } else if (selected === 3) {
             if (customerName.trim() === "" || phone.trim() === "" || address.trim() === "" || time.trim() === "") {
-                addNotification({message: "Inserire tutti i capi", type: "error"})
+                addNotification({message: "Inserire tutti i campi", type: "error"})
+                return
             }
             order.comandWaiterType = "HOME"
             order.name = customerName
@@ -91,7 +94,7 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
             if(response.success){
                 saveCart([], "waiter")
                 addNotification({message: "Ordine aggiunto!", type: "success"})
-                window.location.href = (process.env.REACT_APP_URL || "") + "/" + localname + "/Dashboard/Home"
+                window.location.href = "/" + localname + "/Dashboard/Home"
                 resetForm();
             }else{
                 addNotification({message: "Errore", type: "error"})

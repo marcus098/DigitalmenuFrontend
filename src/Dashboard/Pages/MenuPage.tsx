@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useData } from "../../Context/DataContext";
-import { IdWithOrder, ProductDto } from "../../types";
+import { IdWithOrder, IS_ADMIN, ProductDto } from "../../types";
+import { useLoginContext } from "../../Context/LoginContext";
 import ProductCard from "../../Components/ProductCard";
 import { useParams } from "react-router-dom";
 import DeletePopup from "../../Components/DeletePopup";
@@ -44,6 +45,9 @@ const MenuPage: React.FC = () => {
     const { navigateWithHistory } = useHistory();
     const { localname } = useParams();
     const isDesktop = useIsDesktop();
+    // Il cameriere può solo segnare i prodotti esauriti: niente aggiunte, modifiche o riordino
+    const { checkVariable } = useLoginContext();
+    const isAdmin = checkVariable(IS_ADMIN);
 
     const sortedCategories = useMemo(
         () => [...Array.from(categoriesMap.values())].sort((a, b) => a.progressiveNumber - b.progressiveNumber),
@@ -64,6 +68,7 @@ const MenuPage: React.FC = () => {
     }, [loading, categoriesMap, sortedCategories, selectedCategory]);
 
     const onDragEnd = async (result: DropResult) => {
+        if (!isAdmin) return;
         const { source, destination, type } = result;
         if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) return;
 
@@ -139,7 +144,7 @@ const MenuPage: React.FC = () => {
                                      className="flex flex-row md:flex-col gap-2 overflow-x-auto pb-2 md:pb-0">
 
                                     {sortedCategories.map((cat, index) => (
-                                        <Draggable key={cat.id} draggableId={String(cat.id)} index={index}>
+                                        <Draggable key={cat.id} draggableId={String(cat.id)} index={index} isDragDisabled={!isAdmin}>
                                             {(provided, snapshot) => (
                                                 // Tutta la card è trascinabile (su touch: tieni premuto e trascina);
                                                 // il click semplice seleziona la categoria.
@@ -150,11 +155,11 @@ const MenuPage: React.FC = () => {
                                                             window.location.hash = cat.id + ""
                                                         }
                                                     }
-                                                    title="Trascina per riordinare"
-                                                    className={`flex items-center justify-between p-3 rounded-lg cursor-grab active:cursor-grabbing select-none transition-colors flex-shrink-0 md:flex-shrink-1 ${selectedCategory === cat.id ? 'bg-primary text-white shadow' : 'bg-gray-100 hover:bg-gray-200'} ${snapshot.isDragging ? 'shadow-lg ring-2 ring-primary/40' : ''}`}
+                                                    title={isAdmin ? "Trascina per riordinare" : undefined}
+                                                    className={`flex items-center justify-between p-3 rounded-lg ${isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} select-none transition-colors flex-shrink-0 md:flex-shrink-1 ${selectedCategory === cat.id ? 'bg-primary text-white shadow' : 'bg-gray-100 hover:bg-gray-200'} ${snapshot.isDragging ? 'shadow-lg ring-2 ring-primary/40' : ''}`}
                                                 >
                                                     <span className="font-semibold text-sm md:text-base whitespace-nowrap md:whitespace-normal">{cat.name}</span>
-                                                    <GripVerticalIcon className="w-5 h-5 opacity-60 ml-2 flex-shrink-0" />
+                                                    {isAdmin && <GripVerticalIcon className="w-5 h-5 opacity-60 ml-2 flex-shrink-0" />}
                                                 </div>
                                             )}
                                         </Draggable>
@@ -162,13 +167,13 @@ const MenuPage: React.FC = () => {
                                     {provided.placeholder}
 
                                     {/* Bottone Aggiungi Categoria con stile tratteggiato */}
-                                    <div
+                                    {isAdmin && <div
                                         onClick={() => navigateWithHistory(((`/${localname}/Dashboard/AddCategory`) + (window.location.hash.replace('#', '').trim() !== "" ? window.location.hash : "")))}
                                         className="flex-shrink-0 md:flex-shrink-1 flex items-center justify-center p-3 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:text-primary hover:border-primary cursor-pointer transition-colors"
                                     >
                                         <Plus className="w-5 h-5 mr-1" />
                                         <span className="font-semibold text-sm md:text-base">Nuova</span>
-                                    </div>
+                                    </div>}
                                 </div>
                             )}
                         </Droppable>
@@ -187,11 +192,11 @@ const MenuPage: React.FC = () => {
                                             <input type="text" placeholder="Cerca..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-primary/50"/>
                                         </div>
-                                        <button onClick={() => navigateWithHistory((`/${localname}/Dashboard/AddProduct#${selectedCategory}`) + (window.location.hash.replace('#', '').trim() !== "" ? window.location.hash : ""))}
+                                        {isAdmin && <button aria-label="Aggiungi prodotto" onClick={() => navigateWithHistory((`/${localname}/Dashboard/AddProduct#${selectedCategory}`) + (window.location.hash.replace('#', '').trim() !== "" ? window.location.hash : ""))}
                                                 className="bg-primary text-white p-2.5 rounded-lg shadow-md hover:bg-primary-dark font-semibold">
                                             <Plus className="w-6 h-6 md:hidden"/>
                                             <span className="hidden md:block">Aggiungi Prodotto</span>
-                                        </button>
+                                        </button>}
                                     </div>
                                 </div>
 
@@ -201,7 +206,7 @@ const MenuPage: React.FC = () => {
                                         <div ref={provided.innerRef} {...provided.droppableProps}
                                              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5">
                                             {filteredAndSortedProducts.map((product, index) => (
-                                                <Draggable key={product.id} draggableId={String(product.id)} index={index}>
+                                                <Draggable key={product.id} draggableId={String(product.id)} index={index} isDragDisabled={!isAdmin}>
                                                     {(provided) => (
                                                         <ProductCard
                                                             product={product}

@@ -35,7 +35,7 @@ const SignupPage: React.FC = () => {
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.privacyAccepted) {
-            alert('Please accept the privacy policy to proceed.');
+            alert("Per continuare devi accettare l'informativa privacy.");
             return;
         }
         const data: FormData = new FormData()
@@ -56,24 +56,24 @@ const SignupPage: React.FC = () => {
         <div
             className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-400 via-red-300 to-yellow-400">
             <div className="w-full max-w-lg bg-white p-8 rounded-2xl shadow-2xl">
-                <h2 className="text-3xl font-extrabold text-center mb-6 text-gray-800">Register Your Restaurant</h2>
+                <h2 className="text-3xl font-extrabold text-center mb-6 text-gray-800">Registra il tuo locale</h2>
                 <form onSubmit={handleFormSubmit}>
                     <div className="mb-4 text-center">
                         {formData.image ? (
                             <img
                                 src={formData.image}
-                                alt="Restaurant Preview"
+                                alt="Anteprima logo del locale"
                                 className="w-24 h-24 mx-auto rounded-full border-2 border-orange-500"
                             />
                         ) : (
                             <div
                                 className="w-24 h-24 mx-auto rounded-full border-2 border-gray-300 flex items-center justify-center text-gray-400">
-                                No Image
+                                Nessuna immagine
                             </div>
                         )}
                         <label htmlFor="image"
                                className="block mt-2 text-sm font-semibold text-orange-500 cursor-pointer hover:underline">
-                            Upload Image
+                            Carica immagine
                         </label>
                         <input
                             type="file"
@@ -85,7 +85,7 @@ const SignupPage: React.FC = () => {
                     </div>
                     <div className="mb-4">
                         <label htmlFor="firstName" className="block text-sm font-semibold text-gray-600">
-                            First Name
+                            Nome
                         </label>
                         <input
                             type="text"
@@ -94,13 +94,13 @@ const SignupPage: React.FC = () => {
                             value={formData.firstName}
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
-                            placeholder="Enter your first name"
+                            placeholder="Il tuo nome"
                             required
                         />
                     </div>
                     <div className="mb-4">
                         <label htmlFor="lastName" className="block text-sm font-semibold text-gray-600">
-                            Last Name
+                            Cognome
                         </label>
                         <input
                             type="text"
@@ -109,13 +109,13 @@ const SignupPage: React.FC = () => {
                             value={formData.lastName}
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
-                            placeholder="Enter your last name"
+                            placeholder="Il tuo cognome"
                             required
                         />
                     </div>
                     <div className="mb-4">
                         <label htmlFor="email" className="block text-sm font-semibold text-gray-600">
-                            Email Address
+                            Email
                         </label>
                         <input
                             type="email"
@@ -124,7 +124,7 @@ const SignupPage: React.FC = () => {
                             value={formData.email}
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
-                            placeholder="Enter your email"
+                            placeholder="nome@esempio.it"
                             required
                         />
                     </div>
@@ -139,13 +139,13 @@ const SignupPage: React.FC = () => {
                             value={formData.password}
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
-                            placeholder="Enter your password"
+                            placeholder="Scegli una password"
                             required
                         />
                     </div>
                     <div className="mb-4">
                         <label htmlFor="restaurantName" className="block text-sm font-semibold text-gray-600">
-                            Restaurant Name
+                            Nome del locale
                         </label>
                         <input
                             type="text"
@@ -154,13 +154,13 @@ const SignupPage: React.FC = () => {
                             value={formData.restaurantName}
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
-                            placeholder="Enter your restaurant name"
+                            placeholder="Es. Trattoria Da Marco"
                             required
                         />
                     </div>
                     <div className="mb-4">
                         <label htmlFor="phone" className="block text-sm font-semibold text-gray-600">
-                            Phone Number
+                            Telefono
                         </label>
                         <input
                             type="tel"
@@ -169,7 +169,7 @@ const SignupPage: React.FC = () => {
                             value={formData.phone}
                             onChange={handleInputChange}
                             className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm focus:outline-none focus:ring-2"
-                            placeholder="Enter your phone number"
+                            placeholder="Es. 333 1234567"
                             required
                         />
                     </div>
@@ -183,19 +183,19 @@ const SignupPage: React.FC = () => {
                             className="h-4 w-4 text-orange-500 focus:ring-orange-400 border-orange-500 rounded"
                         />
                         <label htmlFor="privacyAccepted" className="ml-2 block text-sm text-gray-600">
-                            I accept the <a href="#" className="text-orange-500 hover:underline">privacy policy</a>
+                            Accetto l'<a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">informativa privacy</a>
                         </label>
                     </div>
                     <button
                         type="submit"
                         className="w-full bg-orange-500 text-white py-3 px-4 rounded-lg shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-400 focus:ring-offset-2 transition-transform transform hover:scale-105 duration-300"
                     >
-                        Register
+                        Registrati
                     </button>
                     <p className="mt-4 text-sm text-center text-gray-600">
-                        Already have an account?{' '}
+                        Hai già un account?{' '}
                         <a href="/login" className="text-orange-500 font-semibold hover:underline">
-                            Login here
+                            Accedi
                         </a>
                     </p>
                 </form>

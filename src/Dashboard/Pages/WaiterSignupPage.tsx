@@ -26,13 +26,13 @@ const WaiterSignupPage: React.FC = () => {
     }, []);
 
     const loadAgency = async () => {
-        if(!id) window.location.href = process.env.REACT_APP_URL + "/login";
+        if(!id) { window.location.href = "/login"; return }
         const response = await getAgencyByIdApi(Number(id));
         if(response.status === 200 && response.data?.data){
             setLocalname(response.data.data)
             setLoading(false)
         }else{
-            window.location.href = process.env.REACT_APP_URL + "/login"
+            window.location.href = "/login"
         }
     }
 
@@ -58,7 +58,7 @@ const WaiterSignupPage: React.FC = () => {
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.privacyAccepted) {
-            alert('Please accept the privacy policy to proceed.');
+            alert("Per continuare devi accettare l'informativa privacy.");
             return;
         }
 
@@ -92,7 +92,7 @@ const WaiterSignupPage: React.FC = () => {
                         Un link di conferma è stato inviato alla tua email.
                     </p>
                     <p className="text-gray-700 text-lg">
-                        Controlla anche la cartella **spam** o **posta indesiderata**
+                        Controlla anche la cartella <strong>spam</strong> o <strong>posta indesiderata</strong>.
                     </p>
                 </div>
                 :
@@ -176,7 +176,7 @@ const WaiterSignupPage: React.FC = () => {
                         </div>
                         <div className="mb-4">
                             <label htmlFor="phone" className="block text-sm font-semibold text-gray-600">
-                                Phone Number
+                                Telefono
                             </label>
                             <input
                                 type="tel"
@@ -198,7 +198,7 @@ const WaiterSignupPage: React.FC = () => {
                                 className="h-4 w-4 text-orange-500 focus:ring-orange-400 border-orange-500 rounded"
                             />
                             <label htmlFor="privacyAccepted" className="ml-2 block text-sm text-gray-600">
-                                Accetto la <a href="#" className="text-orange-500 hover:underline">privacy policy</a> *
+                                Accetto l'<a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline">informativa privacy</a> *
                             </label>
                         </div>
                         <button
@@ -210,7 +210,7 @@ const WaiterSignupPage: React.FC = () => {
                         <p className="mt-4 text-sm text-center text-gray-600">
                             Hai già un account?{' '}
                             <a href="/login" className="text-orange-500 font-semibold hover:underline">
-                                Login
+                                Accedi
                             </a>
                         </p>
                     </form>

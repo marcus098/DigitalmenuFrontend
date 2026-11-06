@@ -17,6 +17,12 @@ export interface NameType{
     name: string
 }
 
+/** Esito dell'apertura di un tavolo: code = codice d'accesso cliente (4 caratteri) */
+export interface BusyTableResult {
+    result: 'SUCCESS' | 'ALREADY_OPEN' | 'ERROR'
+    code?: string
+}
+
 export interface DataContextType{
     /** Lingua del menu cliente ('it' = originale) e lingue offerte dal locale */
     menuLang: string
@@ -59,8 +65,10 @@ export interface DataContextType{
     forceDeleteTable: (id: number) => Promise<boolean>
     deleteTable: (id: number) => Promise<string>
     freeTableContext: (id: number) => Promise<string>
+    /** Rilegge i tavoli dal server (stato occupato/libero, coperti, codice) */
+    refreshTables: () => Promise<void>
     forceFreeTableContext: (id: number) => Promise<boolean>
-    setBusyTable: (id: number, seats: number) => Promise<boolean>
+    setBusyTable: (id: number, seats: number) => Promise<BusyTableResult>
     updateStyle: (updateStyle: UpdateStyle, logoFile: File | null, heroFile: File | null, onError?: (message: string) => void) => Promise<boolean>
     getWaiters: () => Promise<WaiterDto[] | null>
     deleteWaiter: (id: number) => Promise<boolean>

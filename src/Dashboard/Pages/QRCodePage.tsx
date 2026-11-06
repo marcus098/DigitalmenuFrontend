@@ -7,13 +7,30 @@ import { escapeHtml } from '../../Utilities/Utilities';
 import { getEslConfigsApi, saveEslConfigApi, deleteEslConfigApi, pushEslTagApi } from '../../Utilities/api';
 import { useNotification } from '../../Context/NotificationContext';
 
+/**
+ * Indirizzo pubblico del menu usato nei QR. REACT_APP_URL se configurato; se manca (o è vuoto)
+ * si usa l'origine della pagina. In sviluppo locale, se REACT_APP_URL punta a un localhost diverso
+ * da quello in uso (es. :3000 mentre Vite gira su :5173), vince l'origine corrente.
+ */
+const qrBaseUrl = (): string => {
+    const origin = window.location.origin;
+    const env = (process.env.REACT_APP_URL || '').trim().replace(/\/+$/, '');
+    if (!env) return origin;
+    const isLocal = (u: string) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(u);
+    if (isLocal(env) && isLocal(origin) && env !== origin) return origin;
+    return env;
+};
+
 const QRCodePage: React.FC = () => {
     const { tablesMap } = useData();
     const { user } = useLoginContext();
     const { addNotification } = useNotification();
     const localname = user?.localname ?? '';
-    const baseUrl = process.env.REACT_APP_URL ?? window.location.origin;
-    const tables = Array.from(tablesMap.values()).filter((t: any) => !t.deleted);
+    const baseUrl = qrBaseUrl();
+    // Tutti i tavoli (liberi e occupati), in ordine di nome: "Tavolo 2" prima di "Tavolo 10"
+    const tables = Array.from(tablesMap.values())
+        .filter((t: any) => !t.deleted)
+        .sort((a, b) => a.name.localeCompare(b.name, 'it', { numeric: true, sensitivity: 'base' }));
 
     const [eslConfigs, setEslConfigs] = useState<Map<number, EslConfigDto>>(new Map());
     const [expandedEsl, setExpandedEsl] = useState<number | null>(null);

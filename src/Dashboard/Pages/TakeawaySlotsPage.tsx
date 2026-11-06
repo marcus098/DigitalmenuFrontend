@@ -365,7 +365,7 @@ const TakeawaySlotsPage: React.FC = () => {
                                 {config.closedDates.map(d => (
                                     <span key={d} className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-full">
                                         {itDate(d)}
-                                        <button onClick={() => removeClosedDate(d)} className="hover:bg-red-100 rounded-full p-0.5">
+                                        <button onClick={() => removeClosedDate(d)} aria-label={`Rimuovi chiusura ${d}`} className="hover:bg-red-100 rounded-full p-0.5">
                                             <X className="w-3 h-3" />
                                         </button>
                                     </span>

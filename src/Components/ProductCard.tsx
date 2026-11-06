@@ -28,6 +28,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     const { navigateWithHistory } = useHistory();
     const { ingredientsMap } = useData();
     const { checkVariable } = useLoginContext()
+    const isAdmin = checkVariable(IS_ADMIN)
 
     return (
         <div
@@ -65,22 +66,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     enabled={product.available}
                     onChange={(value) => handleToggleAvailability(product.id, value)}
                 />
-                <div className="flex items-center justify-end space-x-2 pt-2">
+                {isAdmin && <div className="flex items-center justify-end space-x-2 pt-2">
                     <button
                         className="p-3 rounded-full text-gray-500 hover:bg-gray-100 hover:text-primary transition"
                         title="Modifica"
+                        aria-label={`Modifica ${product.name}`}
                         onClick={() => navigateWithHistory((`/${localname}/Dashboard/product/${product.id}`) + (window.location.hash.replace('#', '').trim() !== "" ? window.location.hash : ""))}
                     >
                         <Pencil size={18} />
                     </button>
-                    {checkVariable(IS_ADMIN) && <button
+                    <button
                         className="p-3 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition"
                         title="Elimina"
+                        aria-label={`Elimina ${product.name}`}
                         onClick={() => deleteProduct(product.name, product.id)}
                     >
                         <Trash2 size={18} />
-                    </button>}
-                </div>
+                    </button>
+                </div>}
             </div>
         </div>
     );

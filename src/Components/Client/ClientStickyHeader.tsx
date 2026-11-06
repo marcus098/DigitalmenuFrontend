@@ -1,7 +1,18 @@
 import React from 'react';
-import { ShieldAlert, ShoppingBag } from 'lucide-react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { ReceiptText, ShieldAlert, ShoppingBag } from 'lucide-react';
 import { useData } from '../../Context/DataContext';
 import { useMenuT } from '../../Client/menuI18n';
+import { getTableSession } from '../../Utilities/Utilities';
+
+/** Cliente al tavolo (QR scansionato o sessione di gruppo): solo lui ha una cronologia ordini da consultare. */
+const isAtTable = (): boolean => {
+    try {
+        return !!getTableSession() || !!localStorage.getItem('rf_table_id');
+    } catch {
+        return false;
+    }
+};
 
 /** Nome della lingua scritto nella lingua stessa: lo straniero la riconosce subito. */
 const LANGUAGE_NATIVE: Record<string, string> = {
@@ -32,6 +43,11 @@ const ClientStickyHeader: React.FC<ClientStickyHeaderProps> = ({
 }) => {
     const { menuLang, menuLanguages, setMenuLang } = useData();
     const t = useMenuT();
+    const { localname } = useParams();
+    const navigate = useNavigate();
+    const { pathname } = useLocation();
+    // Accesso alla cronologia ordini: solo al tavolo, mai nell'area camerieri né sulla cronologia stessa
+    const showHistory = !!localname && !pathname.startsWith('/Waiters') && !pathname.endsWith('/history') && isAtTable();
     return (
         <header
             className="sticky top-0 z-30 menu-page"
@@ -94,6 +110,28 @@ const ClientStickyHeader: React.FC<ClientStickyHeaderProps> = ({
                             </span>
                         )}
                     </button>
+
+                    {showHistory && (
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/${localname}/history`)}
+                            aria-label={t('myOrders')}
+                            title={t('myOrders')}
+                            className="menu-focus flex items-center gap-1.5 transition-colors active:opacity-80"
+                            style={{
+                                height: 40,
+                                padding: '0 12px',
+                                borderRadius: 'var(--menu-radius)',
+                                border: '1px solid var(--menu-rule)',
+                                background: 'transparent',
+                                color: 'var(--menu-text)',
+                                fontFamily: 'var(--menu-font-body)',
+                            }}
+                        >
+                            <ReceiptText className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                            <span className="hidden sm:inline text-xs font-semibold tracking-wide">{t('myOrders')}</span>
+                        </button>
+                    )}
 
                     <button
                         type="button"

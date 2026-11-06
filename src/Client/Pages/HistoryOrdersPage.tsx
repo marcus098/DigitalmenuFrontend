@@ -7,7 +7,7 @@ import useCartCount from '../../Utilities/useCartCount';
 import { getClientOrderApi, getClientOrderHistoryApi, getTableSessionStateApi } from '../../Utilities/api';
 import { Comand } from '../../ComandType';
 import { Clock, Wallet, ArrowLeft, History, PlusCircle, MinusCircle } from 'lucide-react';
-import { getOrCreateClientSessionId, getTableSession } from '../../Utilities/Utilities';
+import { comandProductUnitPrice, comandTotal, getOrCreateClientSessionId, getTableSession } from '../../Utilities/Utilities';
 import { TableSessionComandLite } from '../../types';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -27,8 +27,8 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
-    const total = (comanda.orders ?? []).reduce((acc, order) =>
-        acc + (order.products ?? []).reduce((s, p) => s + (p.productOption?.price ?? 0) * p.quantity, 0), 0);
+    // Extra inclusi: totale e righe usano i prezzi calcolati dal server
+    const total = comandTotal(comanda);
     const date = new Date(comanda.createdAt);
     const statusKey = comanda.status ?? 'AWAIT';
 
@@ -65,7 +65,7 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
                                 <p className="font-bold" style={{ color: 'var(--menu-text)' }}>
                                     <span className="font-semibold">{prod.quantity}x</span> {prod.productName}
                                 </p>
-                                <p className="font-bold" style={{ color: 'var(--menu-text)' }}>€{((prod.productOption?.price ?? 0) * prod.quantity).toFixed(2)}</p>
+                                <p className="font-bold" style={{ color: 'var(--menu-text)' }}>€{(comandProductUnitPrice(prod) * prod.quantity).toFixed(2)}</p>
                             </div>
                             {prod.note && <p className="text-xs mt-1 italic" style={{ color: 'var(--menu-muted)' }}>"{prod.note}"</p>}
                             {prod.ingredientsMinus?.length > 0 && (

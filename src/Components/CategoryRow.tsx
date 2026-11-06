@@ -26,7 +26,7 @@ const CategoryRow: React.FC<CategoryRowProps> = ({ category, setEdit }) => {
         setMyLoading(false);
     };
 
-    const defaultImage = "https://via.placeholder.com/100"; // URL immagine predefinita
+    const defaultImage = "/noImage.jpg"; // Fallback locale se non c'è immagine
     const categoryImage = category.image || defaultImage;
 
     return (

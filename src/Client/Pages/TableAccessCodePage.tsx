@@ -6,6 +6,7 @@ import { lookupTableSessionApi, joinTableSessionApi } from '../../Utilities/api'
 import { getOrCreateClientSessionId, saveTableSession } from '../../Utilities/Utilities';
 import { JoinResponse, TableLookup } from '../../types';
 import { Lock, RefreshCw, Users } from 'lucide-react';
+import { tableLabel } from '../../Dashboard/tableLabel';
 
 const CODE_LENGTH = 4;
 
@@ -103,7 +104,7 @@ const TableAccessCodePage: React.FC = () => {
                 <div className="max-w-sm w-full text-center p-6 rounded-2xl" style={{ background: 'var(--menu-surface)', border: '1px solid var(--menu-border)' }}>
                     <Users className="w-12 h-12 mx-auto mb-3" style={{ color: primaryColor }} />
                     <h1 className="font-semibold mb-2" style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.4rem' }}>
-                        Tavolo {lookup.tableName} non aperto
+                        {tableLabel(lookup.tableName, lookup.tableId)} non aperto
                     </h1>
                     <p className="text-sm mb-5" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
                         Chiama il cameriere per attivare l'ordinazione di gruppo a questo tavolo.

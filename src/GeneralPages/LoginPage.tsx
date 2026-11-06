@@ -35,8 +35,8 @@ const LoginPage: React.FC = () => {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-400 via-red-300 to-yellow-400">
             {notifications && <NotificationDisplay />}
-            {transparentLoading && <CustomLoading isTransparent={true} message={"Login..."} />}
-            {loading ? <CustomLoading isTransparent={false} message={"Loading..."} isFullPage={true} /> :
+            {transparentLoading && <CustomLoading isTransparent={true} message={"Accesso in corso..."} />}
+            {loading ? <CustomLoading isTransparent={false} message={"Caricamento..."} isFullPage={true} /> :
             <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl relative animate-fade-in">
                 <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-gradient-to-br from-orange-500 to-red-600 p-5 rounded-full shadow-lg animate-pulse">
                     <svg
@@ -54,11 +54,11 @@ const LoginPage: React.FC = () => {
                         />
                     </svg>
                 </div>
-                <h2 className="text-3xl font-extrabold text-center mb-6 text-gray-800">Welcome Back!</h2>
+                <h2 className="text-3xl font-extrabold text-center mb-6 text-gray-800">Bentornato!</h2>
                 <form onSubmit={handleLogin}>
                     <div className="mb-6">
                         <label htmlFor="email" className="block text-sm font-semibold text-gray-600">
-                            Email Address
+                            Email
                         </label>
                         <input
                             type="email"
@@ -66,7 +66,8 @@ const LoginPage: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                            placeholder="you@example.com"
+                            placeholder="nome@esempio.it"
+                            autoComplete="email"
                             required
                         />
                     </div>
@@ -80,7 +81,8 @@ const LoginPage: React.FC = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                            placeholder="Enter your password"
+                            placeholder="Inserisci la password"
+                            autoComplete="current-password"
                             required
                         />
                     </div>
@@ -88,11 +90,11 @@ const LoginPage: React.FC = () => {
                         type="submit"
                         className="w-full bg-orange-500 text-white py-3 px-4 rounded-lg shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-400 focus:ring-offset-2 transition-transform transform hover:scale-105 duration-300"
                     >
-                        Sign In
+                        Accedi
                     </button>
                 </form>
                 <p className="text-sm text-center text-gray-600 mt-6">
-                    New here? <a href="/signup" className="text-orange-500 font-medium hover:underline">Create an account</a>
+                    Non hai un account? <a href="/signup" className="text-orange-500 font-medium hover:underline">Registra il tuo locale</a>
                 </p>
             </div>}
         </div>

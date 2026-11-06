@@ -110,6 +110,7 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
                             <h2 className="text-xl font-bold" style={{ color: 'var(--menu-text)' }}>{dish.name}</h2>
                             <button
                                 onClick={onClose}
+                                aria-label="Chiudi"
                                 className="absolute top-4 right-4 p-2 rounded-full hover:opacity-80"
                                 style={{ background: 'var(--menu-surface)', color: 'var(--menu-muted)' }}
                             ><X className="w-5 h-5"/></button>

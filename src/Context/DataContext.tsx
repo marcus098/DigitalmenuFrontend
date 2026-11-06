@@ -8,7 +8,7 @@ import {
     ListToExport,
     ProductDto,
     StyleDto,
-    TableDto, UpdateCategory, UpdateIngredient, UpdateProduct, UpdateStyle, UpdateTables, WaiterDto,
+    BusyTableResult, TableDto, UpdateCategory, UpdateIngredient, UpdateProduct, UpdateStyle, UpdateTables, WaiterDto,
     CheckoutResult,
 } from "../types";
 import {CheckoutRequest} from "../ComandType";
@@ -427,6 +427,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         adminSseRef.current.delay = SSE_MIN_RETRY_MS;
     };
 
+    // Rilegge solo i tavoli dal getAll autenticato. Serve all'area camerieri (il catalogo pubblico
+    // ha tablesList vuota) e dopo apertura/chiusura di una sessione tavolo, per aggiornare subito la Sala.
+    const refreshTables = async () => {
+        try {
+            const res = await getAll(true)
+            if (isMountedRef.current && res?.data?.tablesList) {
+                setTablesMap(new Map(res.data.tablesList))
+            }
+        } catch (err) {
+            console.error("Errore nel caricamento dei tavoli:", err)
+        }
+    }
+
     // Funzione per caricare i dati iniziali
     const loadData = async () => {
         try {
@@ -435,6 +448,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             if (response && response.data) {
                 setStates(response.data)
             }
+            // Area camerieri: il catalogo pubblico non contiene i tavoli (tablesList vuota),
+            // quindi si leggono dal getAll autenticato (il cameriere è loggato con rf_token).
+            if (waiters) await refreshTables()
             // Public mode starts SSE immediately; dashboard SSE is started
             // by a separate effect once agencyId is resolved from LoginContext.
             if (!dashboard) startSSE();
@@ -1004,10 +1020,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                 const table = tmp.get(id)
 
                 if(table){
-                    table.busy = false
-                    table.seats = -1
-                    table.code = response.data?.data || ""
-                    tmp.set(id, table)
+                    tmp.set(id, { ...table, busy: false, seats: 0, code: response.data?.data || "" })
                 }else{
                     window.location.reload()
                 }
@@ -1033,10 +1046,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             const table = tmp.get(id)
 
             if(table){
-                table.busy = false
-                table.seats = -1
-                table.code = response.data?.data || ""
-                tmp.set(id, table)
+                tmp.set(id, { ...table, busy: false, seats: 0, code: response.data?.data || "" })
             }else{
                 window.location.reload()
             }
@@ -1049,23 +1059,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return false
     }
 
-    const setBusyTable = async(id: number, seats: number): Promise<boolean> => {
+    // Apre il tavolo (sessione vera lato server): la risposta contiene il codice d'accesso
+    // di 4 caratteri da dare ai clienti. 409 = tavolo già aperto (es. da un altro cameriere).
+    const setBusyTable = async(id: number, seats: number): Promise<BusyTableResult> => {
         const response = await setBusyTableApi(id, seats)
         if(response.status === 200){
-            const tmp = new Map(tablesMap)
-            const table = tmp.get(id)
-            if(table){
-                table.busy = true
-                table.seats = seats
-                tmp.set(id, table)
-            }else{
-                window.location.reload()
-            }
-            setTablesMap(new Map(tmp))
-            return true
+            const code = response.data?.data || ""
+            setTablesMap(prev => {
+                const table = prev.get(id)
+                if (!table) return prev
+                const next = new Map(prev)
+                next.set(id, { ...table, busy: true, seats: seats, code: code || table.code })
+                return next
+            })
+            return { result: "SUCCESS", code }
         }
-        addNotification({message: "Errore", type: "error"})
-        return false
+        if(response.status === 409){
+            // Lo stato locale era vecchio: riallinea la Sala con il server
+            refreshTables()
+            return { result: "ALREADY_OPEN" }
+        }
+        return { result: "ERROR" }
     }
 
     const deleteTable = async(id: number) => {
@@ -1253,6 +1267,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         deleteTable,
         forceDeleteTable,
         setBusyTable,
+        refreshTables,
         setSelectedAllergens,
         changeAvailableAddable,
         addCategory,

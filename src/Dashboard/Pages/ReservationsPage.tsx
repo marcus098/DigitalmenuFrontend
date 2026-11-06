@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     CalendarDaysIcon, PhoneIcon, UserGroupIcon, TrashIcon,
     CheckIcon, XMarkIcon, MagnifyingGlassIcon, ListBulletIcon,
-    ChevronLeftIcon, ChevronRightIcon, PlusIcon, PencilSquareIcon, ArrowRightEndOnRectangleIcon,
+    ChevronLeftIcon, ChevronRightIcon, PlusIcon, PencilSquareIcon, ArrowRightEndOnRectangleIcon, ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import CustomLoading from '../../Components/CustomLoading';
 import { useNotification } from '../../Context/NotificationContext';
@@ -69,13 +69,13 @@ const CalendarGrid: React.FC<CalendarProps> = ({ reservations, onDayClick, selec
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {/* Month nav */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-                <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                <button onClick={prevMonth} aria-label="Mese precedente" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                     <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
                 </button>
                 <span className="font-bold text-gray-800 capitalize">
                     {viewDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
                 </span>
-                <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                <button onClick={nextMonth} aria-label="Mese successivo" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                     <ChevronRightIcon className="w-5 h-5 text-gray-600" />
                 </button>
             </div>
@@ -223,7 +223,7 @@ const ReservationsPage: React.FC = () => {
             {/* Page header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
                 <h1 className="text-3xl font-bold text-gray-800">Prenotazioni</h1>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     {/* View toggle */}
                     <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
                         <button
@@ -241,13 +241,15 @@ const ReservationsPage: React.FC = () => {
                     </div>
                     <button
                         onClick={load}
-                        className="bg-white border border-gray-300 text-gray-700 px-5 py-2.5 rounded-lg shadow-sm hover:bg-gray-50 font-semibold text-sm"
+                        aria-label="Aggiorna"
+                        className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-700 px-3 sm:px-5 py-2.5 rounded-lg shadow-sm hover:bg-gray-50 font-semibold text-sm"
                     >
-                        Aggiorna
+                        <ArrowPathIcon className="w-4 h-4 sm:hidden" />
+                        <span className="hidden sm:inline">Aggiorna</span>
                     </button>
                     <button
                         onClick={() => setEditing('new')}
-                        className="flex items-center gap-1.5 bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:opacity-90 font-semibold text-sm"
+                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:opacity-90 font-semibold text-sm whitespace-nowrap"
                     >
                         <PlusIcon className="w-4 h-4" /> Nuova prenotazione
                     </button>
@@ -290,7 +292,7 @@ const ReservationsPage: React.FC = () => {
                 <div className="mb-4 flex items-center gap-3 bg-primary/10 text-primary px-4 py-2.5 rounded-xl text-sm font-semibold">
                     <CalendarDaysIcon className="w-5 h-5" />
                     Filtro: {new Date(selectedDay + 'T00:00:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    <button onClick={() => setSelectedDay(null)} className="ml-auto hover:opacity-70">
+                    <button onClick={() => setSelectedDay(null)} className="ml-auto hover:opacity-70" aria-label="Rimuovi filtro data">
                         <XMarkIcon className="w-4 h-4" />
                     </button>
                 </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import {Table} from "../../Dashboard/Pages/TablesPage";
+import {tableLabel} from "../../Dashboard/tableLabel";
 
 interface FreeBusyTableModalProps {
     table: Table;
@@ -41,9 +42,9 @@ const FreeBusyTableModal: React.FC<FreeBusyTableModalProps> = ({ table, onClose,
             <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-800">
-                        {table.busy ? `Libera Tavolo ${table.name}` : `Occupa Tavolo ${table.name}`}
+                        {table.busy ? `Libera ${tableLabel(table.name)}` : `Occupa ${tableLabel(table.name)}`}
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={onClose} aria-label="Chiudi" className="text-gray-400 hover:text-gray-600">
                         <XMarkIcon className="w-7 h-7" />
                     </button>
                 </div>

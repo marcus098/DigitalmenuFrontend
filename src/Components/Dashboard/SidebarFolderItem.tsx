@@ -108,6 +108,7 @@ export const SidebarFolderItem: React.FC<SidebarFolderItemProps> = ({ folder, is
             <div ref={menuRef} className="relative flex-shrink-0">
                 <button
                     onClick={handleMenuToggle}
+                    aria-label="Altre azioni"
                     className={`p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700 ${!isMenuOpen && 'opacity-0 group-hover:opacity-100'}`}
                 >
                     <EllipsisVerticalIcon className="w-5 h-5" />

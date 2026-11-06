@@ -37,9 +37,9 @@ const ClientProductPage: React.FC = () => {
 
     const { idProduct, localname } = useParams();
     const navigate = useNavigate();
-    const { productsMap, ingredientsMap, loading, setSelectedAllergens, styles } =
+    const { productsMap, ingredientsMap, loading, setSelectedAllergens, styles, waiters } =
         useData();
-    const cartCount = useCartCount();
+    const cartCount = useCartCount(waiters ? 'waiter' : undefined);
 
     const primaryColor = styles?.primary?.trim() || '#f97316';
 
@@ -86,7 +86,7 @@ const ClientProductPage: React.FC = () => {
                 <ClientStickyHeader
                     restaurantName={styles?.restaurantName || ''}
                     onAllergenClick={() => setIsAllergenModalOpen(true)}
-                    onCartClick={() => navigate(`/${localname}/cart`)}
+                    onCartClick={() => navigate(waiters ? `/Waiters/${localname}/cart` : `/${localname}/cart`)}
                     cartItemCount={cartCount}
                     primaryColor={primaryColor}
                 />

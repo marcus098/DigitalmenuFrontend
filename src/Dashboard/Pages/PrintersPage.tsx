@@ -581,7 +581,7 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
         <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-                <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded">
+                <button onClick={onClose} aria-label="Chiudi" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded">
                     <X className="w-5 h-5" />
                 </button>
             </div>

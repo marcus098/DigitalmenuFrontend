@@ -16,6 +16,7 @@ import {
 import { getPaymentsTodayTotalApi, getReservationsRangeApi } from '../../Utilities/api';
 import { localIsoDate } from '../../Utilities/dates';
 import AiInsightCard from '../../Components/Dashboard/AiInsightCard';
+import { tableLabel } from '../tableLabel';
 import { useAiInsights } from '../../Hooks/useAiInsights';
 
 // ── Animation variants ────────────────────────────────────────────────────────
@@ -413,7 +414,7 @@ const HomePage: React.FC = () => {
                                         transition={{ duration: 0.15 }}
                                     >
                                         <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                            {cmd.idTable ? (
+                                            {cmd.idTable && cmd.idTable > 0 ? (
                                                 <TableCellsIcon className="w-5 h-5 text-gray-500" />
                                             ) : (
                                                 <ShoppingCartIcon className="w-5 h-5 text-gray-500" />
@@ -421,8 +422,8 @@ const HomePage: React.FC = () => {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-semibold text-gray-800 truncate">
-                                                {cmd.idTable
-                                                    ? `Tavolo ${cmd.idTable}`
+                                                {cmd.idTable && cmd.idTable > 0
+                                                    ? tableLabel(tablesMap.get(cmd.idTable)?.name, cmd.idTable)
                                                     : cmd.name || 'Asporto'}
                                             </p>
                                             <p className="text-xs text-gray-400">
@@ -459,7 +460,8 @@ const HomePage: React.FC = () => {
                         label: 'Categorie',
                         value: categoriesMap.size,
                         icon: TagIcon,
-                        path: `/${localname}/Dashboard/Categories`,
+                        // La gestione categorie è del titolare: il cameriere va al menu
+                        path: `/${localname}/Dashboard/${isAdmin ? 'Categories' : 'Menu'}`,
                     },
                     {
                         label: 'Ordini Attivi',

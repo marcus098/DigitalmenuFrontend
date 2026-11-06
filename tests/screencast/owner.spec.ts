@@ -38,7 +38,7 @@ async function seed() {
     // gli ordini rimasti da registrazioni precedenti (serviti e non incassati) vengono eliminati
     const stale = await (await get('/api/orders/to-checkout')).json();
     for (const c of (Array.isArray(stale) ? stale : stale.data ?? [])) {
-        if (mine.includes(c.idTable)) await post('/api/orders/changeStatus', { comandId: c.id, status: 'DELETED' });
+        await post('/api/orders/changeStatus', { comandId: c.id, status: 'DELETED' });
     }
     const dash = await (await fetch('http://localhost:8081/api/dashboard/getAll', { headers: H })).json();
     for (const c of (dash.comands ?? [])) if (c.status !== 'DELETED') await post('/api/orders/changeStatus', { comandId: c.id, status: 'DELETED' });

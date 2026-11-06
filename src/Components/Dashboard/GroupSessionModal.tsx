@@ -121,7 +121,7 @@ const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableNam
                     ) : !session ? (
                         <div>
                             <p className="text-sm text-zinc-600 mb-3">
-                                Nessuna sessione aperta. Apri il tavolo per generare una password di 4 caratteri da consegnare ai clienti.
+                                Nessuna sessione aperta. Apri il tavolo per generare il codice di 4 caratteri da consegnare ai clienti.
                             </p>
                             <label className="text-xs font-bold uppercase tracking-widest text-zinc-500">
                                 Coperti
@@ -145,7 +145,7 @@ const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableNam
                         <>
                             <div className="text-center">
                                 <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">
-                                    Password
+                                    Codice per i clienti
                                 </p>
                                 <div className="flex items-center justify-center gap-2 py-4 px-5 rounded-2xl bg-zinc-100 border-2 border-dashed border-zinc-300">
                                     <Lock className="w-5 h-5 text-zinc-500" />

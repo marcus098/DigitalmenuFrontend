@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import {sendWaiterComandApi} from "../../Utilities/api";
-import {AddComandWaiter, ProductCard} from "../../types";
+import {AddComandWaiter} from "../../types";
+import {CartLine} from "../../Utilities/variants";
 import {convertCartToAddComandWaiterOrder, saveCart} from "../../Utilities/Utilities";
 import {useNotification} from "../../Context/NotificationContext";
 import {useParams} from "react-router-dom";
 import {useData} from "../../Context/DataContext";
 
 interface CartPopupWaiter {
-    cart: ProductCard[]
+    cart: CartLine[]
     close: () => void
 }
 

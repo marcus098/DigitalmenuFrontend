@@ -16,6 +16,7 @@ import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
 import { MenuRule } from '../../Components/Client/MenuPrimitives';
 import { MenuAllergenFooter } from '../../Components/Client/MenuAllergens';
 import { getProductAllergens } from '../../Utilities/Utilities';
+import { findCompatibleSelection } from '../../Utilities/variants';
 
 const ClientProductsPage: React.FC = () => {
     const [selectedDish, setSelectedDish] = useState<ProductDto | null>(null);
@@ -38,10 +39,10 @@ const ClientProductsPage: React.FC = () => {
         .filter(p => p.idCategory === currentCategoryId)
         .filter(p => {
             if (selectedAllergens.length === 0) return true;
-            // Allergeni effettivi = dichiarati sul prodotto ∪ ingredienti. Le sole tracce non
-            // nascondono il piatto: la riga mostra un avviso (vedi MenuAllergenMarkers)
-            const { effective } = getProductAllergens(p, ingredientsMap);
-            return !selectedAllergens.some(a => effective.includes(a));
+            // Allergeni effettivi = dichiarati sul prodotto ∪ ingredienti, corretti dalle varianti:
+            // il piatto resta se ALMENO una combinazione disponibile li evita (es. impasto senza glutine).
+            // Le sole tracce non nascondono il piatto: la riga mostra un avviso (vedi MenuAllergenMarkers)
+            return findCompatibleSelection(p, ingredientsMap, selectedAllergens) !== null;
         });
 
     const hasFrozenProducts = visibleProducts.some(p => getProductAllergens(p, ingredientsMap).frozen);
@@ -150,7 +151,7 @@ const ClientProductsPage: React.FC = () => {
             <ProductCustomizationDrawer
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
-                dish={selectedDish}
+                dish={selectedDish ? (productsMap.get(selectedDish.id) ?? selectedDish) : null}
                 waiter={window.location.href.toLowerCase().includes('/waiters/')}
             />
         </div>

@@ -6,7 +6,7 @@ import { useParams } from "react-router-dom";
 import { ArrowLeft, Save, Plus, Trash2, Camera, Loader2 } from "lucide-react";
 
 import { useHistory } from "../../Context/HistoryContext";
-import { AddProduct, UpdateProduct, OptionInProduct, AiDescriptionTone, IS_ADMIN } from "../../types";
+import { AddProduct, UpdateProduct, OptionInProduct, AiDescriptionTone, IS_ADMIN, VariantGroup } from "../../types";
 
 import CustomLoading from "../../Components/CustomLoading";
 import PillToggle from "../../Components/Dashboard/PillToggle";
@@ -18,6 +18,9 @@ import {useNotification} from "../../Context/NotificationContext";
 import { useLoginContext } from "../../Context/LoginContext";
 import { useAiEnabled } from "../../Hooks/useAiInsights";
 import { generateProductDescriptionApi } from "../../Utilities/api";
+import VariantGroupsEditor from "../../Components/Dashboard/VariantGroupsEditor";
+import VariantsPreview from "../../Components/Dashboard/VariantsPreview";
+import { normalizeVariantGroups, validateVariantGroups } from "../../Components/Dashboard/variantUtils";
 
 interface ProductPageProps {
     isNew: boolean;
@@ -43,6 +46,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
     const [singlePrice, setSinglePrice] = useState<number>(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalType, setModalType] = useState<"ingredienti" | "tags" | null>(null);
+    // Gruppi di varianti oltre al formato; "persisted" = come salvati sul server (id bloccati)
+    const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([]);
+    const [persistedGroups, setPersistedGroups] = useState<VariantGroup[]>([]);
     const [aiTone, setAiTone] = useState<AiDescriptionTone>("classico");
     const [aiWriting, setAiWriting] = useState<boolean>(false);
     // Descrizione corrente: la generazione può durare un minuto e nel frattempo il campo può cambiare
@@ -89,6 +95,9 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                 setAvailable(product.available);
                 setIdCategory(product.idCategory);
                 setImage(product.image || "");
+                const loadedGroups = normalizeVariantGroups(product.variantGroups);
+                setVariantGroups(loadedGroups);
+                setPersistedGroups(loadedGroups);
                 if (product.options && product.options.length > 0) {
                     if (product.options.length === 1 && product.options[0].name === "default") {
                         setPriceMode("single");
@@ -120,6 +129,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         setId(-1);
         setPriceMode("single");
         setSinglePrice(0);
+        setVariantGroups([]);
+        setPersistedGroups([]);
     };
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,6 +227,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
             if (error)
                 return
         }
+        const variantErrors = validateVariantGroups(variantGroups);
+        if (variantErrors.length > 0) {
+            addNotification({message: "Varianti: " + variantErrors[0], type: "warning"})
+            document.querySelector('[data-testid="variant-errors"]')?.scrollIntoView({behavior: "smooth", block: "center"})
+            return
+        }
         setMyLoading(true);
         let success = false;
         const finalOptions: OptionInProduct[] = priceMode === 'single' ? [{
@@ -225,7 +242,7 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         }] : options;
 
         if (isNew) {
-            const payload: AddProduct = {
+            const payload: AddProduct & { variantGroups: VariantGroup[] } = {
                 name,
                 description,
                 idCategory,
@@ -235,11 +252,12 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                 allergens,
                 traces,
                 tags,
-                options: finalOptions
+                options: finalOptions,
+                variantGroups
             };
             success = await addProduct(payload, file);
         } else {
-            const payload: UpdateProduct = {
+            const payload: UpdateProduct & { variantGroups: VariantGroup[] } = {
                 id,
                 name,
                 description,
@@ -251,6 +269,8 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                 traces,
                 tags,
                 options: finalOptions,
+                // Sempre inviato: "[]" rimuove i gruppi eliminati
+                variantGroups,
                 positionProgressive: 1
             };
             success = await updateProduct(payload, file || undefined);
@@ -349,6 +369,13 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
         );
     };
 
+    // Anteprima e validazione live delle varianti
+    const baseAllergenSummary = getProductAllergens({ allergens, traces, ingredients }, ingredientsMap);
+    const variantErrorsLive = validateVariantGroups(variantGroups);
+    const previewFormats = priceMode === "single"
+        ? [{ name: "", price: singlePrice, isDefault: true }]
+        : options.map(o => ({ name: o.name, price: Number(o.price) || 0, isDefault: o.isDefault }));
+
     return (
         <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
             {(myLoading || loading) && <CustomLoading isFullPage={true} isTransparent={true} message={"Salvataggio..."} />}
@@ -427,10 +454,11 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
 
                     {/* Card Gestione Prezzi */}
                     <div className="bg-white p-6 rounded-xl shadow-lg">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4">Gestione Prezzi</h3>
-                        <div className="flex items-center p-1 space-x-1 bg-gray-200 rounded-full w-min mb-4">
+                        <h3 className="text-xl font-bold text-gray-800 mb-1">Formato e prezzo</h3>
+                        <p className="text-sm text-gray-500 mb-4">Il formato fissa il prezzo base (es. Baby / Normale / Maxi, ognuno col suo prezzo). Con un solo formato il cliente non vede nessuna scelta.</p>
+                        <div className="flex items-center p-1 space-x-1 bg-gray-200 rounded-full w-max mb-4">
                             <button onClick={() => setPriceMode('single')} className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-all ${priceMode === 'single' ? 'bg-white text-primary shadow' : 'text-gray-600'}`}>Prezzo Unico</button>
-                            <button onClick={() => setPriceMode('options')} className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-all ${priceMode === 'options' ? 'bg-white text-primary shadow' : 'text-gray-600'}`}>Opzioni Multiple</button>
+                            <button onClick={() => setPriceMode('options')} className={`px-4 py-1.5 text-sm font-semibold rounded-full transition-all ${priceMode === 'options' ? 'bg-white text-primary shadow' : 'text-gray-600'}`}>Più formati</button>
                         </div>
                         {priceMode === 'single' ? (
                             <div>
@@ -441,18 +469,34 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                             <div className="space-y-3">
                                 {options.map((option, index) => (
                                     <div key={index} className="flex flex-col md:flex-row items-center gap-3 bg-slate-50 p-3 rounded-lg border">
-                                        <input type="text" value={option.name} onChange={e => changeNameOption(index, e.target.value)} className="input-style flex-grow" placeholder="Nome opzione (es. Regular, Maxi)"/>
-                                        <input type="number" value={option.price} onChange={e => changePriceOption(index, e.target.value)} className="input-style w-full md:w-28" placeholder="Prezzo"/>
+                                        <input type="text" value={option.name} onChange={e => changeNameOption(index, e.target.value)} className="input-style flex-grow" placeholder="Nome formato (es. Baby, Normale, Maxi)"/>
+                                        <input type="number" value={option.price} onChange={e => changePriceOption(index, e.target.value)} className="input-style w-full md:w-28" placeholder="Prezzo €" aria-label="Prezzo del formato in euro"/>
                                         <div className="flex items-center gap-2" title="Imposta come predefinita">
                                             <input type="radio" id={`default-${index}`} name="default-option" checked={option.isDefault} onChange={() => changeDefaultOption(index)} className="h-4 w-4 text-primary focus:ring-primary"/>
-                                            <label htmlFor={`default-${index}`} className="text-sm text-gray-600">Default</label>
+                                            <label htmlFor={`default-${index}`} className="text-sm text-gray-600">Predefinito</label>
                                         </div>
                                         <button onClick={() => deleteOption(index)} className="text-red-400 hover:text-red-600 p-2 rounded-full"><Trash2/></button>
                                     </div>
                                 ))}
-                                {options.length < 3 && <button onClick={addOption} className="btn-secondary text-sm"><Plus className="mr-2"/>Aggiungi Opzione</button>}
+                                {options.length < 3 && <button onClick={addOption} className="btn-secondary text-sm"><Plus className="mr-2"/>Aggiungi formato</button>}
+                                {options.length === 1 && <p className="text-xs text-gray-500">Un solo formato: nel menu non compare la scelta, vale solo il prezzo.</p>}
                             </div>
                         )}
+                    </div>
+
+                    {/* Card Varianti (gruppi a scelta singola oltre al formato) */}
+                    <div className="bg-white p-6 rounded-xl shadow-lg" id="varianti">
+                        <div className="flex items-baseline justify-between gap-2 mb-1">
+                            <h3 className="text-xl font-bold text-gray-800">Varianti</h3>
+                            {variantGroups.length > 0 && <span className="text-xs text-gray-500">{variantGroups.length} {variantGroups.length === 1 ? "gruppo" : "gruppi"}</span>}
+                        </div>
+                        <VariantGroupsEditor
+                            groups={variantGroups}
+                            onChange={setVariantGroups}
+                            persisted={persistedGroups}
+                            productAllergens={baseAllergenSummary.effective}
+                            errors={variantErrorsLive}
+                        />
                     </div>
 
                     {/* Card Ingredienti, Allergeni e Tag */}
@@ -488,6 +532,14 @@ const ProductPage: React.FC<ProductPageProps> = ({ isNew }) => {
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Stato</h3>
                         <PillToggle label="Visibilità Prodotto" enabled={available} onChange={setAvailable}/>
                         <p className="text-xs text-gray-500 mt-2">Se disabilitato, il prodotto non sarà visibile ai clienti nel menu.</p>
+                    </div>
+                    <div className="lg:sticky lg:top-4">
+                        <VariantsPreview
+                            formats={previewFormats}
+                            groups={variantGroups}
+                            baseAllergens={baseAllergenSummary.effective}
+                            baseTraces={baseAllergenSummary.traces}
+                        />
                     </div>
                 </div>
             </div>

@@ -343,7 +343,7 @@ export const sendWaiterComandApi = async (addComandWaiter: AddComandWaiter) => {
     return apiCall<Response<string>>({method: POST, fixed: true, data: addComandWaiter, url: SEND_WAITER_COMAND})
 }
 
-export const sendClientOrderApi = async (tableId: number, localname: string, clientSessionId: string, orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[] }[] }[]) => {
+export const sendClientOrderApi = async (tableId: number, localname: string, clientSessionId: string, orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[]; variants?: { groupId: string; choiceId: string }[] }[] }[]) => {
     return clientApiCall<CreatedOrderResponse>({ method: POST, fixed: true, webflux: false, url: SEND_CLIENT_COMAND, data: { tableId, localname, clientSessionId, orders } })
 }
 
@@ -580,7 +580,7 @@ export const updateReservationStaffApi = async (id: number, data: Partial<StaffR
 // takeaway
 export const sendTakeawayOrderApi = async (
     localname: string,
-    data: { customerName: string; customerPhone: string; pickupTime?: string; orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[] }[] }[] }
+    data: { customerName: string; customerPhone: string; pickupTime?: string; orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[]; variants?: { groupId: string; choiceId: string }[] }[] }[] }
 ) => {
     return clientApiCall<CreatedOrderResponse>({ method: POST, fixed: true, url: SEND_TAKEAWAY_ORDER(localname), data })
 }
@@ -820,6 +820,14 @@ export const setAvailableCategoryApi = async (idCategory: number, value: boolean
 
 export const setAvailableProductApi = async (idProduct: number, value: boolean) => {
     return apiCall<Response<string>>({method: GET, fixed: true, url: SET_AVAILABLE_PRODUCT + "/" + idProduct + "/" + value})
+}
+
+/** Esaurisce/ripristina una singola scelta di un gruppo di varianti (titolare e cameriere). */
+export const setVariantAvailableApi = async (idProduct: number, groupId: string, choiceId: string, value: boolean) => {
+    return apiCall<Response<ProductDto | string>>({
+        method: GET, fixed: true,
+        url: "/api/products/setVariantAvailable/" + idProduct + "/" + encodeURIComponent(groupId) + "/" + encodeURIComponent(choiceId) + "/" + value,
+    })
 }
 
 export const setAvailableIngredientApi = async (idIngredient: number, value: boolean) => {

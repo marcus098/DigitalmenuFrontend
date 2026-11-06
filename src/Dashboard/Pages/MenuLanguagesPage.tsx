@@ -17,6 +17,7 @@ const TYPE_LABEL: Record<TranslationRow['type'], string> = {
     CATEGORY: 'Categorie',
     PRODUCT: 'Prodotti',
     INGREDIENT: 'Ingredienti',
+    VARIANT: 'Varianti dei prodotti',
 };
 
 const STATUS: Record<TranslationStatus, { label: string; cls: string }> = {
@@ -57,7 +58,7 @@ const RowEditor: React.FC<{
     return (
         <li className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 px-4 py-3">
             <div className="min-w-0">
-                <p className="text-xs text-gray-400 mb-0.5">{row.field === 'NAME' ? 'Nome' : 'Descrizione'}</p>
+                <p className="text-xs text-gray-400 mb-0.5">{row.type === 'VARIANT' ? (row.field.includes('/') ? 'Scelta' : 'Gruppo') : row.field === 'NAME' ? 'Nome' : 'Descrizione'}</p>
                 <p className="text-sm text-gray-800 break-words">{row.source}</p>
             </div>
             <div className="min-w-0 space-y-1">
@@ -181,6 +182,12 @@ const MenuLanguagesPage: React.FC = () => {
             return !q || r.source.toLowerCase().includes(q) || (r.translation ?? '').toLowerCase().includes(q);
         });
     }, [rows, filter, search]);
+
+    const productNames = useMemo(() => {
+        const m = new Map<number, string>();
+        rows?.forEach(r => { if (r.type === 'PRODUCT' && r.field === 'NAME') m.set(r.id, r.source); });
+        return m;
+    }, [rows]);
 
     if (!overview) return <CustomLoading isTransparent={true} isFullPage={true}/>;
 
@@ -320,9 +327,29 @@ const MenuLanguagesPage: React.FC = () => {
                             {rows.length === 0 ? 'Il menu non ha ancora testi da tradurre.' : 'Nessun testo con questi filtri.'}
                         </p>
                     ) : (
-                        (['CATEGORY', 'PRODUCT', 'INGREDIENT'] as const).map(type => {
+                        (['CATEGORY', 'PRODUCT', 'INGREDIENT', 'VARIANT'] as const).map(type => {
                             const group = visibleRows.filter(r => r.type === type);
                             if (!group.length) return null;
+                            if (type === 'VARIANT') {
+                                // Raggruppate per prodotto (il nome italiano viene dalla riga PRODUCT/NAME)
+                                const byProduct = new Map<number, TranslationRow[]>();
+                                group.forEach(r => byProduct.set(r.id, [...(byProduct.get(r.id) ?? []), r]));
+                                return (
+                                    <div key={type}>
+                                        <h3 className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{TYPE_LABEL[type]}</h3>
+                                        {Array.from(byProduct.entries()).map(([productId, list]) => (
+                                            <div key={productId}>
+                                                <p className="px-4 pt-3 pb-1 text-sm font-semibold text-gray-700 bg-gray-50 border-y border-gray-100">
+                                                    {productNames.get(productId) ?? `Prodotto ${productId}`}
+                                                </p>
+                                                <ul className="divide-y divide-gray-100">
+                                                    {list.map(r => <RowEditor key={`${r.type}-${r.id}-${r.field}`} row={r} onSave={saveRow}/>)}
+                                                </ul>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }
                             return (
                                 <div key={type}>
                                     <h3 className="px-4 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{TYPE_LABEL[type]}</h3>

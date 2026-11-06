@@ -15,6 +15,15 @@ export interface ProductOption {
     isDefault: boolean;
 }
 
+export interface SelectedVariant {
+    groupId: string;
+    groupName: string;
+    choiceId: string;
+    choiceName: string;
+    priceDelta: number;
+    highlight: boolean;
+}
+
 export interface Product {
     idProduct: number;
     productName: string;
@@ -25,7 +34,9 @@ export interface Product {
     ingredientsMinus: Ingredient[];
     ingredientsPlus: Ingredient[];
     note: string;
-    /** Prezzo unitario (opzione + extra) in centesimi, calcolato dal server all'ordine */
+    /** Varianti scelte (impasto, mozzarella, ...), salvate dal server con nome e supplemento */
+    selectedVariants?: SelectedVariant[];
+    /** Prezzo unitario (opzione + varianti + extra) in centesimi, calcolato dal server all'ordine */
     unitPriceCents?: number | null;
 }
 

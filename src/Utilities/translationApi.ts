@@ -2,8 +2,9 @@ import {apiCall, clientApiCall} from "./helper";
 
 // Menu in più lingue — backend translationmodule (traduzione con Ollama)
 
-export type TranslationEntity = 'CATEGORY' | 'PRODUCT' | 'INGREDIENT';
-export type TranslationField = 'NAME' | 'DESCRIPTION';
+export type TranslationEntity = 'CATEGORY' | 'PRODUCT' | 'INGREDIENT' | 'VARIANT';
+/** VARIANT: "<groupId>" (nome gruppo) o "<groupId>/<choiceId>" (nome scelta); id = prodotto */
+export type TranslationField = 'NAME' | 'DESCRIPTION' | (string & {});
 export type TranslationStatus = 'OK' | 'STALE' | 'MISSING';
 
 export interface MenuLanguage {

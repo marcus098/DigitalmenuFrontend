@@ -210,6 +210,43 @@ export interface ProductDto{
     ingredients: number[]
     available: boolean
     positionProgressive: number
+    /** Gruppi di varianti oltre al formato (vedi docs/VARIANTI_PRODOTTO.md nel backend) */
+    variantGroups?: VariantGroup[]
+}
+
+/** Gruppo di varianti a scelta singola (es. "Impasto": Classico / Senza glutine). */
+export interface VariantGroup{
+    id: string
+    name: string
+    choices: VariantChoice[]
+}
+
+export interface VariantChoice{
+    id: string
+    name: string
+    /** Supplemento in euro rispetto al prezzo del formato (può essere 0 o negativo) */
+    priceDelta: number
+    isDefault: boolean
+    available: boolean
+    /** Allergeni (id 1..14) che la scelta toglie: finiscono nelle tracce salvo certifiedFree */
+    removesAllergens: number[]
+    addsAllergens: number[]
+    /** Il locale garantisce l'assenza (es. senza glutine certificato < 20 ppm): l'allergene tolto non va nelle tracce */
+    certifiedFree: boolean
+    /** Etichette dietetiche mostrate al cliente, es. "senza-lattosio" */
+    dietaryTags: string[]
+    /** Stampata in evidenza sulla comanda (es. "⚠ SENZA GLUTINE") */
+    highlight: boolean
+}
+
+/** Scelta fatta dal cliente/cameriere per un gruppo, come salvata nella comanda. */
+export interface SelectedVariant{
+    groupId: string
+    groupName: string
+    choiceId: string
+    choiceName: string
+    priceDelta: number
+    highlight: boolean
 }
 
 export interface OptionInProduct{
@@ -228,11 +265,14 @@ export interface ProductToOrder{
     ingredientsMinus: IngredientOrder[]
     ingredientsPlus: IngredientOrderPlus[]
     note: string
+    selectedVariants?: SelectedVariant[]
 }
 
 export interface AddProductToOrder{
     idProduct: number
     productOption: string
+    /** Una scelta per gruppo; i gruppi omessi prendono la scelta predefinita */
+    variants?: { groupId: string; choiceId: string }[]
     quantity: number
     ingredientsMinus: number[]
     ingredientsPlus: number[]

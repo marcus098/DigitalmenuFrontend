@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import {Orders} from "../Dashboard/Pages/OrderPage";
 import {formatDateTime} from "../Utilities/Utilities";
 import {tableLabel} from "../Dashboard/tableLabel";
+import SelectedVariantChips from "./Dashboard/SelectedVariantChips";
+
+/** Il formato unico ("default"/"Standard") non va mostrato. */
+const showOption = (name?: string) => !!name && !["default", "standard"].includes(name.trim().toLowerCase());
 
 const STATUS_LABEL: Record<string, string> = {
     AWAIT: "Nuovo",
@@ -97,9 +101,12 @@ const OrderCard: React.FC<OrderCardProps> = ({
                     (item, index) => (
                         <div key={index} className="mb-2">
                             <p>
-                                <strong>{item.productName} {' x '} {item.quantity}</strong> ({item.categoryName}) - €
-                                {item.total.toFixed(2) || 0.00}
+                                <strong>{item.productName} {' x '} {item.quantity}</strong>
+                                {showOption(item.option) && <span className="font-semibold text-gray-700"> · {item.option}</span>}
+                                {' '}({item.categoryName}) - €
+                                {(item.total || 0).toFixed(2)}
                             </p>
+                            <SelectedVariantChips variants={item.variants} />
                             {item.additionalIngredients.length > 0 && (
                                 <p className="text-sm text-green-600">
                                     + {item.additionalIngredients.join(", ")}

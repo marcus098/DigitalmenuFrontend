@@ -10,6 +10,8 @@ import {getTakeawayPauseApi, pauseTakeawayApi, resumeTakeawayApi, TakeawayPauseS
 import {localIsoDate} from "../../Utilities/dates";
 import {LoginContext} from "../../Context/LoginContext";
 import {useTabletPrinting} from "../../Hooks/useTabletPrinting";
+import {SelectedVariant} from "../../ComandType";
+import SelectedVariantChips from "../../Components/Dashboard/SelectedVariantChips";
 
 /** Countdown "m:ss" verso una scadenza ISO; "scaduto" se passata. */
 const Countdown: React.FC<{ deadline?: string }> = ({deadline}) => {
@@ -39,6 +41,8 @@ export interface OrderItem {
     notes: string;
     option?: string
     quantity: number
+    /** Varianti scelte (impasto, mozzarella, ...): quelle highlight vanno in evidenza */
+    variants?: SelectedVariant[]
 }
 
 export interface Orders {
@@ -240,7 +244,10 @@ const OrdersPage: React.FC = () => {
                                 </div>
                                 <ul className="mt-3 text-sm space-y-0.5">
                                     {order.items.map((it, i) => (
-                                        <li key={i}><strong>{it.quantity}×</strong> {it.productName}{it.option && it.option !== 'Default' ? ` (${it.option})` : ''}</li>
+                                        <li key={i}>
+                                            <strong>{it.quantity}×</strong> {it.productName}{it.option && it.option !== 'Default' ? ` (${it.option})` : ''}
+                                            <SelectedVariantChips variants={it.variants} showDelta={false}/>
+                                        </li>
                                     ))}
                                 </ul>
                                 {order.paymentAuthorized && (

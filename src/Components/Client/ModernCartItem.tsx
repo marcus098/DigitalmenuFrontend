@@ -1,11 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ProductCard } from '../../types';
 import { useData } from '../../Context/DataContext';
 import { Trash2, Minus, Plus } from 'lucide-react';
+import { CartLine, lineVariantLabels } from '../../Utilities/variants';
+import VariantSummary from './VariantSummary';
+import { useMenuT } from '../../Client/menuI18n';
 
 interface ModernCartItemProps {
-    item: ProductCard;
+    item: CartLine;
     onRemove: () => void;
     onQuantityChange: (newQuantity: number) => void;
 }
@@ -17,6 +19,10 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
 }) => {
     const { productsMap, ingredientsMap } = useData();
     const product = productsMap.get(item.id);
+    const t = useMenuT();
+    // Varianti della riga coi nomi del catalogo; le righe dei vecchi carrelli mostrano le predefinite
+    const variants = lineVariantLabels(product, item);
+    const showFormat = item.optionName !== 'default' && (product?.options?.length ?? 0) > 1;
 
     const imageUrl = product?.image
         ? `${process.env.REACT_APP_BUCKET_URL}${product.image}`
@@ -79,12 +85,13 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                 </p>
 
                 <div className="mt-1 space-y-0.5">
-                    {item.optionName !== 'default' && (
+                    {showFormat && (
                         <p className="text-xs" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
-                            Opzione:{' '}
+                            {t('format')}:{' '}
                             <span style={{ color: 'var(--menu-text)' }}>{item.optionName}</span>
                         </p>
                     )}
+                    <VariantSummary variants={variants} />
                     {item.ingredientsPlus.length > 0 && (
                         <p className="text-xs" style={{ color: '#4ade80', fontFamily: 'var(--menu-font-body)' }}>
                             +{' '}
@@ -120,6 +127,7 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                 >
                     <motion.button
                         onClick={() => onQuantityChange(item.quantity - 1)}
+                        aria-label="Diminuisci quantità"
                         whileTap={{ scale: 0.85 }}
                         className="flex items-center justify-center"
                         style={{ color: 'var(--menu-muted)', width: 20, height: 20 }}
@@ -134,6 +142,7 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                     </span>
                     <motion.button
                         onClick={() => onQuantityChange(item.quantity + 1)}
+                        aria-label="Aumenta quantità"
                         whileTap={{ scale: 0.85 }}
                         className="flex items-center justify-center"
                         style={{ color: 'var(--menu-muted)', width: 20, height: 20 }}
@@ -151,6 +160,7 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
 
                 <motion.button
                     onClick={onRemove}
+                    aria-label="Rimuovi dal carrello"
                     whileHover={{ color: '#f87171' }}
                     whileTap={{ scale: 0.9 }}
                     style={{ color: 'var(--menu-muted)', opacity: 0.5, transition: 'color 0.2s, opacity 0.2s' }}

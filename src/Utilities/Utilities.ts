@@ -1,6 +1,7 @@
-import {AddComandWaiter, AddProductToOrder, ProductCard, ProductToOrder} from "../types";
+import {AddComandWaiter, AddProductToOrder, ProductToOrder} from "../types";
 import {Orders} from "../Dashboard/Pages/OrderPage";
 import {Comand, Product as ComandProduct} from "../ComandType";
+import {CartLine, cartLineKey, lineVariantsPayload} from "./variants";
 
 export const MOBILE_WIDTH = 350
 
@@ -163,11 +164,8 @@ export const print = (order: Orders): void => {
 };
 
 // carrello
-const generateCartKey = (productCart: ProductCard): string => {
-    const plus = productCart.ingredientsPlus.sort((a, b) => a - b).join(",");
-    const minus = productCart.ingredientsMinus.sort((a, b) => a - b).join(",");
-    return `id=${productCart.id}|opt=${productCart.optionName}|plus=${plus}|minus=${minus}`;
-};
+// Identità della riga (prodotto, formato, varianti, extra, rimozioni, nota): vedi cartLineKey in variants.ts
+const generateCartKey = (productCart: CartLine): string => cartLineKey(productCart);
 
 export const CART_UPDATED_EVENT = 'restaurantflow:cart-updated';
 
@@ -177,7 +175,7 @@ export const CART_UPDATED_EVENT = 'restaurantflow:cart-updated';
 const cartCookieName = (cartName?: string): string =>
     cartName ? (cartName.startsWith("cart") ? "" : "cart_") + cartName : "cart_tmp0";
 
-export const addProductToCart = (productCart: ProductCard, cartName?: string) => {
+export const addProductToCart = (productCart: CartLine, cartName?: string) => {
     const nameCart = cartCookieName(cartName);
     const cartMap = getCartMap(nameCart);
 
@@ -193,14 +191,23 @@ export const addProductToCart = (productCart: ProductCard, cartName?: string) =>
     return true;
 };
 
-export const getCartMap = (cartName?: string): { [key: string]: ProductCard } => {
+export const getCartMap = (cartName?: string): { [key: string]: CartLine } => {
     const nameCart = cartCookieName(cartName);
     const cookie = getCookie(nameCart) || "{}";
 
     try {
         const parsed = JSON.parse(cookie);
         if (typeof parsed === 'object' && parsed !== null) {
-            return parsed;
+            // saveCart salvava un array: lo riporto a mappa con le chiavi di riga (altrimenti
+            // le aggiunte successive, fatte per chiave su un array, andavano perse in JSON)
+            const lines: CartLine[] = Array.isArray(parsed) ? parsed : Object.values(parsed);
+            const map: { [key: string]: CartLine } = {};
+            lines.filter(l => l && typeof l.id === 'number').forEach(l => {
+                const key = generateCartKey(l);
+                if (map[key]) map[key].quantity += l.quantity;
+                else map[key] = l;
+            });
+            return map;
         }
     } catch (e) {
         console.error("Errore nel parsing del carrello:", e);
@@ -209,7 +216,7 @@ export const getCartMap = (cartName?: string): { [key: string]: ProductCard } =>
     return {};
 };
 
-export const removeProductFromCart = (productCart: ProductCard, cartName?: string): boolean => {
+export const removeProductFromCart = (productCart: CartLine, cartName?: string): boolean => {
     const nameCart = cartCookieName(cartName);
     const cartMap = getCartMap(nameCart);
     const key = generateCartKey(productCart);
@@ -223,7 +230,7 @@ export const removeProductFromCart = (productCart: ProductCard, cartName?: strin
     return false;
 };
 
-export const updateProductQuantity = (productCart: ProductCard, delta: number, cartName?: string) => {
+export const updateProductQuantity = (productCart: CartLine, delta: number, cartName?: string) => {
     const nameCart = cartCookieName(cartName);
     const cartMap = getCartMap(nameCart);
     const key = generateCartKey(productCart);
@@ -247,7 +254,7 @@ export const emptyCart = (cartName?: string) => {
     window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
 };
 
-export const convertCartToAddComandWaiterOrder = (products: ProductCard[]): AddComandWaiter => {
+export const convertCartToAddComandWaiterOrder = (products: CartLine[]): AddComandWaiter => {
     let productsToOrder: AddProductToOrder[] = []
 
     products.forEach((prod, index) => {
@@ -257,20 +264,28 @@ export const convertCartToAddComandWaiterOrder = (products: ProductCard[]): AddC
             note: prod.note,
             quantity: prod.quantity,
             ingredientsMinus: prod.ingredientsMinus,
-            ingredientsPlus: prod.ingredientsPlus
+            ingredientsPlus: prod.ingredientsPlus,
+            variants: lineVariantsPayload(prod)
         })
     })
 
     return {orders: [{products: productsToOrder}], comandWaiterType: "HOME"}
 }
 
-export function saveCart(productCard: ProductCard[], name: string | undefined){
+export function saveCart(productCard: CartLine[], name: string | undefined){
     try {
         const nameCart = cartCookieName(name);
         if(productCard.length === 0){
             deleteCookie(nameCart)
         }else {
-            setCookie(nameCart, JSON.stringify(productCard), 1);
+            // Sempre come mappa chiave-di-riga → riga (lo stesso formato di addProductToCart)
+            const map: { [key: string]: CartLine } = {};
+            productCard.forEach(l => {
+                const key = generateCartKey(l);
+                if (map[key]) map[key] = { ...map[key], quantity: map[key].quantity + l.quantity };
+                else map[key] = l;
+            });
+            setCookie(nameCart, JSON.stringify(map), 1);
         }
         window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         return true;
@@ -349,7 +364,7 @@ export const clearTableSession = (): void => {
     }
 };
 
-export const cartToAddComandOrders = (cart: ProductCard[]) => {
+export const cartToAddComandOrders = (cart: CartLine[]) => {
     return cart.map((item) => ({
         products: [{
             idProduct: item.id,
@@ -358,14 +373,17 @@ export const cartToAddComandOrders = (cart: ProductCard[]) => {
             quantity: item.quantity,
             ingredientsMinus: item.ingredientsMinus,
             ingredientsPlus: item.ingredientsPlus,
+            variants: lineVariantsPayload(item),
         }],
     }));
 };
 
-/** Prezzo unitario di una riga di comanda (€): snapshot del server, altrimenti opzione + extra salvati. */
+/** Prezzo unitario di una riga di comanda (€): snapshot del server, altrimenti opzione + varianti + extra salvati. */
 export const comandProductUnitPrice = (p: ComandProduct): number => {
     if (p.unitPriceCents != null) return p.unitPriceCents / 100;
-    return (p.productOption?.price ?? 0) + (p.ingredientsPlus ?? []).reduce((s, i) => s + (i?.price ?? 0), 0);
+    return (p.productOption?.price ?? 0)
+        + (p.selectedVariants ?? []).reduce((s, v) => s + (Number(v?.priceDelta) || 0), 0)
+        + (p.ingredientsPlus ?? []).reduce((s, i) => s + (i?.price ?? 0), 0);
 };
 
 /** Totale della comanda (€): totalCents del server se presente, altrimenti somma delle righe (extra inclusi). */

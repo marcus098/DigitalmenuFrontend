@@ -9,6 +9,7 @@ import { Comand } from '../../ComandType';
 import { Clock, Wallet, ArrowLeft, History, PlusCircle, MinusCircle } from 'lucide-react';
 import { comandProductUnitPrice, comandTotal, getOrCreateClientSessionId, getTableSession } from '../../Utilities/Utilities';
 import { TableSessionComandLite } from '../../types';
+import VariantSummary from '../../Components/Client/VariantSummary';
 
 const STATUS_LABEL: Record<string, string> = {
     AWAIT: 'In attesa',
@@ -67,6 +68,10 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
                                 </p>
                                 <p className="font-bold" style={{ color: 'var(--menu-text)' }}>€{(comandProductUnitPrice(prod) * prod.quantity).toFixed(2)}</p>
                             </div>
+                            {prod.productOption?.name && !['default', 'standard'].includes(prod.productOption.name.toLowerCase()) && (
+                                <p className="text-xs mt-1" style={{ color: 'var(--menu-muted)' }}>{prod.productOption.name}</p>
+                            )}
+                            <VariantSummary variants={prod.selectedVariants} className="mt-1" />
                             {prod.note && <p className="text-xs mt-1 italic" style={{ color: 'var(--menu-muted)' }}>"{prod.note}"</p>}
                             {prod.ingredientsMinus?.length > 0 && (
                                 <p className="text-xs text-red-600 flex items-center gap-1 mt-1">

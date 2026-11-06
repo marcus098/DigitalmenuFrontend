@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState, createContext, useContext, useMemo} from 'react';
+import { translateVariantGroups } from '../Utilities/variants';
 import {
     AddCategory, AddIngredient, AddProduct, AddTable,
     CategoryDto,
@@ -9,7 +10,7 @@ import {
     ProductDto,
     StyleDto,
     BusyTableResult, TableDto, UpdateCategory, UpdateIngredient, UpdateProduct, UpdateStyle, UpdateTables, WaiterDto,
-    CheckoutResult,
+    CheckoutResult, VariantGroup,
 } from "../types";
 import {CheckoutRequest} from "../ComandType";
 import {
@@ -38,8 +39,10 @@ import {
     UPDATE_ENDPOINT_DASHBOARD,
     updateCategoryApi,
     updateIngredientApi,
-    updateProductApi, updateSingleTableApi, updateStyleApi, updateTablesApi
+    updateProductApi, updateSingleTableApi, updateStyleApi, updateTablesApi,
+    setVariantAvailableApi
 } from "../Utilities/api";
+import {serializeVariantGroups} from "../Components/Dashboard/variantUtils";
 import {useParams} from "react-router-dom";
 import {allergens} from "../Utilities/Utilities";
 import {Comand} from "../ComandType";
@@ -282,7 +285,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
 
     // "Esaurito" in tempo reale. Dashboard: si aggiorna il flag. Menu cliente: il catalogo pubblico contiene
     // solo elementi disponibili, quindi un esaurito sparisce e un ritorno disponibile ricarica il menu.
-    const applyAvailability = (events: { kind: 'PRODUCT' | 'CATEGORY' | 'INGREDIENT', id: number, available: boolean }[]) => {
+    const applyAvailability = (events: { kind: 'PRODUCT' | 'CATEGORY' | 'INGREDIENT', id: number, available: boolean, groupId?: string, choiceId?: string, choiceAvailable?: boolean }[]) => {
         const apply = <T extends { available?: boolean }>(kind: string, setter: React.Dispatch<React.SetStateAction<Map<number, T>>>) => {
             const list = events.filter(e => e.kind === kind)
             if (!list.length) return
@@ -290,6 +293,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                 const next = new Map(prev)
                 for (const e of list) {
                     const current = next.get(e.id)
+                    // Esaurita/ripristinata una singola scelta di variante: la disponibilità del prodotto non cambia
+                    if (kind === 'PRODUCT' && e.groupId != null && e.choiceId != null && typeof e.choiceAvailable === 'boolean') {
+                        const groups = (current as ProductDto | undefined)?.variantGroups
+                        if (current && groups) {
+                            next.set(e.id, { ...current, variantGroups: groups.map(g => g.id !== e.groupId ? g : {
+                                ...g, choices: g.choices.map(c => c.id === e.choiceId ? { ...c, available: e.choiceAvailable as boolean } : c)
+                            }) })
+                        }
+                        continue
+                    }
                     if (dashboard || waiters) {
                         if (current) next.set(e.id, { ...current, available: e.available })
                     } else if (!e.available) {
@@ -475,10 +488,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                         const optName  = p.productOption?.name  ?? ''
                         const plus     = p.ingredientsPlus || []
                         const minus    = p.ingredientsMinus || []
+                        const variants = p.selectedVariants || []
                         items.push({
                             productName: p.productName || "",
                             categoryName: p.categoryName || "",
-                            total: optPrice + plus.reduce((acc, i) => acc + (i?.price ?? 0), 0),
+                            // Prezzo unitario calcolato dal server (formato + varianti + extra); fallback per comande vecchie
+                            total: p.unitPriceCents != null ? p.unitPriceCents / 100
+                                : optPrice + variants.reduce((acc, v) => acc + (Number(v?.priceDelta) || 0), 0)
+                                  + plus.reduce((acc, i) => acc + (i?.price ?? 0), 0),
+                            variants,
                             option: optName,
                             additionalIngredients: plus.map((i) => i?.name || ''),
                             removedIngredients: minus.map((i) => i?.name || ''),
@@ -578,7 +596,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     }
 
 
-    const addProduct = async (addProduct: AddProduct, file?: File | null) => {
+    // Esaurisce/ripristina una scelta di un gruppo di varianti (come setAvailable del prodotto)
+    const setVariantAvailable: VariantAvailabilitySetter = async (idProduct, groupId, choiceId, value) => {
+        const response = await setVariantAvailableApi(idProduct, groupId, choiceId, value)
+        if (response?.status !== 200) return false
+        setProductsMap(prev => {
+            const prod = prev.get(idProduct)
+            if (!prod) return prev
+            const next = new Map(prev)
+            next.set(idProduct, {
+                ...prod,
+                variantGroups: (prod.variantGroups || []).map(g => g.id !== groupId ? g : {
+                    ...g,
+                    choices: g.choices.map(c => c.id === choiceId ? { ...c, available: value } : c)
+                })
+            })
+            return next
+        })
+        return true
+    }
+
+    const addProduct = async (addProduct: AddProduct & { variantGroups?: VariantGroup[] }, file?: File | null) => {
         const formData: FormData = new FormData()
 
         formData.append("name", addProduct.name);
@@ -606,6 +644,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         addProduct.options.forEach(option => {
             formData.append("options", JSON.stringify(option).replaceAll(",", ";"));
         });
+        // Varianti: JSON standard così com'è (senza il trucco ; → , delle options)
+        if (addProduct.variantGroups)
+            formData.append("variantGroups", serializeVariantGroups(addProduct.variantGroups));
 
 //        formData.append("addProduct", JSON.stringify(addProduct))
 
@@ -774,7 +815,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         return null
     }
 
-    const updateProduct = async (updateProduct: UpdateProduct, file?: File) => {
+    const updateProduct = async (updateProduct: UpdateProduct & { variantGroups?: VariantGroup[] }, file?: File) => {
         const formData: FormData = new FormData()
         formData.append("id", updateProduct.id.toString())
         formData.append("name", updateProduct.name)
@@ -796,6 +837,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         updateProduct.options.forEach(option => {
             formData.append("options", JSON.stringify(option).replaceAll(",", ";"));
         });
+        // Assente = nessuna modifica; "[]" = rimuove tutti i gruppi
+        if (updateProduct.variantGroups)
+            formData.append("variantGroups", serializeVariantGroups(updateProduct.variantGroups));
         formData.append("idCategory", updateProduct.idCategory.toString())
         formData.append("positionProgressive", updateProduct.positionProgressive.toString())
         if(file)
@@ -1223,11 +1267,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
 
     const shownProducts = useMemo(() => {
         const t = menuTexts?.texts.PRODUCT
-        if (!t) return productsMap
+        // Varianti: VARIANT[idProdotto]["gruppo" | "gruppo/scelta"] (vedi translateVariantGroups)
+        const v = (menuTexts?.texts as Record<string, Record<string, Record<string, string>> | undefined> | undefined)?.VARIANT
+        if (!t && !v) return productsMap
         const out = new Map(productsMap)
         out.forEach((p, id) => {
-            const tr = t[String(id)]
-            if (tr) out.set(id, {...p, name: tr.NAME ?? p.name, description: tr.DESCRIPTION ?? p.description})
+            const tr = t?.[String(id)]
+            const vt = v?.[String(id)]
+            if (tr || vt) out.set(id, {
+                ...p,
+                name: tr?.NAME ?? p.name,
+                description: tr?.DESCRIPTION ?? p.description,
+                variantGroups: translateVariantGroups(p.variantGroups, vt),
+            })
         })
         return out
     }, [productsMap, menuTexts])
@@ -1270,6 +1322,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         refreshTables,
         setSelectedAllergens,
         changeAvailableAddable,
+        setVariantAvailable,
         addCategory,
         addProduct,
         changeComandStatus,
@@ -1315,6 +1368,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     );
 
 };
+
+export type VariantAvailabilitySetter = (idProduct: number, groupId: string, choiceId: string, value: boolean) => Promise<boolean>;
+
+/** Azione "esaurisci/ripristina scelta" (aggiunta al contesto senza toccare DataContextType condiviso). */
+export const useSetVariantAvailable = (): VariantAvailabilitySetter =>
+    (useData() as DataContextType & { setVariantAvailable: VariantAvailabilitySetter }).setVariantAvailable;
 
 // Custom hook per accedere al DataContext
 export const useData = (): DataContextType => {

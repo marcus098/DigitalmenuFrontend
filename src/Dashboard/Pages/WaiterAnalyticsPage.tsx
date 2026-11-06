@@ -4,6 +4,7 @@ import { localIsoDate } from '../../Utilities/dates';
 import { WaiterDto } from '../../types';
 import { Comand } from '../../ComandType';
 import CustomLoading from '../../Components/CustomLoading';
+import { lineUnitPrice } from '../../Components/Dashboard/variantUtils';
 import {
     CurrencyEuroIcon, ShoppingBagIcon, UserGroupIcon, ChartBarIcon, ClockIcon,
 } from '@heroicons/react/24/outline';
@@ -40,11 +41,8 @@ const getDates = (days: number): string[] =>
 const computeValue = (comand: Comand): number =>
     comand.checkout ? comand.checkout.totalCents / 100 :
     comand.orders.reduce((total, order) =>
-        total + order.products.reduce((t, p) => {
-            const base = (p.productOption?.price ?? 0) * p.quantity;
-            const extras = (p.ingredientsPlus ?? []).reduce((s, i) => s + (i.price ?? 0), 0) * p.quantity;
-            return t + base + extras;
-        }, 0), 0);
+        // Prezzo unitario dal server (formato + varianti + extra), fallback per comande vecchie
+        total + order.products.reduce((t, p) => t + lineUnitPrice(p) * p.quantity, 0), 0);
 
 const countItems = (comand: Comand): number =>
     comand.orders.reduce((s, o) => s + o.products.reduce((ps, p) => ps + p.quantity, 0), 0);

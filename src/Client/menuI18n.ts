@@ -39,6 +39,17 @@ const STRINGS = {
         pt: 'Alergénios indicados segundo o Regulamento UE 1169/2011. Para informações sobre alergénios e ingredientes, pergunte ao pessoal.',
         zh: '过敏原依据欧盟第1169/2011号法规标注。如需了解过敏原和配料信息，请咨询工作人员。',
     },
+    // ── Varianti del prodotto (nomi di gruppi e scelte arrivano già tradotti dal catalogo) ──
+    format: {it: 'Formato', en: 'Size', de: 'Größe', fr: 'Format', es: 'Tamaño', nl: 'Formaat', pl: 'Rozmiar', pt: 'Tamanho', zh: '规格'},
+    soldOut: {it: 'Esaurito', en: 'Sold out', de: 'Ausverkauft', fr: 'Épuisé', es: 'Agotado', nl: 'Uitverkocht', pl: 'Wyprzedane', pt: 'Esgotado', zh: '已售罄'},
+    choiceSoldOut: {it: "Scelta esaurita: selezionane un'altra", en: 'Sold out: choose another option', de: 'Ausverkauft: bitte andere Option wählen', fr: 'Épuisé : choisissez une autre option', es: 'Agotado: elige otra opción', nl: 'Uitverkocht: kies een andere optie', pl: 'Wyprzedane: wybierz inną opcję', pt: 'Esgotado: escolha outra opção', zh: '已售罄：请选择其他选项'},
+    allergensForChoice: {it: 'Allergeni della versione scelta', en: 'Allergens for the selected version', de: 'Allergene der gewählten Variante', fr: 'Allergènes de la version choisie', es: 'Alérgenos de la versión elegida', nl: 'Allergenen van de gekozen versie', pl: 'Alergeny wybranej wersji', pt: 'Alergénios da versão escolhida', zh: '所选版本的过敏原'},
+    availableAs: {it: 'Disponibile in versione', en: 'Available as', de: 'Erhältlich als', fr: 'Disponible en version', es: 'Disponible en versión', nl: 'Verkrijgbaar als', pl: 'Dostępne w wersji', pt: 'Disponível na versão', zh: '可选版本'},
+    dietary: {it: 'Caratteristiche', en: 'Dietary', de: 'Ernährung', fr: 'Régime', es: 'Dieta', nl: 'Dieet', pl: 'Dieta', pt: 'Dieta', zh: '饮食'},
+    dietGlutenFree: {it: 'Senza glutine', en: 'Gluten-free', de: 'Glutenfrei', fr: 'Sans gluten', es: 'Sin gluten', nl: 'Glutenvrij', pl: 'Bezglutenowe', pt: 'Sem glúten', zh: '无麸质'},
+    dietLactoseFree: {it: 'Senza lattosio', en: 'Lactose-free', de: 'Laktosefrei', fr: 'Sans lactose', es: 'Sin lactosa', nl: 'Lactosevrij', pl: 'Bez laktozy', pt: 'Sem lactose', zh: '无乳糖'},
+    dietVegan: {it: 'Vegano', en: 'Vegan', de: 'Vegan', fr: 'Végan', es: 'Vegano', nl: 'Veganistisch', pl: 'Wegańskie', pt: 'Vegano', zh: '纯素'},
+    dietVegetarian: {it: 'Vegetariano', en: 'Vegetarian', de: 'Vegetarisch', fr: 'Végétarien', es: 'Vegetariano', nl: 'Vegetarisch', pl: 'Wegetariańskie', pt: 'Vegetariano', zh: '素食'},
 } as const;
 
 /**
@@ -73,4 +84,19 @@ export const menuText = (key: MenuStringKey, lang: string): string => {
 export const useMenuT = () => {
     const {menuLang} = useData();
     return (key: MenuStringKey) => menuText(key, menuLang);
+};
+
+const DIETARY_KEYS: Record<string, MenuStringKey> = {
+    'senza-glutine': 'dietGlutenFree', 'gluten-free': 'dietGlutenFree',
+    'senza-lattosio': 'dietLactoseFree', 'lactose-free': 'dietLactoseFree',
+    'vegano': 'dietVegan', 'vegan': 'dietVegan',
+    'vegetariano': 'dietVegetarian', 'vegetarian': 'dietVegetarian',
+};
+
+/** Etichetta di un tag dietetico ("senza-lattosio" → "Senza lattosio"); tag sconosciuti: slug leggibile. */
+export const dietaryTagLabel = (tag: string, lang: string): string => {
+    const key = DIETARY_KEYS[tag.trim().toLowerCase()];
+    if (key) return menuText(key, lang);
+    const text = tag.replace(/[-_]+/g, ' ').trim();
+    return text.charAt(0).toUpperCase() + text.slice(1);
 };

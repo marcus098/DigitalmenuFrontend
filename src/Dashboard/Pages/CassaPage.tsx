@@ -15,15 +15,16 @@ import {
     MagnifyingGlassIcon, ArrowUturnLeftIcon, QrCodeIcon, CreditCardIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
+import SelectedVariantChips from '../../Components/Dashboard/SelectedVariantChips';
+import { defaultVariantsDelta, lineUnitPrice } from '../../Components/Dashboard/variantUtils';
 
 // Caricato solo quando si apre lo scanner della tessera
 const QrScanner = React.lazy(() => import('react-qr-scanner'));
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const itemUnitPrice = (p: Product) =>
-    (p.productOption?.price ?? 0) +
-    (p.ingredientsPlus ?? []).reduce((s, i) => s + (i.price ?? 0), 0);
+// Prezzo unitario calcolato dal server (formato + varianti + extra); fallback per le comande vecchie
+const itemUnitPrice = (p: Product) => lineUnitPrice(p);
 
 const formatEur = (n: number) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
@@ -377,7 +378,8 @@ const CheckoutPanel: React.FC<PanelProps> = ({
                     productId:   product.id,
                     productName: product.name,
                     optionName:  option.name,
-                    price:       option.price,
+                    // Aggiunto in cassa: formato + supplementi delle varianti predefinite
+                    price:       Math.round((option.price + defaultVariantsDelta(product.variantGroups)) * 100) / 100,
                     qty:         1,
                 }],
             });
@@ -447,6 +449,7 @@ const CheckoutPanel: React.FC<PanelProps> = ({
                                 {p.productOption?.name && !p.productOption.isDefault && (
                                     <p className="text-xs text-gray-400 mt-0.5">{p.productOption.name}</p>
                                 )}
+                                <SelectedVariantChips variants={p.selectedVariants} className={removed ? 'opacity-60' : ''} />
                                 {(p.ingredientsPlus ?? []).length > 0 && (
                                     <p className="text-xs text-emerald-600 mt-0.5">
                                         + {p.ingredientsPlus.map(i => i.name).join(', ')}

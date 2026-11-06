@@ -8,6 +8,8 @@ import {
 } from '../../Utilities/api';
 import { PaymentIntentResponse, SumUpSyncResponse } from '../../types';
 import { Comand } from '../../ComandType';
+import VariantSummary from '../../Components/Client/VariantSummary';
+import { comandProductUnitPrice } from '../../Utilities/Utilities';
 import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
 import CustomLoading from '../../Components/CustomLoading';
 import { CheckCircleIcon, ExclamationTriangleIcon, ClockIcon } from '@heroicons/react/24/outline';
@@ -460,13 +462,19 @@ const PaymentPage: React.FC = () => {
             </div>
             <div className="rounded-2xl p-4 space-y-1.5 mt-3" style={{ background: 'var(--menu-surface)' }}>
                 {(comand.orders ?? []).flatMap(o => o.products ?? []).map((p, i) => (
-                    <div key={i} className="flex justify-between text-sm">
-                        <span style={{ color: 'var(--menu-text)' }}>
-                            {p.quantity}× {p.productName}
-                            {p.productOption?.name && p.productOption.name !== 'Default' && (
-                                <span className="ml-1" style={{ color: 'var(--menu-muted)' }}>({p.productOption.name})</span>
-                            )}
-                        </span>
+                    <div key={i} className="text-sm">
+                        <div className="flex justify-between gap-3">
+                            <span style={{ color: 'var(--menu-text)' }}>
+                                {p.quantity}× {p.productName}
+                                {p.productOption?.name && !['default', 'standard'].includes(p.productOption.name.toLowerCase()) && (
+                                    <span className="ml-1" style={{ color: 'var(--menu-muted)' }}>({p.productOption.name})</span>
+                                )}
+                            </span>
+                            <span className="tabular-nums flex-shrink-0" style={{ color: 'var(--menu-muted)' }}>
+                                €{(comandProductUnitPrice(p) * p.quantity).toFixed(2)}
+                            </span>
+                        </div>
+                        <VariantSummary variants={p.selectedVariants} className="mt-0.5" />
                     </div>
                 ))}
                 <div className="pt-2 mt-2 flex justify-between font-bold" style={{ borderTop: '1px solid var(--menu-border)', color: 'var(--menu-text)' }}>

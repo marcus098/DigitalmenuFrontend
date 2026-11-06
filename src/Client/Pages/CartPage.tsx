@@ -5,7 +5,8 @@ import { useNotification } from '../../Context/NotificationContext';
 import { useData } from '../../Context/DataContext';
 import { getCartMap, saveCart, emptyCart, CART_UPDATED_EVENT, getTableSession, getOrCreateClientSessionId, cartToAddComandOrders } from '../../Utilities/Utilities';
 import { sendClientOrderApi, sendTakeawayOrderApi, setReadyApi, getPublicTakeawaySlotsApi, getPublicPaymentsConfigApi, getPublicTakeawayStatusApi, type Slot } from '../../Utilities/api';
-import { CreatedOrderResponse, ProductCard, PublicPaymentsConfig } from '../../types';
+import { CreatedOrderResponse, PublicPaymentsConfig } from '../../types';
+import { CartLine, cartLineKey } from '../../Utilities/variants';
 
 import CustomLoading from '../../Components/CustomLoading';
 import ClientStickyHeader from '../../Components/Client/ClientStickyHeader';
@@ -40,7 +41,7 @@ const slideUp = {
 };
 
 const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
-    const [cart, setCart] = useState<ProductCard[]>([]);
+    const [cart, setCart] = useState<CartLine[]>([]);
     const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +113,7 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
         return () => { cancelled = true; };
     }, [isTakeaway, localname]);
 
-    const updateCartStateAndStorage = (newCart: ProductCard[]) => {
+    const updateCartStateAndStorage = (newCart: CartLine[]) => {
         const storageKey = waiter ? 'waiter' : undefined;
         if (saveCart(newCart, storageKey)) {
             setCart(newCart);
@@ -121,13 +122,15 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
         }
     };
 
-    const removeItem = (id: string) =>
-        updateCartStateAndStorage(cart.filter(i => i.id.toString() !== id));
+    // Righe identificate dalla chiave completa (prodotto, formato, varianti, extra, rimozioni, nota):
+    // due Margherite con impasti diversi sono righe distinte
+    const removeItem = (key: string) =>
+        updateCartStateAndStorage(cart.filter(i => cartLineKey(i) !== key));
 
-    const updateItemQuantity = (id: string, qty: number) => {
+    const updateItemQuantity = (key: string, qty: number) => {
         if (qty < 1) return;
         updateCartStateAndStorage(
-            cart.map(i => (i.id.toString() === id ? { ...i, quantity: qty } : i))
+            cart.map(i => (cartLineKey(i) === key ? { ...i, quantity: qty } : i))
         );
     };
 
@@ -310,16 +313,17 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                     ) : (
                         <>
                             <div className="flex flex-col gap-3">
-                                {cart.map(item => (
-                                    <ModernCartItem
-                                        key={item.id}
-                                        item={item}
-                                        onRemove={() => removeItem(item.id.toString())}
-                                        onQuantityChange={qty =>
-                                            updateItemQuantity(item.id.toString(), qty)
-                                        }
-                                    />
-                                ))}
+                                {cart.map(item => {
+                                    const key = cartLineKey(item);
+                                    return (
+                                        <ModernCartItem
+                                            key={key}
+                                            item={item}
+                                            onRemove={() => removeItem(key)}
+                                            onQuantityChange={qty => updateItemQuantity(key, qty)}
+                                        />
+                                    );
+                                })}
                             </div>
 
                             <motion.div

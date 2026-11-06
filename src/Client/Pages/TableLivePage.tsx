@@ -4,6 +4,9 @@ import { useData } from '../../Context/DataContext';
 import { clearTableSession, emptyCart, getOrCreateClientSessionId, getTableSession } from '../../Utilities/Utilities';
 import { useTableSessionSSE } from '../../Hooks/useTableSessionSSE';
 import { TableSessionState } from '../../types';
+import { Comand } from '../../ComandType';
+import { getClientOrderApi } from '../../Utilities/api';
+import ComandLines from '../../Components/Client/ComandLines';
 import { Check, ChefHat, Clock, PartyPopper, ReceiptText } from 'lucide-react';
 
 const COMAND_STATUS_LABEL: Record<string, string> = {
@@ -59,6 +62,26 @@ const TableLivePage: React.FC = () => {
     }, [clientSessionId]);
 
     useTableSessionSSE(stored?.sessionId ?? null, clientSessionId, onState);
+
+    // Dettaglio delle comande (righe, varianti, prezzi del server): lo stato del tavolo ha solo id e stato
+    const [details, setDetails] = useState<Record<string, Comand>>({});
+    const comandIdsKey = (state?.comands ?? []).map(c => c.comandId).join(',');
+    useEffect(() => {
+        const missing = comandIdsKey ? comandIdsKey.split(',').filter(id => !details[id]) : [];
+        if (missing.length === 0) return;
+        let cancelled = false;
+        Promise.all(missing.map(id => getClientOrderApi(id).then(r => [id, r.success ? r.data : null] as const)))
+            .then(results => {
+                if (cancelled) return;
+                setDetails(prev => {
+                    const next = { ...prev };
+                    results.forEach(([id, data]) => { if (data) next[id] = data; });
+                    return next;
+                });
+            });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [comandIdsKey]);
 
     if (!stored || !loaded || !state) {
         return (
@@ -158,9 +181,10 @@ const TableLivePage: React.FC = () => {
                             return (
                                 <div
                                     key={c.comandId}
-                                    className="flex items-center justify-between px-4 py-3"
+                                    className="px-4 py-3"
                                     style={{ borderTop: idx === 0 ? 'none' : '1px solid var(--menu-border)' }}
                                 >
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <Icon className="w-5 h-5" style={{ color: c.status === 'COMPLETED' ? '#22c55e' : primaryColor }} />
                                         <div>
@@ -192,6 +216,12 @@ const TableLivePage: React.FC = () => {
                                         {statusLabel}
                                     </span>
                                     )}
+                                </div>
+                                {details[c.comandId] && (
+                                    <div className="mt-2 pl-8">
+                                        <ComandLines comand={details[c.comandId]} compact />
+                                    </div>
+                                )}
                                 </div>
                             );
                         })}

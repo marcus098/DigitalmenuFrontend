@@ -8,6 +8,7 @@ import { useHistory } from "../Context/HistoryContext";
 import { useParams } from "react-router-dom";
 import PillToggle from "./Dashboard/PillToggle";
 import {useLoginContext} from "../Context/LoginContext";
+import VariantAvailabilityPanel from "./Dashboard/VariantAvailabilityPanel";
 
 interface ProductCardProps {
     provided: DraggableProvided;
@@ -46,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     alt={product.name}
                     className="w-16 h-16 flex-shrink-0 object-cover rounded-lg border border-gray-200"
                 />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-bold text-gray-800">{product.name}</h3>
                     <p className="text-base font-semibold text-primary">
                         € {product.options.find((o) => o.isDefault)?.price.toFixed(2)}
@@ -56,6 +57,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             {product.ingredients.map(id => ingredientsMap.get(id)?.name).join(', ')}
                         </p>
                     )}
+                    <VariantAvailabilityPanel product={product} />
                 </div>
             </div>
 

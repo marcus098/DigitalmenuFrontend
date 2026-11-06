@@ -1,13 +1,28 @@
 // src/Components/ProductCustomizationDrawer.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ProductDto, IngredientDto, ProductCard } from "../types";
+import { ProductDto, IngredientDto } from "../types";
 import { useData } from "../Context/DataContext";
 import { addProductToCart } from "../Utilities/Utilities";
 import { useNotification } from "../Context/NotificationContext";
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Plus, Minus, ChevronDown, Search } from 'lucide-react';
 import { MenuAllergenDetails } from './Client/MenuAllergens';
+import VariantPicker from './Client/VariantPicker';
+import { useMenuT } from '../Client/menuI18n';
+import {
+    CartLine,
+    completeSelection,
+    defaultVariantSelection,
+    findCompatibleSelection,
+    formatPrice,
+    formatSupplement,
+    getVariantGroups,
+    selectionHasUnavailable,
+    selectionToPayload,
+    variantsSupplement,
+    VariantSelectionMap,
+} from '../Utilities/variants';
 
 // ... Componente IngredientRow (invariato)
 const IngredientRow: React.FC<{ name: string; price?: number; isSelected: boolean; onToggle: () => void; }> = ({ name, price, isSelected, onToggle }) => (
@@ -49,35 +64,65 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
     const [totalPrice, setTotalPrice] = useState(0);
     const [isExtrasOpen, setIsExtrasOpen] = useState(true);
     const [extraSearchTerm, setExtraSearchTerm] = useState('');
-    const { ingredientsMap } = useData();
+    const [selection, setSelection] = useState<VariantSelectionMap>({});
+    const { ingredientsMap, selectedAllergens, menuLang } = useData();
     const { addNotification } = useNotification();
+    const t = useMenuT();
+    const variantGroups = useMemo(() => getVariantGroups(dish), [dish]);
 
-    // ... useEffect e funzioni (invariate) ...
+    // Reset all'apertura o al cambio di piatto (non a ogni aggiornamento del catalogo via SSE,
+    // che altrimenti cancellerebbe le scelte del cliente mentre sta scegliendo)
     useEffect(() => {
-        if (dish) {
+        if (dish && isOpen) {
             const defaultOpt = dish.options.find(o => o.isDefault) || dish.options[0];
             setSelectedIngredients(dish.ingredients || []);
             setNote('');
             setQuantity(1);
             setSelectedOption(defaultOpt?.name || null);
             setIsExtrasOpen(true);
+            // Dal menu filtrato per allergeni: preseleziona la combinazione che li evita
+            setSelection(
+                (selectedAllergens.length > 0 ? findCompatibleSelection(dish, ingredientsMap, selectedAllergens) : null)
+                ?? defaultVariantSelection(dish)
+            );
         }
-    }, [dish]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dish?.id, isOpen]);
+
+    // Selezione sempre completa e coerente col catalogo attuale (gruppi nuovi -> predefinita)
+    const currentSelection = useMemo(() => completeSelection(dish, selection), [dish, selection]);
+    const blockedBySoldOut = selectionHasUnavailable(dish, currentSelection);
+    const extraIds = useMemo(
+        () => selectedIngredients.filter(id => !(dish?.ingredients || []).includes(id)),
+        [selectedIngredients, dish]
+    );
+
     useEffect(() => {
         if (!dish || !selectedOption) { setTotalPrice(0); return; }
+        // Prezzo unitario = formato + supplementi delle varianti + extra (il server lo ricalcola dal DB)
         let singleUnitPrice = dish.options.find(o => o.name === selectedOption)?.price || 0;
+        singleUnitPrice += variantsSupplement(dish, currentSelection);
         const baseIngredients = dish.ingredients || [];
         selectedIngredients.forEach(ingId => {
             if (!baseIngredients.includes(ingId)) singleUnitPrice += ingredientsMap.get(ingId)?.price || 0;
         });
         setTotalPrice(singleUnitPrice * quantity);
-    }, [dish, selectedOption, selectedIngredients, quantity, ingredientsMap]);
+    }, [dish, selectedOption, selectedIngredients, quantity, ingredientsMap, currentSelection]);
     const handleToggleIngredient = (id: number) => setSelectedIngredients(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
     const changeOption = (name: string) => setSelectedOption(name);
     const handleAddToCart = () => {
         if (!dish || !selectedOption) return;
+        if (blockedBySoldOut) {
+            addNotification({ message: t('choiceSoldOut'), type: "error" });
+            return;
+        }
         const base = dish.ingredients || [];
-        const productCart: ProductCard = { id: dish.id, quantity, optionName: selectedOption, price: totalPrice / quantity, note, ingredientsPlus: selectedIngredients.filter(id => !base.includes(id)), ingredientsMinus: base.filter(id => !selectedIngredients.includes(id)) };
+        const productCart: CartLine = {
+            id: dish.id, quantity, optionName: selectedOption, price: totalPrice / quantity, note: note.trim(),
+            ingredientsPlus: selectedIngredients.filter(id => !base.includes(id)),
+            ingredientsMinus: base.filter(id => !selectedIngredients.includes(id)),
+            ...(variantGroups.length > 0 ? { variants: selectionToPayload(currentSelection) } : {}),
+        };
         if (addProductToCart(productCart, waiter ? "waiter" : undefined)) {
             addNotification({ message: "Prodotto aggiunto!", type: "success" });
             onClose();
@@ -117,31 +162,37 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
                         </div>
 
                         <div className="p-6 space-y-6 overflow-y-auto">
-                            {/* Allergeni effettivi (prodotto ∪ ingredienti) e tracce, Reg. UE 1169/2011 */}
-                            <MenuAllergenDetails product={dish} />
-
-                            {/* --- 3. GIÀ PRESENTE: Sezione per la scelta delle opzioni --- */}
+                            {/* --- Formato (opzioni esistenti: fissano il prezzo base; nascosto se ce n'è una sola) --- */}
                             {dish.options && dish.options.length > 1 && dish.options[0].name !== 'default' && (
-                                <div>
-                                    <h3 className="font-semibold text-lg mb-3" style={{ color: 'var(--menu-text)' }}>Scegli un'opzione</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {dish.options.map(opt => (
-                                            <button
-                                                key={opt.name}
-                                                onClick={() => changeOption(opt.name)}
-                                                className="px-4 py-2 text-sm font-bold rounded-full border-2 transition-colors"
-                                                style={
-                                                    selectedOption === opt.name
-                                                        ? { background: 'var(--menu-accent)', color: 'var(--menu-accent-text)', borderColor: 'var(--menu-accent)' }
-                                                        : { background: 'var(--menu-card)', color: 'var(--menu-text)', borderColor: 'var(--menu-border)' }
-                                                }
-                                            >
-                                                {opt.name} (€{opt.price.toFixed(2)})
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                <VariantPicker
+                                    name={`format-${dish.id}`}
+                                    legend={t('format')}
+                                    value={selectedOption}
+                                    onChange={changeOption}
+                                    choices={dish.options.map(opt => ({ id: opt.name, name: opt.name, priceLabel: formatPrice(opt.price, menuLang) }))}
+                                />
                             )}
+
+                            {/* --- Gruppi di varianti: una scelta per gruppo, predefinita già selezionata --- */}
+                            {variantGroups.map(group => (
+                                <VariantPicker
+                                    key={group.id}
+                                    name={`variant-${dish.id}-${group.id}`}
+                                    legend={group.name}
+                                    value={currentSelection[group.id] ?? null}
+                                    onChange={choiceId => setSelection(prev => ({ ...prev, [group.id]: choiceId }))}
+                                    choices={group.choices.map(c => ({
+                                        id: c.id,
+                                        name: c.name,
+                                        priceLabel: Number(c.priceDelta) ? formatSupplement(Number(c.priceDelta), menuLang) : undefined,
+                                        disabled: c.available === false,
+                                        dietaryTags: c.dietaryTags,
+                                    }))}
+                                />
+                            ))}
+
+                            {/* Allergeni della combinazione scelta (prodotto + ingredienti + extra, corretti dalle varianti) e tracce, Reg. UE 1169/2011 */}
+                            <MenuAllergenDetails product={dish} selection={currentSelection} extraIngredientIds={extraIds} />
 
                             {/* Ingredienti Inclusi */}
                             <div>
@@ -210,10 +261,14 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
                             </div>
                             <button
                                 onClick={handleAddToCart}
-                                className="flex-grow ml-4 text-base px-5 py-2.5 rounded-lg shadow-md font-semibold transition-colors hover:opacity-90"
+                                disabled={blockedBySoldOut}
+                                aria-live="polite"
+                                className="flex-grow ml-4 text-base px-5 py-2.5 rounded-lg shadow-md font-semibold transition-colors hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                 style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
                             >
-                                Aggiungi {quantity > 1 ? `${quantity} pz.` : ''} - €{totalPrice.toFixed(2)}
+                                {blockedBySoldOut
+                                    ? t('choiceSoldOut')
+                                    : <>Aggiungi {quantity > 1 ? `${quantity} pz.` : ''} - €{totalPrice.toFixed(2)}</>}
                             </button>
                         </div>
                     </motion.div>

@@ -6,6 +6,9 @@ import AllergenModal from '../../Components/Client/AllergenModal';
 import useCartCount from '../../Utilities/useCartCount';
 import { getClientOrderApi, getPublicPaymentsConfigApi } from '../../Utilities/api';
 import { Check, Clock, CreditCard, Hourglass, Loader2, PartyPopper, XCircle } from 'lucide-react';
+import { Comand } from '../../ComandType';
+import ComandLines from '../../Components/Client/ComandLines';
+import { comandTotal } from '../../Utilities/Utilities';
 
 type OrderStatus = 'submitted' | 'in_preparation' | 'ready';
 
@@ -50,6 +53,8 @@ const OrderStatusPage: React.FC = () => {
     const [refunded, setRefunded] = useState(false);
     const [paymentsEnabled, setPaymentsEnabled] = useState(false);
     const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
+    // Comanda completa dalla GET pubblica (gli eventi SSE hanno solo id/stato)
+    const [comand, setComand] = useState<Comand | null>(null);
     const esRef = useRef<EventSource | null>(null);
 
     const { setSelectedAllergens, styles } = useData();
@@ -75,6 +80,7 @@ const OrderStatusPage: React.FC = () => {
         if ('authorizationCanceled' in (data ?? {})) setAuthorizationCanceled(!!data.authorizationCanceled);
         if ('paymentAuthorized' in (data ?? {})) setPaymentAuthorized(!!data.paymentAuthorized);
         if ('refunded' in (data ?? {})) setRefunded(!!data.refunded);
+        if (Array.isArray(data?.orders)) setComand(data as Comand);
     };
 
     // Il locale accetta pagamenti online? (mostra "Paga online" solo se attivi)
@@ -343,6 +349,16 @@ const OrderStatusPage: React.FC = () => {
                                 );
                             })}
                         </div>
+
+                        {comand && (comand.orders ?? []).some(o => (o.products ?? []).length > 0) && (
+                            <section className="mt-8" aria-label="Riepilogo ordine">
+                                <div className="flex justify-between items-baseline mb-3">
+                                    <h2 className="font-bold text-lg" style={{ color: 'var(--menu-text)' }}>Il tuo ordine</h2>
+                                    <span className="font-bold tabular-nums" style={{ color: 'var(--menu-text)' }}>€{comandTotal(comand).toFixed(2)}</span>
+                                </div>
+                                <ComandLines comand={comand} />
+                            </section>
+                        )}
 
                         {status === 'ready' && (
                             <div className="mt-10 text-center p-6 bg-green-50 border-2 border-dashed border-green-300 rounded-2xl">

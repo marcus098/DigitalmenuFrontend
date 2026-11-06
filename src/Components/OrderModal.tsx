@@ -1,5 +1,6 @@
 import React from "react";
 import {Orders} from "../Dashboard/Pages/OrderPage";
+import SelectedVariantChips from "./Dashboard/SelectedVariantChips";
 
 interface OrderModalProps {
     order: Orders;
@@ -20,6 +21,7 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, onClose }) => {
                                 {item.productName} - €
                                 {item.total.toFixed(2)}
                             </p>
+                            <SelectedVariantChips variants={item.variants} />
                             {item.additionalIngredients.length > 0 && (
                                 <p className="text-sm text-gray-600">
                                     + {item.additionalIngredients.join(", ")}

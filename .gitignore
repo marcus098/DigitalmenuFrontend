@@ -55,3 +55,8 @@ CERT_*.pdf
 
 # Config Spring di produzione montata nei container (contiene segreti)
 /config/
+
+# Guide video (Playwright screencast)
+/screencast-output
+/screencast-videos
+/screencast-shots

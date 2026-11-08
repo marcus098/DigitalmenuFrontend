@@ -10,7 +10,7 @@ const PrivacyPolicyPage: React.FC = () => {
         <LegalLayout title="Informativa sulla privacy" lastUpdated="21 giugno 2026">
             <p>
                 La presente informativa descrive le modalità di trattamento dei dati personali degli utenti
-                che utilizzano il servizio <strong>RestaurantFlow</strong> (di seguito, il "Servizio"),
+                che utilizzano il servizio <strong>Omnivo</strong> (di seguito, il "Servizio"),
                 in conformità al Regolamento (UE) 2016/679 ("GDPR") e al D.Lgs. 196/2003 come modificato
                 dal D.Lgs. 101/2018 ("Codice Privacy").
             </p>

@@ -10,7 +10,7 @@ const CookiePolicyPage: React.FC = () => {
         <LegalLayout title="Cookie policy" lastUpdated="21 giugno 2026">
             <p>
                 Questa cookie policy descrive le tipologie di cookie e di tecnologie di tracciamento simili
-                utilizzate dal sito <strong>RestaurantFlow</strong> e dalle relative applicazioni web,
+                utilizzate dal sito <strong>Omnivo</strong> e dalle relative applicazioni web,
                 in conformità alle Linee guida cookie del Garante per la protezione dei dati personali
                 del 10 giugno 2021 e all'art. 122 del D.Lgs. 196/2003.
             </p>

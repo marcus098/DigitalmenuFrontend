@@ -2,39 +2,44 @@ import React from 'react';
 import { BRAND_NAME } from './brand';
 
 /*
- * Marchio provvisorio: un modulo 3×3 che ricorda un QR (tre "angoli" pieni) con il
- * modulo in basso a destra nel colore d'accento — il punto in cui l'ordine parte.
- * Il wordmark è solo tipografico, quindi funziona con qualsiasi nome breve in brand.ts.
+ * Marchio Omnivo: simbolo (piatto a quattro spicchi con il morso) + wordmark "omnivo"
+ * in Nunito 900, con la "i" senza puntino e un puntino arancio al suo posto.
+ * Gli stili (.omn-*) sono in landing.css; il simbolo è il file in public/brand.
  */
-export const BrandGlyph: React.FC<{ size?: number; className?: string; inverted?: boolean }> = ({ size = 18, className = '', inverted = false }) => {
-    const ink = inverted ? 'var(--dark-ink)' : 'var(--ink)';
-    // 1 = pieno, 0 = vuoto, 2 = accento
-    const cells = [
-        1, 0, 1,
-        0, 1, 0,
-        1, 0, 2,
-    ];
-    return (
-        <svg width={size} height={size} viewBox="0 0 18 18" className={className} aria-hidden="true" focusable="false">
-            {cells.map((c, i) => {
-                if (!c) return null;
-                const x = (i % 3) * 6;
-                const y = Math.floor(i / 3) * 6;
-                return <rect key={i} x={x} y={y} width={5} height={5} fill={c === 2 ? 'var(--accent)' : ink} />;
-            })}
-        </svg>
-    );
-};
 
-export const Wordmark: React.FC<{ className?: string; inverted?: boolean; size?: 'sm' | 'md' | 'lg' }> = ({ className = '', inverted = false, size = 'md' }) => {
-    const glyph = size === 'lg' ? 26 : size === 'sm' ? 15 : 18;
-    const text = size === 'lg' ? 'text-[28px]' : size === 'sm' ? 'text-[15px]' : 'text-[18px]';
-    return (
-        <span className={`inline-flex items-center gap-[0.5em] ${text} ${className}`}>
-            <BrandGlyph size={glyph} inverted={inverted} />
-            <span className="font-semibold tracking-[-0.03em] leading-none">{BRAND_NAME}</span>
+type Tone = 'dark' | 'light';
+
+export const OmnivoSymbol: React.FC<{ size?: number; className?: string }> = ({ size = 28, className = '' }) => (
+    <img
+        src="/brand/omnivo-symbol.svg"
+        width={size}
+        height={size}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={`omn-sym block flex-none ${className}`}
+    />
+);
+
+/**
+ * Logo completo. `animated` riproduce l'entrata del video (girandola che ruota, puntino che
+ * cade sulla i) una sola volta; con prefers-reduced-motion resta fermo.
+ * `tone="light"` per gli sfondi scuri (simbolo arancio, scritta crema).
+ */
+export const Wordmark: React.FC<{ size?: number; tone?: Tone; animated?: boolean; className?: string }> = ({
+    size = 26, tone = 'dark', animated = false, className = '',
+}) => (
+    <span
+        role="img"
+        aria-label={BRAND_NAME}
+        className={`inline-flex items-center ${animated ? 'omn-anim' : ''} ${className}`}
+        style={{ gap: Math.round(size * 0.3) }}
+    >
+        <OmnivoSymbol size={Math.round(size * 1.12)} />
+        <span aria-hidden="true" className={`omn-word ${tone === 'light' ? 'is-light' : ''}`} style={{ fontSize: size }}>
+            omn<span className="omn-i">ı<span className="omn-dot" /></span>vo
         </span>
-    );
-};
+    </span>
+);
 
 export default Wordmark;

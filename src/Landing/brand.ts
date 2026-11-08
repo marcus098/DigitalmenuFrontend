@@ -1,6 +1,8 @@
-// TODO: nome del prodotto non ancora deciso. Cambiarlo qui aggiorna tutto il sito vetrina
-// (titolo pagina, meta, wordmark, testi). Il wordmark si adatta a qualsiasi nome breve.
-export const BRAND_NAME = "AxiomMenu";
+/** Nome del prodotto (sito vetrina, titoli, testi). Il wordmark grafico è in BrandMark.tsx. */
+export const BRAND_NAME = "Omnivo";
+
+/** Nome del motore di intelligenza artificiale integrato nel prodotto. */
+export const AI_NAME = "AxiomAI";
 
 /** Azienda che sviluppa il prodotto. */
 export const COMPANY_NAME = "Axiom Group";
@@ -17,7 +19,7 @@ export const COMPANY_LEGAL = {
 } as const;
 
 /*
- * Colori e caratteri del sito vetrina: sono definiti come variabili CSS in landing.css
- * (blocco `.lp { --accent: … }`). Per cambiare il colore del marchio basta modificare lì
- * --accent / --accent-text.
+ * Colori e caratteri del sito vetrina: variabili CSS in landing.css (blocco `.lp { … }`):
+ * crema #FBF7F3, marrone caffè #2A1F18 / #16110E, arancio #F97316 (testo arancio #C2410C).
+ * Logo: public/brand/omnivo-*.svg.
  */

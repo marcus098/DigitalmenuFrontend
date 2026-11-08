@@ -3,7 +3,7 @@ import fs from 'fs';
 import { Screencast } from './helpers';
 
 /**
- * Guida video per il TITOLARE (ruolo ROLE_ADMIN) di RestaurantFlow.
+ * Guida video per il TITOLARE (ruolo ROLE_ADMIN) di Omnivo.
  * Dati demo: vedi demo-data.md. Usa i tavoli 1, 2, 4, 7 (id 10, 11, 13, 16): 3, 5 e 6 sono di cliente e cameriere.
  */
 const APP = 'http://localhost:5173';
@@ -118,7 +118,7 @@ test('Guida titolare', async ({ page }) => {
     // 1. Accesso
     await page.goto(APP + '/login');
     await page.waitForLoadState('networkidle');
-    await sc.scene('Accedi alla tua area', 'Benvenuto in RestaurantFlow! Accedi con la tua email e la tua password: da qui gestisci tutto il ristorante.', 3500);
+    await sc.scene('Accedi alla tua area', 'Benvenuto in Omnivo! Accedi con la tua email e la tua password: da qui gestisci tutto il ristorante.', 3500);
     await sc.type(page.locator('input[type=email]'), EMAIL);
     await sc.type(page.locator('input[type=password]'), PASSWORD);
     await shot(page, '01-login');
@@ -304,6 +304,6 @@ test('Guida titolare', async ({ page }) => {
 
     // 18. Chiusura
     await sc.click(nav('Home'), 2500);
-    await sc.scene('Tutto sotto controllo', 'Questo è RestaurantFlow: tutto il tuo ristorante in un unico posto. Buon lavoro!', 5000);
+    await sc.scene('Tutto sotto controllo', 'Questo è Omnivo: tutto il tuo ristorante in un unico posto. Buon lavoro!', 5000);
     await sc.finish();
 });

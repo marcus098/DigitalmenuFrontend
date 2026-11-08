@@ -10,7 +10,7 @@ type Props = {
 
 const LegalLayout: React.FC<Props> = ({ title, lastUpdated, children }) => {
     useEffect(() => {
-        document.title = `${title} · RestaurantFlow`;
+        document.title = `${title} · Omnivo`;
         window.scrollTo(0, 0);
     }, [title]);
 
@@ -19,7 +19,7 @@ const LegalLayout: React.FC<Props> = ({ title, lastUpdated, children }) => {
             <header className="border-b border-slate-200 bg-white">
                 <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
                     <Link to="/" className="text-sm font-semibold text-slate-700 hover:text-orange-600">
-                        ← RestaurantFlow
+                        ← Omnivo
                     </Link>
                     <button
                         type="button"

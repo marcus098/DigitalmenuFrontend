@@ -18,6 +18,7 @@ import { localIsoDate } from '../../Utilities/dates';
 import AiInsightCard from '../../Components/Dashboard/AiInsightCard';
 import { tableLabel } from '../tableLabel';
 import { useAiInsights } from '../../Hooks/useAiInsights';
+import { timeAgo } from '../../Utilities/timeAgo';
 
 // ── Animation variants ────────────────────────────────────────────────────────
 const pageVariants = {
@@ -400,10 +401,7 @@ const HomePage: React.FC = () => {
                                     (s, o) => s + o.products.reduce((ps, p) => ps + p.quantity, 0),
                                     0
                                 );
-                                const diff = Date.now() - new Date(cmd.updatedAt).getTime();
-                                const m = Math.floor(diff / 60000);
-                                const timeAgo =
-                                    m < 1 ? 'adesso' : m < 60 ? `${m}m fa` : `${Math.floor(m / 60)}h fa`;
+                                const ago = timeAgo(cmd.updatedAt);
 
                                 return (
                                     <motion.div
@@ -428,7 +426,7 @@ const HomePage: React.FC = () => {
                                             </p>
                                             <p className="text-xs text-gray-400">
                                                 {totalItems}{' '}
-                                                {totalItems === 1 ? 'prodotto' : 'prodotti'} · {timeAgo}
+                                                {totalItems === 1 ? 'prodotto' : 'prodotti'} · {ago}
                                             </p>
                                         </div>
                                         <span

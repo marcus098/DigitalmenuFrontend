@@ -2,7 +2,7 @@ import React from 'react';
 import { ProductDto } from '../../types';
 import { Plus } from 'lucide-react';
 import { useMenuLook } from './MenuThemeProvider';
-import { imageRadius, MenuDescription, MenuPrice, MenuTags, rowPadding } from './MenuPrimitives';
+import { imageRadius, MenuDescription, MenuNumber, MenuPrice, MenuTags, rowPadding } from './MenuPrimitives';
 import { FrozenMark, MenuAllergenMarkers, useProductAllergens } from './MenuAllergens';
 import { allergenById } from '../../Utilities/Utilities';
 
@@ -244,14 +244,8 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, onClick, ind
             className="menu-row w-full text-left flex items-start gap-3.5 px-1"
             style={{ minHeight: compact ? 48 : 56, paddingTop: pad, paddingBottom: pad }}
         >
-            {number && (
-                <span
-                    className="menu-price flex-shrink-0 pt-0.5"
-                    style={{ color: 'var(--menu-emph)', fontSize: '0.8rem', fontWeight: 600, minWidth: '1.6rem' }}
-                    aria-hidden="true"
-                >
-                    {number}
-                </span>
+            {number && index && (
+                <MenuNumber n={index} className="flex-shrink-0" style={{ minWidth: '1.6rem', marginTop: look.numberStyle === 'boxed' ? 0 : 2 }} />
             )}
             <div className="flex-1 min-w-0">
                 {eyebrowEl}

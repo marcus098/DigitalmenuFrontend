@@ -5,7 +5,7 @@ import { allergenName, menuText } from '../../../Client/menuI18n';
 import { allergenById, allergens as ALLERGENS } from '../../../Utilities/Utilities';
 import { MenuLookProvider } from '../../Client/MenuThemeProvider';
 import {
-    formatEuro, imageRadius, MenuDescription, MenuMastheadTitle, MenuPrice, MenuRule, MenuSectionHeading,
+    formatEuro, imageRadius, MenuDescription, MenuMastheadTitle, MenuNumber, MenuPrice, MenuRule, MenuSectionHeading,
 } from '../../Client/MenuPrimitives';
 import type { AllergenStyle, PdfCategory, PdfMenuData, PdfProduct } from './menuPdfModel';
 
@@ -156,9 +156,7 @@ const RowItem: React.FC<ItemProps & { narrow?: boolean }> = ({ product, index, t
     return (
         <div className="pdf-item" style={{ display: 'flex', gap: '8pt', alignItems: 'flex-start', padding: `${pad}pt 1.5pt ${pad}pt 0`, opacity: product.soldOut ? 0.55 : 1 }}>
             {l.productNumbers && (
-                <span className="menu-price" style={{ color: 'var(--menu-emph)', fontSize: '9pt', fontWeight: 600, minWidth: '16pt', paddingTop: '2pt' }}>
-                    {String(index).padStart(2, '0')}
-                </span>
+                <MenuNumber n={index} size="9pt" style={{ minWidth: '16pt', marginTop: l.numberStyle === 'boxed' ? 0 : '2pt', height: l.numberStyle === 'boxed' ? '15pt' : undefined }} />
             )}
             <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline' }}>

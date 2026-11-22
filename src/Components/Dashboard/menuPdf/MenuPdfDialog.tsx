@@ -286,10 +286,10 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
                                 id="menu-pdf-fonts"
                                 value={fontPair || templateKey}
                                 onChange={e => setFontPair(e.target.value as MenuTemplateKey)}
-                                className="input-style mt-1 w-full"
+                                className="input-style mt-1 w-full text-sm"
                             >
                                 {pairOptions.map(k => (
-                                    <option key={k} value={k}>{k === templateKey ? 'Del template — ' : ''}{fontPairLabel(TEMPLATE_BY_KEY[k])}</option>
+                                    <option key={k} value={k} title={fontPairLabel(TEMPLATE_BY_KEY[k])}>{k === templateKey ? '★ ' : ''}{fontPairLabel(TEMPLATE_BY_KEY[k])}</option>
                                 ))}
                             </select>
                         </div>

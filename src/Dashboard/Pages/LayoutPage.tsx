@@ -178,7 +178,7 @@ const ControlPanel: React.FC<{
                             style={{ fontFamily: AVAILABLE_FONTS.find(f => f.key === (draftTheme.font || 'system'))?.family }}
                         >
                             <option value="template">Abbinamento del template (consigliato)</option>
-                            {AVAILABLE_FONTS.map(f => (
+                            {AVAILABLE_FONTS.filter(f => !f.legacy || f.key === draftTheme.font).map(f => (
                                 <option key={f.key} value={f.key} style={{ fontFamily: f.family }}>
                                     {f.name}
                                 </option>

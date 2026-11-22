@@ -476,7 +476,7 @@ code {
 
 /* Grana della carta da risografia: puntinato fitto e irregolare. */
 [data-menu-texture="grain"] .menu-page {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .13 0 0 0 0 .2 0 0 0 0 .48 0 0 0 7 -3.7'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='.2'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .13 0 0 0 0 .2 0 0 0 0 .48 0 0 0 7 -3.7'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='.14'/%3E%3C/svg%3E");
 }
 /* Feltro della bacheca a lettere: scanalature orizzontali regolari. */
 [data-menu-texture="felt"] .menu-page {
@@ -617,3 +617,194 @@ code {
 .lp-slide { transition: opacity 1.1s ease; }
 .lp-scroll-snap { scroll-snap-type: x mandatory; scrollbar-width: thin; }
 .lp-scroll-snap > * { scroll-snap-align: start; }
+
+/* ─── Sito vetrina: impaginazioni "da stampa" (dicembre 2026, vedi landing/PrintSections.tsx) ──
+   Manifesto, cartoncino del menu, lavagna, biglietto, provino, polaroid, indice. Colori e font
+   dal template; nessuna ombra sfumata: dove serve profondità è un'ombra piena di 1-3 px. */
+
+/* Manifesto (poster) */
+.lp-poster-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 28px; margin-top: 14px; font-family: var(--menu-font-body); font-size: 0.92rem; line-height: 1.35; color: var(--menu-muted); }
+.lp-poster-grid { display: grid; gap: 28px; margin-top: 28px; }
+.lp-poster-title { font-size: clamp(3rem, 9.5vw, 8.5rem); line-height: 0.86; letter-spacing: var(--menu-h-tracking, -0.02em); overflow-wrap: break-word; hyphens: manual; }
+.lp-poster-sub { margin-top: 22px; max-width: 30rem; font-size: clamp(1.05rem, 3.6vw, 1.3rem); line-height: 1.45; color: var(--menu-text); }
+.lp-poster-figure figcaption { margin-top: 8px; font-family: var(--menu-font-body); font-size: 0.8rem; color: var(--menu-muted); }
+.lp-poster-photo { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--menu-surface); }
+.lp-poster-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Foto in bicromia da risografia: grigio moltiplicato sul secondo inchiostro */
+.lp-duotone { background: var(--menu-accent); }
+.lp-duotone img { filter: grayscale(1) contrast(1.15) brightness(1.05); mix-blend-mode: multiply; }
+.lp-duotone::after { content: ''; position: absolute; inset: 0; background: var(--menu-text); mix-blend-mode: screen; opacity: 0.18; transform: translate(4px, 3px); pointer-events: none; }
+@media (min-width: 768px) {
+  .lp-poster-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 24px; }
+  .lp-poster-main { grid-column: 1 / span 8; }
+  .lp-poster-figure { grid-column: 9 / span 4; margin-top: 120px; }
+}
+
+/* Cartoncino del menu (card) */
+.lp-menucard {
+  position: relative; z-index: 1;
+  background: var(--menu-card); color: var(--menu-text);
+  padding: 34px 26px 30px; text-align: center;
+  border: 1px solid var(--menu-rule); outline: 1px solid var(--menu-rule); outline-offset: -7px;
+  box-shadow: 3px 4px 0 color-mix(in srgb, var(--menu-text) 12%, transparent);
+}
+@media (min-width: 768px) { .lp-menucard { padding: 48px 46px 40px; } .lp-cardhero-photo { margin-right: -40px; } }
+.lp-menucard-facts { font-family: var(--menu-font-body); font-style: italic; font-size: 0.95rem; color: var(--menu-muted); }
+.lp-menucard-sub { max-width: 26rem; margin: 0 auto; font-size: 1.05rem; line-height: 1.55; color: var(--menu-muted); font-style: italic; }
+.lp-menucard-list { list-style: none; padding: 0; margin: 0 auto; max-width: 24rem; text-align: left; }
+.lp-menucard-list button { display: flex; align-items: baseline; gap: 10px; width: 100%; min-height: 44px; padding: 6px 2px; }
+.lp-menucard-num { flex: 0 0 2.2rem; font-family: var(--menu-font-display); color: var(--menu-emph); font-size: 0.95rem; }
+.lp-menucard-name { font-size: 1.15rem; }
+.lp-menucard-ctas > div { justify-content: center; margin-top: 26px; }
+.lp-cardhero-photo { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--menu-surface); }
+.lp-cardhero-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* Lavagna / bacheca (board) */
+.lp-board {
+  position: relative;
+  background: var(--menu-card);
+  border: 12px solid #4a3524;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 3px 0 rgba(0, 0, 0, 0.35);
+  padding: 30px 26px 28px;
+  color: var(--menu-text);
+}
+.lp-board--felt {
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,0.45) 0 1px, rgba(255,255,255,0.04) 1px 2px, transparent 2px 11px), var(--menu-card);
+  border-color: #8d8c86; border-width: 9px; text-align: center;
+}
+.lp-board-facts { font-family: var(--menu-font-body); font-size: 0.95rem; color: var(--menu-muted); }
+.lp-board-title { margin-top: 6px; font-size: clamp(2.8rem, 12vw, 5.4rem); line-height: 0.95; }
+.lp-board-sub { margin-top: 12px; font-size: 1.1rem; line-height: 1.45; color: var(--menu-muted); max-width: 32rem; }
+.lp-board--felt .lp-board-sub { margin-left: auto; margin-right: auto; }
+.lp-board-today { margin-top: 26px; font-size: 1.5rem; color: var(--menu-emph); }
+.lp-board-list { list-style: none; padding: 0; margin: 8px 0 0; columns: 2; column-gap: 24px; }
+.lp-board--felt .lp-board-list { columns: 1; }
+.lp-board-list li { break-inside: avoid; }
+.lp-board-list button { min-height: 40px; font-family: var(--menu-font-body); font-size: 1.2rem; color: var(--menu-text); text-align: left; text-shadow: var(--menu-ink, none); }
+.lp-board--felt .lp-board-list button { font-family: var(--menu-font-display); text-transform: uppercase; letter-spacing: 0.08em; font-size: 1.35rem; text-align: center; }
+.lp-board-ctas > div { margin-top: 24px; }
+.lp-board--felt .lp-board-ctas > div { justify-content: center; }
+/* Foto appuntata (polaroid con puntina) */
+.lp-pinned { position: relative; background: #fbfaf6; padding: 10px 10px 34px; transform: rotate(2.2deg); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18); max-width: 420px; margin-left: auto; margin-right: auto; }
+.lp-pinned::before { content: ''; position: absolute; top: -7px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--menu-accent); box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.25); }
+.lp-pinned img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.lp-pinned figcaption { position: absolute; left: 12px; right: 12px; bottom: 8px; font-family: var(--menu-font-display); font-size: 0.95rem; color: #2a2420; text-align: center; }
+.lp-pinned--right { transform: rotate(-2.4deg); }
+.lp-pinned-note { margin-top: 26px; font-family: var(--menu-font-body); font-size: 1.05rem; line-height: 1.5; color: var(--menu-muted); transform: rotate(-1deg); }
+.lp-pinned-note .menu-h { font-size: 1.35rem; color: var(--menu-emph); }
+
+/* Chi siamo: editoriale */
+.lp-editorial-figure { margin: 0 0 28px; }
+.lp-editorial-figure img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.lp-editorial-figure figcaption { margin-top: 8px; font-family: var(--menu-font-body); font-style: italic; font-size: 0.85rem; color: var(--menu-muted); }
+.lp-editorial-grid { display: grid; gap: 18px; }
+.lp-editorial-title { font-size: clamp(2rem, 7vw, 3.2rem); line-height: 1; }
+.lp-editorial-text { font-size: 1.08rem; line-height: 1.7; color: var(--menu-text); }
+.lp-editorial-text p + p { margin-top: 1em; }
+.lp-dropcap::first-letter { float: left; font-family: var(--menu-font-display); font-size: 3.9em; line-height: 0.82; padding: 0.06em 0.1em 0 0; color: var(--menu-emph); }
+@media (min-width: 768px) {
+  .lp-editorial-figure img { aspect-ratio: 21 / 9; }
+  .lp-editorial-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; }
+  .lp-editorial-grid > :first-child { grid-column: 1 / span 4; }
+  .lp-editorial-grid > :last-child { grid-column: 6 / span 7; }
+}
+
+/* Chi siamo: biglietto */
+.lp-note {
+  position: relative; background: var(--menu-card); color: var(--menu-text);
+  padding: 34px 28px 26px; transform: rotate(-0.8deg);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--menu-text) 16%, transparent);
+  font-size: 1.12rem; line-height: 1.65;
+}
+.lp-note::before { content: ''; position: absolute; top: -11px; left: 28px; width: 86px; height: 24px; background: rgba(240, 232, 205, 0.7); transform: rotate(-6deg); border-left: 1px dashed rgba(0,0,0,0.08); border-right: 1px dashed rgba(0,0,0,0.08); }
+.lp-note p + p { margin-top: 0.9em; }
+.lp-note-title { font-size: clamp(1.8rem, 6vw, 2.5rem); margin-bottom: 14px; }
+.lp-note-sign { margin-top: 18px !important; font-family: var(--menu-font-display); font-size: 1.4rem; color: var(--menu-emph); text-align: right; }
+
+/* Galleria: provino a contatto */
+.lp-film {
+  background: #161513; padding: 22px 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, #f3efe6 0 3px, transparent 3.5px),
+    radial-gradient(circle at 50% 50%, #f3efe6 0 3px, transparent 3.5px);
+  background-size: 18px 18px, 18px 18px;
+  background-position: 0 2px, 0 calc(100% - 2px);
+  background-repeat: repeat-x;
+  overflow-x: auto; scrollbar-width: thin;
+}
+.lp-film-track { display: flex; gap: 10px; padding: 0 12px; width: max-content; }
+.lp-film-frame { width: clamp(200px, 30vw, 320px); margin: 0; }
+.lp-film-frame img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; }
+.lp-film-frame figcaption { margin-top: 6px; font-family: "Courier Prime", ui-monospace, monospace; font-size: 0.72rem; color: #e5a43a; letter-spacing: 0.04em; }
+
+/* Galleria: collage */
+.lp-collage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lp-collage figure { position: relative; margin: 0; overflow: hidden; background: var(--menu-surface); }
+.lp-collage img { display: block; width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1 / 1; }
+.lp-collage-0 { grid-column: 1 / -1; }
+.lp-collage-0 img { aspect-ratio: 4 / 3; }
+.lp-collage-n { position: absolute; left: 8px; bottom: 6px; font-family: var(--menu-font-display); font-size: 0.95rem; color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.5); }
+.lp-collage-captions { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 4px 24px; font-size: 0.9rem; color: var(--menu-muted); }
+.lp-collage-captions b { color: var(--menu-emph); margin-right: 4px; font-family: var(--menu-font-display); font-weight: 400; }
+@media (min-width: 768px) {
+  .lp-collage { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+  .lp-collage-0 { grid-column: 1 / span 4; grid-row: span 2; }
+  .lp-collage-0 img { aspect-ratio: auto; height: 100%; }
+  .lp-collage-1, .lp-collage-2 { grid-column: 5 / span 2; }
+  .lp-collage-x { grid-column: span 2; }
+  .lp-collage-x:nth-child(4):nth-last-child(2), .lp-collage-x:nth-child(5):last-child { grid-column: span 3; }
+  .lp-collage-x:nth-child(4):last-child { grid-column: 1 / -1; }
+  .lp-collage-captions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Piatti: menù stampato */
+.lp-printmenu { list-style: none; padding: 0; margin: 0; display: grid; gap: 0 48px; }
+@media (min-width: 768px) { .lp-printmenu { grid-template-columns: 1fr 1fr; } }
+.lp-printmenu-row { display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left; padding: 14px 2px; border-bottom: 1px solid var(--menu-border); }
+.lp-printmenu-name { font-size: 1.2rem; line-height: 1.2; }
+
+/* Piatti: polaroid */
+.lp-polaroids { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 16px; }
+@media (min-width: 768px) { .lp-polaroids { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 28px; } }
+.lp-polaroid { display: block; width: 100%; background: #fbfaf6; padding: 8px 8px 12px; text-align: center; color: #2a2420; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.14); transition: transform 0.2s ease; }
+.lp-polaroids > li:nth-child(3n + 1) .lp-polaroid { transform: rotate(-2.2deg); }
+.lp-polaroids > li:nth-child(3n + 2) .lp-polaroid { transform: rotate(1.6deg) translateY(10px); }
+.lp-polaroids > li:nth-child(3n) .lp-polaroid { transform: rotate(-0.6deg); }
+.lp-polaroid:hover { transform: rotate(0) !important; }
+.lp-polaroid-photo { display: block; aspect-ratio: 1 / 1; background: #e8e3d8; overflow: hidden; }
+.lp-polaroid-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lp-polaroid-name { display: block; margin-top: 10px; font-size: 1.05rem; line-height: 1.15; color: #2a2420 !important; }
+.lp-polaroid-price { display: block; margin-top: 4px; }
+.lp-polaroid-price .menu-price { color: #2a2420 !important; }
+
+/* Piatti: indice svizzero */
+.lp-index { list-style: none; padding: 0; margin: 0; border-bottom: 2px solid var(--menu-text); }
+.lp-index-row { display: grid; grid-template-columns: 3.2rem 1fr auto; gap: 12px; width: 100%; text-align: left; padding: 16px 0 18px; border-top: 2px solid var(--menu-text); align-items: baseline; }
+.lp-index-num { font-size: 1.6rem; line-height: 1; color: var(--menu-emph); }
+.lp-index-name { display: block; font-size: clamp(1.3rem, 4.6vw, 2rem); line-height: 1.05; }
+.lp-index-desc { display: block; margin-top: 6px; font-size: 0.95rem; line-height: 1.45; color: var(--menu-muted); max-width: 34rem; }
+@media (min-width: 768px) { .lp-index-row { grid-template-columns: 7rem 1fr 8rem; } .lp-index-num { font-size: 2.6rem; } .lp-index-price { text-align: right; } }
+
+/* Punti di forza come elenco */
+.lp-facts-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0 40px; }
+@media (min-width: 768px) { .lp-facts-list { grid-template-columns: 1fr 1fr; } }
+.lp-facts-list li { display: flex; gap: 14px; align-items: baseline; padding: 14px 0; border-top: 1px solid var(--menu-rule); }
+.lp-facts-num { flex: 0 0 auto; transform: translateY(2px); }
+.lp-facts-title { font-size: 1.2rem; }
+.lp-facts-sub { display: block; margin-top: 3px; color: var(--menu-muted); font-size: 0.95rem; line-height: 1.45; }
+
+/* Recensioni come citazioni */
+.lp-quote-lead { max-width: 46rem; margin-bottom: 8px; }
+.lp-quote-lead .menu-h { font-size: clamp(1.5rem, 4.6vw, 2.3rem); line-height: 1.2; text-transform: none; letter-spacing: 0; }
+.lp-quote-by { margin-top: 12px; font-size: 0.95rem; color: var(--menu-muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.text-center .lp-quote-by { justify-content: center; }
+.lp-quotes { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 22px 40px; }
+@media (min-width: 768px) { .lp-quotes { grid-template-columns: 1fr 1fr; } }
+.lp-quotes li { border-top: 1px solid var(--menu-rule); padding-top: 14px; font-size: 1.02rem; line-height: 1.6; }
+
+/* Orari come cartello sulla porta */
+.lp-timetable > div { display: flex; align-items: baseline; padding: 7px 0; font-size: 1.05rem; }
+.lp-timetable dt { white-space: nowrap; }
+.lp-timetable dd { white-space: nowrap; text-align: right; }
+.lp-timetable .is-today dt, .lp-timetable .is-today dd { font-weight: 700; color: var(--menu-emph); }
+.lp-today { font-weight: 400; font-style: italic; }

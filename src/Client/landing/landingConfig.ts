@@ -80,7 +80,20 @@ interface Base<T extends SectionType> {
     style: SectionStyle;
 }
 
-export type HeroVariant = 'template' | 'image' | 'split' | 'slideshow' | 'minimal';
+/**
+ * Intestazioni. Le ultime tre (dicembre 2026) sono impaginazioni "da stampa":
+ *  - 'poster': manifesto tipografico, nome enorme a bandiera e foto ritagliata a lato (svizzero, fanzine);
+ *  - 'card':   il cartoncino del menu appoggiato sulla pagina, con le sezioni del menù dentro (tipografia, pasticceria);
+ *  - 'board':  la lavagna / bacheca all'ingresso con le voci del menù scritte sopra (osteria, tavola calda).
+ */
+export type HeroVariant = 'template' | 'image' | 'split' | 'slideshow' | 'minimal' | 'poster' | 'card' | 'board';
+export const HERO_VARIANTS: HeroVariant[] = ['template', 'image', 'split', 'slideshow', 'minimal', 'poster', 'card', 'board'];
+/** Chi siamo: foto a lato (storico), editoriale con capolettera, biglietto scritto a mano. */
+export type AboutVariant = 'side' | 'editorial' | 'note';
+/** Galleria: le tre storiche + provino a contatto (striscia di pellicola) e collage asimmetrico. */
+export type GalleryLayout = 'grid' | 'masonry' | 'carousel' | 'filmstrip' | 'collage';
+/** Piatti in evidenza: schede, elenco, menù stampato su due colonne, polaroid, indice numerato. */
+export type HighlightsLayout = 'cards' | 'list' | 'menu' | 'polaroid' | 'index';
 
 export interface HeroSection extends Base<'hero'> {
     variant: HeroVariant;
@@ -98,10 +111,10 @@ export interface HeroSection extends Base<'hero'> {
     align: Align;
     height: 'medium' | 'large' | 'full';
 }
-export interface AboutSection extends Base<'about'> { text: string; image: LandingImage | null; imagePosition: 'left' | 'right' }
-export interface GallerySection extends Base<'gallery'> { items: LandingImage[]; layout: 'grid' | 'masonry' | 'carousel' }
+export interface AboutSection extends Base<'about'> { text: string; image: LandingImage | null; imagePosition: 'left' | 'right'; variant: AboutVariant }
+export interface GallerySection extends Base<'gallery'> { items: LandingImage[]; layout: GalleryLayout }
 export interface FeaturesSection extends Base<'features'> { items: FeatureCard[] }
-export interface HighlightsSection extends Base<'highlights'> { productIds: number[]; layout: 'cards' | 'list'; showPrices: boolean }
+export interface HighlightsSection extends Base<'highlights'> { productIds: number[]; layout: HighlightsLayout; showPrices: boolean }
 export interface Testimonial { text: string; author: string; stars: number }
 export interface TestimonialsSection extends Base<'testimonials'> { items: Testimonial[] }
 export interface DayHours { closed: boolean; text: string }
@@ -163,19 +176,35 @@ export const SECTION_ORDER: SectionType[] = [
 
 export const WEEKDAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
 
-export interface FontPairing { key: string; label: string; display: string; body: string }
+/** Abbinamento di font del sito: famiglie CSS + query Google Fonts da caricare. */
+export interface FontPairing { key: string; label: string; display: string; body: string; google: string[] }
 
-/** Abbinamenti titoli/testo (chiavi di Utilities/fonts.ts). */
+/**
+ * Abbinamenti titoli/testo. Le chiavi sono salvate nei config (non cambiano); i caratteri sì:
+ * a dicembre 2026 via Playfair/Lato/Inter/Poppins/DM Sans/Oswald/Cormorant, i font "di default"
+ * che fanno sembrare ogni sito uguale. Ogni coppia ora ha un'origine di stampa precisa.
+ */
 export const FONT_PAIRINGS: FontPairing[] = [
-    { key: 'classico',    label: 'Classico — Playfair + Lato',        display: 'playfair',         body: 'lato' },
-    { key: 'editoriale',  label: 'Editoriale — Cormorant + Inter',     display: 'cormorant',        body: 'inter' },
-    { key: 'caldo',       label: 'Caldo — Lora + Nunito',              display: 'lora',             body: 'nunito' },
-    { key: 'moderno',     label: 'Moderno — Poppins + DM Sans',        display: 'poppins',          body: 'dm-sans' },
-    { key: 'insegna',     label: 'Insegna — Bebas Neue + Inter',       display: 'bebas-neue',       body: 'inter' },
-    { key: 'urbano',      label: 'Urbano — Oswald + DM Sans',          display: 'oswald',           body: 'dm-sans' },
-    { key: 'artigianale', label: 'Artigianale — Caveat + Lora',        display: 'caveat',           body: 'lora' },
-    { key: 'street',      label: 'Street — Permanent Marker + Poppins', display: 'permanent-marker', body: 'poppins' },
+    { key: 'classico',    label: 'Classico — Libre Baskerville + Spectral', display: '"Libre Baskerville", Georgia, serif', body: 'Spectral, Georgia, serif',
+        google: ['Libre+Baskerville:wght@400;700', 'Spectral:ital,wght@0,400;0,600;1,400'] },
+    { key: 'editoriale',  label: 'Editoriale — Libre Caslon + Libre Franklin', display: '"Libre Caslon Display", Georgia, serif', body: '"Libre Franklin", Arial, sans-serif',
+        google: ['Libre+Caslon+Display', 'Libre+Franklin:ital,wght@0,400;0,600;1,400'] },
+    { key: 'caldo',       label: 'Caldo — Young Serif + Alegreya Sans',      display: '"Young Serif", Georgia, serif', body: '"Alegreya Sans", Arial, sans-serif',
+        google: ['Young+Serif', 'Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400'] },
+    { key: 'moderno',     label: 'Moderno — Schibsted Grotesk',              display: '"Schibsted Grotesk", Arial, sans-serif', body: '"Schibsted Grotesk", Arial, sans-serif',
+        google: ['Schibsted+Grotesk:ital,wght@0,400;0,600;0,800;1,400'] },
+    { key: 'insegna',     label: 'Insegna — Big Shoulders + Archivo',        display: '"Big Shoulders Display", "Arial Narrow", sans-serif', body: 'Archivo, Arial, sans-serif',
+        google: ['Big+Shoulders+Display:wght@700;800', 'Archivo:wght@400;500;700'] },
+    { key: 'urbano',      label: 'Urbano — Antonio + Libre Franklin',        display: 'Antonio, "Arial Narrow", sans-serif', body: '"Libre Franklin", Arial, sans-serif',
+        google: ['Antonio:wght@600;700', 'Libre+Franklin:ital,wght@0,400;0,600;1,400'] },
+    { key: 'artigianale', label: 'Artigianale — Caveat Brush + Vollkorn',    display: '"Caveat Brush", cursive', body: 'Vollkorn, Georgia, serif',
+        google: ['Caveat+Brush', 'Vollkorn:ital,wght@0,400;0,600;1,400'] },
+    { key: 'street',      label: 'Street — Bungee + Archivo',                display: 'Bungee, Impact, sans-serif', body: 'Archivo, Arial, sans-serif',
+        google: ['Bungee', 'Archivo:wght@400;500;700'] },
 ];
+
+export const fontPairingHref = (p: FontPairing): string =>
+    `https://fonts.googleapis.com/css2?${p.google.map(f => `family=${f}`).join('&')}&display=swap`;
 
 export const DEFAULT_FEATURE_CARDS: FeatureCard[] = [
     { icon: 'leaf',       title: 'Ingredienti Freschi', sub: 'Selezionati ogni giorno' },
@@ -214,7 +243,7 @@ export function newSection(type: SectionType): LandingSection {
             buttons: [{ label: 'Sfoglia il menù', action: 'menu', href: '' }, { label: 'Prenota un tavolo', action: 'reserve', href: '' }],
             showTakeaway: false, showFacts: true, overlayColor: '', overlayOpacity: null, align: 'template', height: 'large',
         };
-        case 'about': return { ...base('about', 'La nostra storia'), text: '', image: null, imagePosition: 'left' };
+        case 'about': return { ...base('about', 'La nostra storia'), text: '', image: null, imagePosition: 'left', variant: 'side' };
         case 'gallery': return { ...base('gallery', 'Galleria'), items: [], layout: 'grid' };
         case 'features': return { ...base('features', 'Perché sceglierci'), items: DEFAULT_FEATURE_CARDS.map(f => ({ ...f })) };
         case 'highlights': return { ...base('highlights', 'I nostri piatti'), productIds: [], layout: 'cards', showPrices: true };
@@ -310,7 +339,7 @@ function normalizeSection(v: unknown): LandingSection | null {
     switch (type) {
         case 'hero': return {
             ...common, type,
-            variant: oneOf(v.variant, ['template', 'image', 'split', 'slideshow', 'minimal'] as const, 'image'),
+            variant: oneOf(v.variant, HERO_VARIANTS, 'image'),
             subtitle: str(v.subtitle, LIMITS.subtitle),
             images: images(v.images, LIMITS.heroImages),
             interval: num(v.interval, 3, 15, 5),
@@ -329,10 +358,11 @@ function normalizeSection(v: unknown): LandingSection | null {
         case 'about': return {
             ...common, type, text: str(v.text, LIMITS.text), image: image(v.image),
             imagePosition: oneOf(v.imagePosition, ['left', 'right'] as const, 'left'),
+            variant: oneOf(v.variant, ['side', 'editorial', 'note'] as const, 'side'),
         };
         case 'gallery': return {
             ...common, type, items: images(v.items, LIMITS.gallery),
-            layout: oneOf(v.layout, ['grid', 'masonry', 'carousel'] as const, 'grid'),
+            layout: oneOf(v.layout, ['grid', 'masonry', 'carousel', 'filmstrip', 'collage'] as const, 'grid'),
         };
         case 'features': return {
             ...common, type,
@@ -343,7 +373,7 @@ function normalizeSection(v: unknown): LandingSection | null {
         case 'highlights': return {
             ...common, type,
             productIds: arr(v.productIds).filter((x): x is number => typeof x === 'number' && Number.isFinite(x)).slice(0, LIMITS.highlights),
-            layout: oneOf(v.layout, ['cards', 'list'] as const, 'cards'),
+            layout: oneOf(v.layout, ['cards', 'list', 'menu', 'polaroid', 'index'] as const, 'cards'),
             showPrices: bool(v.showPrices, true),
         };
         case 'testimonials': return {

@@ -380,8 +380,8 @@ const SPECS: TemplateSpec[] = [
         },
         fonts: {
             display: '"Caveat Brush", "Segoe Print", cursive',
-            body: '"Gochi Hand", "Segoe Print", cursive',
-            google: ['Caveat+Brush', 'Gochi+Hand'],
+            body: '"Patrick Hand", "Segoe Print", cursive',
+            google: ['Caveat+Brush', 'Patrick+Hand'],
         },
         look: {
             align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.01em',
@@ -491,8 +491,9 @@ const SPECS: TemplateSpec[] = [
         look: {
             align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.005em',
             divider: 'thick', texture: 'none', radius: 4, leaders: true, price: 'accent',
-            productLayout: 'menu', categoryLayout: 'rows', categoryNumbers: 'none', productNumbers: false,
+            productLayout: 'menu', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
             hero: 'overlay', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'marquee',
+            sectionHeader: 'band', categoryNav: 'block',
         },
     },
     {

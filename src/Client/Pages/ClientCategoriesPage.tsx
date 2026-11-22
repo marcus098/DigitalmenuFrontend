@@ -115,7 +115,9 @@ const ClientCategoriesPage: React.FC = () => {
                 />
 
                 <main>
-                    {look.hero === 'overlay' ? (
+                    {/* Senza foto di copertina la testata "sopra la foto" non ha senso (e l'immagine di riserva
+                        non esiste): si usa la testata tipografica del template. */}
+                    {look.hero === 'overlay' && !!styles?.heroImageUrl && styles.heroImageUrl !== 'DELETE' ? (
                         /* Foto con il nome del locale sopra */
                         <div className="relative overflow-hidden" style={{ height: 'clamp(200px, 42vw, 300px)' }}>
                             <img

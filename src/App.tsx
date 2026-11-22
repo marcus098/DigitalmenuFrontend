@@ -27,6 +27,7 @@ const LandingPage = lazy(() => import("./Landing/LandingPage"));
 // Legal — lazy loaded
 const PrivacyPolicyPage = lazy(() => import("./GeneralPages/PrivacyPolicyPage"));
 const CookiePolicyPage  = lazy(() => import("./GeneralPages/CookiePolicyPage"));
+const DeleteAccountPage = lazy(() => import("./GeneralPages/DeleteAccountPage"));
 
 // Dashboard — lazy loaded
 const ProfilePage          = lazy(() => import("./Dashboard/Pages/ProfilePage"));
@@ -202,6 +203,7 @@ function App() {
               <Route path={"/signup"} element={<SignupPage />} />
               <Route path={"/privacy"} element={<Suspense fallback={<PageLoader />}><PrivacyPolicyPage /></Suspense>} />
               <Route path={"/cookie-policy"} element={<Suspense fallback={<PageLoader />}><CookiePolicyPage /></Suspense>} />
+              <Route path={"/elimina-account"} element={<Suspense fallback={<PageLoader />}><DeleteAccountPage /></Suspense>} />
               <Route path={"/superadmin/*"} element={<SuperadminRoutes />} />
               <Route path={"/:localname/Dashboard/*"} element={<DashboardRoutes />} />
               <Route path={"/Waiters/:localname/*"} element={<WaiterRoutes />} />

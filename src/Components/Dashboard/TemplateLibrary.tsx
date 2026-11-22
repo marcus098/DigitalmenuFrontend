@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Sparkles } from 'lucide-react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Check, FileDown, Sparkles } from 'lucide-react';
 import { StyleDto } from '../../types';
 import {
     MENU_TEMPLATES, MenuTemplateDef, VENUE_FILTERS, VenueTag,
-    buildTemplateFontsHref, resolveTemplateKey,
+    buildTemplateFontsHref, parseTemplateValue, serializeTemplateValue,
 } from '../../Client/menuTemplates';
 import { getMenuTokens, tokensToCssVars, TEMPLATE_FONT_KEY } from '../../Client/menuTheme';
 import { LandingConfig, SECTION_META } from '../../Client/landing/landingConfig';
@@ -16,6 +17,9 @@ import { applyPreset, LANDING_PRESETS, LandingPreset } from '../../Client/landin
  * e i font veri del template, così il ristoratore vede subito la differenza
  * tra "Trattoria", "Pub", "Cocktail bar"… senza aprire l'anteprima completa.
  */
+
+// Caricato solo quando serve (porta con sé react-dom/server per generare il documento)
+const MenuPdfDialog = lazy(() => import('./menuPdf/MenuPdfDialog'));
 
 const VENUE_LABEL: Record<VenueTag, string> = Object.fromEntries(
     VENUE_FILTERS.filter(v => v.key !== 'all').map(v => [v.key, v.label]),
@@ -40,18 +44,49 @@ const TemplateThumb: React.FC<{ def: MenuTemplateDef }> = ({ def }) => {
 
     const rule = (
         <div className={`menu-rule menu-rule--${l.divider}`} style={{ margin: '6px 0', transform: l.divider === 'checker' ? 'scaleY(0.6)' : undefined }}>
-            {l.divider === 'ornament' && <i />}
+            {(l.divider === 'ornament' || l.divider === 'nouveau') && <i />}
         </div>
     );
 
-    const title = (
+    const plainTitle = (
         <div className="menu-h" style={{ fontSize: 17, lineHeight: 1, textAlign: centered ? 'center' : 'left', color: l.hero === 'overlay' ? '#fff' : undefined }}>
             Da Mario
         </div>
     );
+    // Testate dei template "a cornice" in miniatura
+    const box = (style: React.CSSProperties, inner: React.ReactNode = plainTitle) => (
+        <div style={{ textAlign: centered ? 'center' : 'left' }}>
+            <div style={{ display: 'inline-block', padding: '4px 10px', ...style }}>{inner}</div>
+        </div>
+    );
+    const title = ((): React.ReactNode => {
+        switch (l.headerStyle) {
+            case 'framed': return box({ border: '1px solid var(--menu-rule)', outline: '1px solid var(--menu-rule)', outlineOffset: -3, padding: '6px 14px' });
+            case 'banner': return <div style={{ background: 'var(--menu-secondary)', padding: '5px 8px' }}><div className="menu-h" style={{ fontSize: 17, lineHeight: 1, color: 'var(--menu-secondary-text)' }}>Da Mario</div></div>;
+            case 'stamp': return box({ border: '2px solid var(--menu-accent)', transform: 'rotate(-2deg)' }, <div className="menu-h" style={{ fontSize: 16, lineHeight: 1, color: 'var(--menu-accent)' }}>Da Mario</div>);
+            case 'script': return <div style={{ fontFamily: 'var(--menu-font-accent)', fontSize: 22, lineHeight: 1, color: 'var(--menu-emph)', transform: 'rotate(-4deg)', textShadow: '1px 1px 0 var(--menu-text)' }}>Da Mario</div>;
+            case 'noren': return <div style={{ background: 'repeating-linear-gradient(90deg, var(--menu-secondary) 0 calc(25% - 2px), transparent calc(25% - 2px) 25%)', padding: '6px 0 9px', textAlign: 'center' }}><div className="menu-h" style={{ fontSize: 16, lineHeight: 1, color: 'var(--menu-secondary-text)' }}>Da Mario</div></div>;
+            case 'tape': return box({ background: 'var(--menu-card)', transform: 'rotate(-1.5deg)', boxShadow: '0 4px 8px -6px rgba(0,0,0,.5)' });
+            default: return plainTitle;
+        }
+    })();
 
     let dishes: React.ReactNode;
-    if (l.productLayout === 'cards') {
+    if (l.productLayout === 'grid') {
+        dishes = (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                {SAMPLE_DISHES.slice(0, 2).map(([n, pr], i) => (
+                    <div key={n} style={{ background: 'var(--menu-card)', border: '1px solid var(--menu-border)', borderRadius: Math.min(l.radius, 8), overflow: 'hidden' }}>
+                        <div style={{ height: 4, background: i ? 'var(--menu-secondary)' : 'var(--menu-accent)' }} />
+                        <div style={{ padding: '3px 5px 4px' }}>
+                            <div className="menu-h" style={{ fontSize: 9, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n}</div>
+                            <div className="menu-price" style={{ fontSize: 8.5, fontWeight: 700, marginTop: 3, color: 'var(--menu-emph)' }}>€{pr}</div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    } else if (l.productLayout === 'cards') {
         dishes = (
             <div style={{ display: 'grid', gap: 5 }}>
                 {SAMPLE_DISHES.slice(0, 2).map(([n, pr]) => (
@@ -114,7 +149,7 @@ const TemplateThumb: React.FC<{ def: MenuTemplateDef }> = ({ def }) => {
     }
 
     return (
-        <div data-menu-texture={l.texture} style={vars} aria-hidden="true">
+        <div data-menu-texture={l.texture} style={{ ...vars, ['--menu-font-accent' as any]: def.fonts.accent || def.fonts.display }} aria-hidden="true">
             <div
                 className="menu-page"
                 style={{ height: 150, overflow: 'hidden', position: 'relative', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)' }}
@@ -150,7 +185,10 @@ interface TemplateLibraryProps {
 const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThemeValue, updateLanding }) => {
     const [filter, setFilter] = useState<VenueTag | 'all'>('all');
     const [applyPalette, setApplyPalette] = useState(true);
-    const current = resolveTemplateKey((draftTheme as any).landingTemplate);
+    const [pdfOpen, setPdfOpen] = useState(false);
+    const { localname } = useParams();
+    const parsedCurrent = parseTemplateValue((draftTheme as any).landingTemplate);
+    const current = parsedCurrent.key;
 
     // Carica i font di tutti i template per le miniature (solo in questa scheda).
     useEffect(() => {
@@ -168,7 +206,8 @@ const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThe
     const list = filter === 'all' ? MENU_TEMPLATES : MENU_TEMPLATES.filter(t => t.venues.includes(filter));
 
     const choose = (def: MenuTemplateDef) => {
-        updateThemeValue('landingTemplate', def.key);
+        // Con "colori e font del template" si riparte pulito; altrimenti i ritocchi del tab Layout restano.
+        updateThemeValue('landingTemplate', applyPalette ? def.key : serializeTemplateValue(def.key, parsedCurrent.overrides));
         if (!applyPalette) return;
         const pl = def.palette;
         updateThemeValue('backgroundGradient', [pl.bg]);
@@ -197,6 +236,21 @@ const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThe
 
     return (
         <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-lg border">
+                <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-700">Menu stampabile</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Tutto il menu in A4, nello stile del template che scegli.</p>
+                </div>
+                <button type="button" onClick={() => setPdfOpen(true)} className="btn-primary text-sm flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+                    <FileDown className="w-4 h-4" /> Scarica menu in PDF
+                </button>
+            </div>
+            {pdfOpen && (
+                <Suspense fallback={null}>
+                    <MenuPdfDialog draftTheme={draftTheme} localname={localname || ''} onClose={() => setPdfOpen(false)} />
+                </Suspense>
+            )}
+
             {updateLanding && (
                 <div className="space-y-3">
                     <div>

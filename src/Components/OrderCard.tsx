@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import {Orders} from "../Dashboard/Pages/OrderPage";
+import {Orders, orderTotalCents} from "../Dashboard/Pages/OrderPage";
 import {formatDateTime} from "../Utilities/Utilities";
 import {tableLabel} from "../Dashboard/tableLabel";
 import SelectedVariantChips from "./Dashboard/SelectedVariantChips";
+import DeliveryInfo, {DeliveryBadge} from "./Dashboard/delivery/DeliveryInfo";
 
 /** Il formato unico ("default"/"Standard") non va mostrato. */
 const showOption = (name?: string) => !!name && !["default", "standard"].includes(name.trim().toLowerCase());
@@ -40,6 +41,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                                                  onPrintPending,
                                              }) => {
     const [expanded, setExpanded] = useState(false);
+    const delivery = order.delivery;
 
     return (
         <div
@@ -62,6 +64,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 min-w-0">
                     <h6 className="font-bold truncate">Ordine #{order.id.substring(0, 17)}...</h6>
+                    {delivery && <DeliveryBadge/>}
                     {order.paid && (
                         <span className="shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-green-600 text-white" title="Pagato online">
                             Pagato
@@ -90,10 +93,21 @@ const OrderCard: React.FC<OrderCardProps> = ({
             {order.createdAt && <p className="text-sm text-black-500">{formatDateTime(order.createdAt)}</p>}
             {order.tableName && <p className="text-sm text-gray-500">{tableLabel(order.tableName)}</p>}
             {order.name && <p className="text-sm text-gray-500">Nome: {order.name}</p>}
-            {order.address && <p className="text-sm text-gray-500">Indirizzo: {order.address}</p>}
-            {order.phone && <p className="text-sm text-gray-500">Tel: {order.phone}</p>}
-            {order.time && <p className="text-sm text-gray-500">Ora: {order.time}</p>}
-            {order.userId.length < 5 && <p className="text-sm text-gray-500">Utente: {order.userId}</p>}
+            {order.takenBy && <p className="text-sm text-gray-500">Preso da: <span className="font-semibold text-gray-700">{order.takenBy}</span></p>}
+            {delivery ? (
+                <DeliveryInfo delivery={delivery} phone={order.phone} time={order.time}
+                              totalCents={orderTotalCents(order)} paid={order.paid} compact/>
+            ) : (
+                <>
+                    {order.address && <p className="text-sm text-gray-500">Indirizzo: {order.address}</p>}
+                    {order.phone && <p className="text-sm text-gray-500">Tel: {order.phone}</p>}
+                    {order.time && <p className="text-sm text-gray-500">Ora: {order.time}</p>}
+                </>
+            )}
+            {/* Comande precedenti a takenBy: solo l'id dell'operatore (0 = ordine del cliente, non si mostra) */}
+            {!delivery && !order.takenBy && order.userId && order.userId !== "0" && order.userId.length < 5 && (
+                <p className="text-sm text-gray-500">Preso da: operatore #{order.userId}</p>
+            )}
 
             {/* Prodotti */}
             <div className="mt-4">
@@ -190,13 +204,13 @@ const OrderCard: React.FC<OrderCardProps> = ({
                                 onClick={() => onStatusChange(order.id, "PENDING")}
                                 className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded"
                             >
-                                Pending
+                                In attesa
                             </button>
                             <button
                                 onClick={() => onStatusChange(order.id, "PROGRESS")}
                                 className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded"
                             >
-                                In Cucina
+                                In cucina
                             </button>
                         </>
                     )}
@@ -207,7 +221,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                                 onClick={() => onStatusChange(order.id, "PROGRESS")}
                                 className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-1 rounded"
                             >
-                                In Cucina
+                                In cucina
                             </button>
                             <button
                                 onClick={() => onStatusChange(order.id, "COMPLETED")}

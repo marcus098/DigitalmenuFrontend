@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { getMenuTokens, MenuTokens, tokensToCssVars, TEMPLATE_FONT_KEY } from '../../Client/menuTheme';
 import { usePreviewStyles } from '../../Client/usePreviewStyles';
 import { buildGoogleFontsHref } from '../../Utilities/fonts';
-import { buildTemplateFontsHref, getTemplateDef } from '../../Client/menuTemplates';
 
 /**
  * Wraps the client (customer-facing) routes and injects menu CSS variables on
@@ -25,6 +24,11 @@ export function useMenuLook(): MenuTokens {
     const ctx = useContext(MenuLookContext);
     return ctx ?? getMenuTokens(null);
 }
+
+/** Fornisce token già calcolati (es. stampa del menu in PDF con un template diverso da quello in uso). */
+export const MenuLookProvider: React.FC<{ tokens: MenuTokens; children: React.ReactNode }> = ({ tokens, children }) => (
+    <MenuLookContext.Provider value={tokens}>{children}</MenuLookContext.Provider>
+);
 
 function ensureStylesheet(id: string, href: string | null) {
     if (!href || document.getElementById(id)) return;
@@ -53,11 +57,15 @@ const MenuThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     // dall'utente in dashboard. Caricati on-demand da Google Fonts.
     const userFontKey = (styles?.font || '').trim();
     useEffect(() => {
-        ensureStylesheet(`menu-tpl-fonts-${tokens.template}`, buildTemplateFontsHref([getTemplateDef(tokens.template)]));
+        // Abbinamento del template o quello scelto nei ritocchi (fp): una sola richiesta per combinazione.
+        const fams = tokens.fontsGoogle;
+        ensureStylesheet(`menu-tpl-fonts-${tokens.overrides.fp || tokens.template}`, fams.length
+            ? `https://fonts.googleapis.com/css2?${fams.map(f => `family=${f}`).join('&')}&display=swap`
+            : null);
         if (userFontKey && userFontKey !== TEMPLATE_FONT_KEY) {
             ensureStylesheet(`menu-fonts-${userFontKey}`, buildGoogleFontsHref([userFontKey]));
         }
-    }, [userFontKey, tokens.template]);
+    }, [userFontKey, tokens.template, tokens.overrides.fp, tokens.fontsGoogle]);
 
     return (
         <MenuLookContext.Provider value={tokens}>

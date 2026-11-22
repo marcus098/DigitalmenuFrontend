@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Figtree:wght@400;500;600;700&display=swap');
 
 /*
- * Sito vetrina Omnivo — stili isolati sotto .lp (caricati solo con la pagina "/").
+ * Sito vetrina DineUp — stili isolati sotto .lp (caricati solo con la pagina "/").
  * Colori del marchio: crema, marrone caffè, arancio. Tipografia: Nunito (titoli) + Figtree (testo).
  */
 .lp {
@@ -116,7 +116,7 @@
 }
 
 /* ─── Marchio ─────────────────────────────────────────────────────────────── */
-.lp .omn-word {
+.lp .du-word {
     font-family: var(--f-display);
     font-weight: 900;
     letter-spacing: -0.01em;
@@ -124,31 +124,20 @@
     color: var(--ink);
     white-space: nowrap;
 }
-.lp .omn-word.is-light { color: var(--on-night); }
-.lp .omn-i { position: relative; display: inline-block; }
-.lp .omn-dot {
-    position: absolute;
-    left: 50%;
-    top: 0.02em;
-    width: 0.2em;
-    height: 0.2em;
-    margin-left: -0.1em;
-    border-radius: 50%;
-    background: var(--orange);
-}
-.lp .omn-anim .omn-sym { animation: omnSpin 1.05s cubic-bezier(.16, .9, .22, 1) both; }
-.lp .omn-anim .omn-dot { animation: omnDrop .75s .95s cubic-bezier(.3, 0, .4, 1) both; }
-@keyframes omnSpin {
+.lp .du-word.is-light { color: var(--on-night); }
+.lp .du-up { display: inline-block; color: var(--orange); }
+.lp .du-anim .du-sym { animation: duSpin 1.05s cubic-bezier(.16, .9, .22, 1) both; }
+.lp .du-anim .du-up { animation: duHop .75s .95s cubic-bezier(.3, 0, .4, 1) both; transform-origin: 50% 100%; }
+@keyframes duSpin {
     0% { transform: rotate(-400deg) scale(.2); opacity: 0; }
     35% { opacity: 1; }
     100% { transform: rotate(0) scale(1); opacity: 1; }
 }
-@keyframes omnDrop {
-    0% { transform: translateY(-1.4em); opacity: 0; }
+@keyframes duHop {
+    0% { transform: translateY(.5em); opacity: 0; }
     15% { opacity: 1; }
-    55% { transform: translateY(0) scale(1.25, .75); }
-    70% { transform: translateY(-0.22em) scale(1); }
-    85% { transform: translateY(0) scale(1.08, .92); }
+    55% { transform: translateY(-0.18em) scale(1.04, .96); }
+    75% { transform: translateY(0) scale(1.03, .97); }
     100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
@@ -233,7 +222,7 @@
     color: var(--ink);
     box-shadow: 0 1px 0 var(--rule);
 }
-.lp .site-header:not(.is-solid) .omn-word { color: #fff; }
+.lp .site-header:not(.is-solid) .du-word { color: #fff; }
 .lp .nav-a {
     font-family: var(--f-display);
     font-weight: 800;
@@ -622,7 +611,7 @@
 }
 
 /* ─── Modale video (<dialog> nativo) ─────────────────────────────────────── */
-.lp .omn-dialog {
+.lp .du-dialog {
     width: min(1120px, calc(100vw - 32px));
     max-width: none;
     max-height: none;
@@ -632,14 +621,14 @@
     overflow: visible;
     color: #fff;
 }
-.lp .omn-dialog::backdrop {
+.lp .du-dialog::backdrop {
     background: rgba(22, 17, 14, .88);
     -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
 }
-.lp .omn-dialog-inner { position: relative; }
-.lp .omn-dialog video { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 18px; background: #000; }
-.lp .omn-close {
+.lp .du-dialog-inner { position: relative; }
+.lp .du-dialog video { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 18px; background: #000; }
+.lp .du-close {
     position: absolute;
     right: 0;
     top: -56px;
@@ -651,8 +640,8 @@
     background: rgba(251, 247, 243, .14);
     border: 1px solid rgba(251, 247, 243, .3);
 }
-.lp .omn-close:hover { background: rgba(251, 247, 243, .26); }
-html:has(.lp .omn-dialog[open]) { overflow: hidden; }
+.lp .du-close:hover { background: rgba(251, 247, 243, .26); }
+html:has(.lp .du-dialog[open]) { overflow: hidden; }
 
 html:has(.lp) { scroll-behavior: smooth; }
 .lp [id] { scroll-margin-top: 72px; }

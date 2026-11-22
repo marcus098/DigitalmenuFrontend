@@ -128,12 +128,18 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return message;
     }
 
-    const _login = async (email: string, password: string) => {
+    const _login = async (email: string, password: string, recaptchaToken?: string): Promise<string | null> => {
         setTransparentLoading(true)
         // Un nuovo login esplicito chiude qualsiasi sessione di supporto residua in questa scheda
         clearImpersonationStorage()
         try {
-            const response = await login(email, password);
+            const response = await login(email, password, recaptchaToken);
+            // 403 = verifica reCAPTCHA non superata, 429 = troppi tentativi: il backend manda già il messaggio in italiano
+            if (response && !response.data && (response.status === 403 || response.status === 429)) {
+                deleteCookie("rf_token")
+                setTransparentLoading(false)
+                return response.message || "Accesso temporaneamente bloccato. Riprova tra qualche minuto."
+            }
             if(response && response.data){
                 if(response.data.status === 200){
                     setErrorType(null)
@@ -152,7 +158,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     } else {
                         navigate("/" + response.data.localname + "/Dashboard/Home")
                     }
-                    return
+                    return null
 
                 }else if(response.data.status === 401){
                     setErrorType("credenziali")
@@ -187,6 +193,7 @@ export const LoginProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             setErrorType('connection')
         }
         setTransparentLoading(false)
+        return null
     }
 
     const changePasswordFunc = async (oldPassword: string, newPassword: string ): Promise<boolean> => {

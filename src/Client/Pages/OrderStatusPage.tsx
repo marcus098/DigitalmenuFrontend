@@ -9,6 +9,10 @@ import { Check, Clock, CreditCard, Hourglass, Loader2, PartyPopper, XCircle } fr
 import { Comand } from '../../ComandType';
 import ComandLines from '../../Components/Client/ComandLines';
 import { comandTotal } from '../../Utilities/Utilities';
+import DeliveryOrderStatus from '../../Components/Client/DeliveryOrderStatus';
+import type { ComandDelivery } from '../../deliveryTypes';
+import { formatCents, useDeliveryT } from '../delivery/deliveryI18n';
+import { loadOrderAddress } from '../delivery/deliveryUtils';
 
 type OrderStatus = 'submitted' | 'in_preparation' | 'ready';
 
@@ -56,6 +60,8 @@ const OrderStatusPage: React.FC = () => {
     // Comanda completa dalla GET pubblica (gli eventi SSE hanno solo id/stato)
     const [comand, setComand] = useState<Comand | null>(null);
     const esRef = useRef<EventSource | null>(null);
+    const isDeliveryRef = useRef(false);
+    const dt = useDeliveryT();
 
     const { setSelectedAllergens, styles } = useData();
     const navigate = useNavigate();
@@ -81,6 +87,13 @@ const OrderStatusPage: React.FC = () => {
         if ('paymentAuthorized' in (data ?? {})) setPaymentAuthorized(!!data.paymentAuthorized);
         if ('refunded' in (data ?? {})) setRefunded(!!data.refunded);
         if (Array.isArray(data?.orders)) setComand(data as Comand);
+        else if (typeof data?.deliveryStage === 'string') {
+            // evento SSE pubblico: porta solo lo stage della consegna
+            setComand(c => (c && (c as any).delivery ? ({ ...c, delivery: { ...(c as any).delivery, stage: data.deliveryStage } } as Comand) : c));
+        } else if (data?.delivery && typeof data.delivery === 'object') {
+            // evento SSE con lo stage aggiornato: lo applichiamo subito alla comanda già caricata
+            setComand(c => (c ? ({ ...c, delivery: { ...(c as any).delivery, ...data.delivery } } as Comand) : c));
+        }
     };
 
     // Il locale accetta pagamenti online? (mostra "Paga online" solo se attivi)
@@ -139,8 +152,9 @@ const OrderStatusPage: React.FC = () => {
                         const mine = payload.data.orders.find((o: any) => o?.id === comandId);
                         if (mine) {
                             applyOrder(mine);
-                            // rifiuto/approvazione: ricarica motivo e dettagli dalla vista pubblica
-                            if (mine.status === 'DELETED' || mine.status === 'PENDING') refreshStatus();
+                            // rifiuto/approvazione: ricarica motivo e dettagli dalla vista pubblica;
+                            // consegna: lo stage (rider) arriva con la GET se l'evento non lo porta
+                            if (mine.status === 'DELETED' || mine.status === 'PENDING' || isDeliveryRef.current) refreshStatus();
                         }
                     }
                 } catch {}
@@ -182,9 +196,15 @@ const OrderStatusPage: React.FC = () => {
     }, [comandId]);
 
     const currentStepIndex = statusSteps.findIndex(s => s.id === status);
+    // la vista pubblica non porta l'indirizzo: si completa con la copia salvata all'invio
+    const serverDelivery = (comand as any)?.delivery ?? null;
+    const delivery: ComandDelivery | null = serverDelivery
+        ? ({ ...(comandId ? loadOrderAddress(comandId) : null), ...Object.fromEntries(Object.entries(serverDelivery).filter(([, v]) => v != null)) } as ComandDelivery)
+        : null;
+    isDeliveryRef.current = !!delivery || comand?.type === 'DELIVERY';
     const awaitingPayment = backendStatus === 'AWAIT_PAYMENT';
     const awaitingApproval = backendStatus === 'AWAIT_APPROVAL';
-    const canPayOnline = paymentsEnabled && !paid && !deleted && !awaitingApproval && !awaitingPayment && !!comandId;
+    const canPayOnline = paymentsEnabled && !paid && !deleted && !awaitingApproval && !awaitingPayment && !!comandId && !delivery;
 
     const renderSpecialState = () => {
         if (awaitingPayment) {
@@ -316,6 +336,15 @@ const OrderStatusPage: React.FC = () => {
                             )}
                         </div>
 
+                        {delivery && comand ? (
+                            <DeliveryOrderStatus
+                                delivery={delivery}
+                                status={backendStatus}
+                                paid={paid}
+                                totalCents={comand.totalCents ?? Math.round(comandTotal(comand) * 100)}
+                                deliveryTime={(delivery as any).deliveryTime ?? (comand as any).deliveryTime ?? comand.time ?? null}
+                            />
+                        ) : (
                         <div className="flex flex-col">
                             {statusSteps.map((step, index) => {
                                 const isActive = index <= currentStepIndex;
@@ -349,6 +378,7 @@ const OrderStatusPage: React.FC = () => {
                                 );
                             })}
                         </div>
+                        )}
 
                         {comand && (comand.orders ?? []).some(o => (o.products ?? []).length > 0) && (
                             <section className="mt-8" aria-label="Riepilogo ordine">
@@ -357,10 +387,18 @@ const OrderStatusPage: React.FC = () => {
                                     <span className="font-bold tabular-nums" style={{ color: 'var(--menu-text)' }}>€{comandTotal(comand).toFixed(2)}</span>
                                 </div>
                                 <ComandLines comand={comand} />
+                                {delivery && (
+                                    <div className="mt-3 pt-3 space-y-1 text-sm" style={{ borderTop: '1px solid var(--menu-border)', color: 'var(--menu-muted)' }}>
+                                        <div className="flex justify-between">
+                                            <span>{dt('deliveryFee')}{delivery.distanceKm != null ? ` (${delivery.distanceKm.toFixed(1).replace('.', ',')} km)` : ''}</span>
+                                            <span className="tabular-nums">{delivery.feeCents ? formatCents(delivery.feeCents) : dt('free')}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         )}
 
-                        {status === 'ready' && (
+                        {status === 'ready' && !delivery && (
                             <div className="mt-10 text-center p-6 bg-green-50 border-2 border-dashed border-green-300 rounded-2xl">
                                 <PartyPopper className="w-16 h-16 text-green-500 mx-auto" />
                                 <h3 className="mt-4 text-xl font-bold text-green-800">Buon Appetito!</h3>

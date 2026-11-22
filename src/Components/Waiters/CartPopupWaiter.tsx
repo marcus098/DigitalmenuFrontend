@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {sendWaiterComandApi} from "../../Utilities/api";
 import {AddComandWaiter} from "../../types";
 import {CartLine} from "../../Utilities/variants";
@@ -26,6 +26,9 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     const [phone, setPhone] = useState<string>("");
     const [address, setAddress] = useState<string>("");
     const [time, setTime] = useState<string>("");
+    // Evita comande doppie se il cameriere tocca "Conferma" due volte mentre la richiesta è in corso
+    const [sending, setSending] = useState(false);
+    const sendingRef = useRef(false);
     const { addNotification } = useNotification()
     const { localname } = useParams()
     const { tablesMap } = useData()
@@ -45,6 +48,18 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     };
 
     const handleConfirm = async () => {
+        if (sendingRef.current) return
+        sendingRef.current = true
+        setSending(true)
+        try {
+            await submitOrder()
+        } finally {
+            sendingRef.current = false
+            setSending(false)
+        }
+    };
+
+    const submitOrder = async () => {
         let order: AddComandWaiter = convertCartToAddComandWaiterOrder(cart)
         if (selected === 1) {
             if (tableNumber <= 0) {
@@ -171,10 +186,11 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                         </button>
                         <button
                             onClick={handleConfirm}
-                            className="px-4 py-2 rounded-lg font-semibold hover:opacity-90"
+                            disabled={sending}
+                            className="px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
                             style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
                         >
-                            Conferma
+                            {sending ? "Invio…" : "Conferma"}
                         </button>
                     </div>
                 </div>
@@ -228,10 +244,11 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                         </button>
                         <button
                             onClick={handleConfirm}
-                            className="px-4 py-2 rounded-lg font-semibold hover:opacity-90"
+                            disabled={sending}
+                            className="px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
                             style={{ background: 'var(--menu-accent)', color: 'var(--menu-accent-text)' }}
                         >
-                            Conferma
+                            {sending ? "Invio…" : "Conferma"}
                         </button>
                     </div>
                 </div>

@@ -81,6 +81,8 @@ export interface Comand {
     checkout?: ComandCheckout
     /** Solo vista pubblica: totale calcolato dal server (centesimi) */
     totalCents?: number
+    /** Operatore dello staff che ha inserito la comanda (impostato dal server); assente per gli ordini dei clienti */
+    takenBy?: { id: number, name: string } | null
 }
 
 
@@ -100,6 +102,7 @@ export interface ComandCheckout {
     /** Perché non è stato accreditato nulla (es. visita già conteggiata oggi) */
     loyaltyNote?: string | null
     paidOnline: boolean
+    paymentMethod?: PaymentMethod
     closedAt: string
     closedBy?: number
 }
@@ -114,4 +117,8 @@ export interface CheckoutRequest {
     pointsToUse: number
     redeemStamps: boolean
     earn: boolean
+    /** Opzionale, solo per lo storico: assente = non specificato */
+    paymentMethod?: PaymentMethod
 }
+
+export type PaymentMethod = 'CASH' | 'CARD' | 'OTHER' | 'UNSPECIFIED'

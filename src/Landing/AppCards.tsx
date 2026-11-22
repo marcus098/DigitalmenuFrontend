@@ -3,7 +3,7 @@ import { BellRing, ChefHat, CreditCard, QrCode, Sparkles, type LucideIcon } from
 import { AI_NAME } from './brand';
 
 /*
- * "Schede app": le notifiche/card di Omnivo che appaiono sopra le foto e i video.
+ * "Schede app": le notifiche/card di DineUp che appaiono sopra le foto e i video.
  * Sono componenti HTML veri (testo selezionabile, leggibile dagli screen reader).
  */
 

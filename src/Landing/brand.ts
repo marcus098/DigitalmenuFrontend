@@ -1,5 +1,5 @@
 /** Nome del prodotto (sito vetrina, titoli, testi). Il wordmark grafico è in BrandMark.tsx. */
-export const BRAND_NAME = "Omnivo";
+export const BRAND_NAME = "DineUp";
 
 /** Nome del motore di intelligenza artificiale integrato nel prodotto. */
 export const AI_NAME = "AxiomAI";
@@ -21,5 +21,5 @@ export const COMPANY_LEGAL = {
 /*
  * Colori e caratteri del sito vetrina: variabili CSS in landing.css (blocco `.lp { … }`):
  * crema #FBF7F3, marrone caffè #2A1F18 / #16110E, arancio #F97316 (testo arancio #C2410C).
- * Logo: public/brand/omnivo-*.svg.
+ * Logo: public/brand/dineup-*.svg (originali in Commerciale/DineUp/logo).
  */

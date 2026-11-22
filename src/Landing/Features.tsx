@@ -11,7 +11,7 @@ type Feat = { icon: LucideIcon; title: string; text: string; chips?: string[]; c
 
 const FEATS: Feat[] = [
     {
-        icon: Smartphone, title: 'Omnivo Sala',
+        icon: Smartphone, title: 'DineUp Sala',
         text: 'L’app dei camerieri: ordini presi al tavolo, notifiche quando un piatto è pronto, mappa dei tavoli.',
         chips: ['Notifiche push', 'Mappa sala'],
     },
@@ -69,7 +69,7 @@ const EinkQr: React.FC = () => {
         <div ref={ref} className="eink" role="img" aria-label="Schermino e-ink sul tavolo 7 con un QR che cambia a ogni cliente">
             <div className="eink-screen">
                 <div className="w-full" style={{ opacity: flash ? 0.15 : 1, transition: 'opacity .2s steps(2)' }}>
-                    <QRCode value={`OMNIVO-TAVOLO-7-${token}`} size={256} style={{ width: '100%', height: 'auto', display: 'block' }} bgColor="#E9E7E1" fgColor="#1d1d1b" level="L" />
+                    <QRCode value={`DINEUP-TAVOLO-7-${token}`} size={256} style={{ width: '100%', height: 'auto', display: 'block' }} bgColor="#E9E7E1" fgColor="#1d1d1b" level="L" />
                 </div>
                 <div className="flex w-full items-baseline justify-between text-[11px] font-bold tracking-[0.04em]">
                     <span>TAVOLO 7</span><span className="tnum opacity-70">#{token}</span>

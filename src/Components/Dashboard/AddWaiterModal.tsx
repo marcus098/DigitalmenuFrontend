@@ -6,17 +6,22 @@ import { XMarkIcon } from '@heroicons/react/24/solid';
 interface AddWaiterModalProps {
     link: string;
     onClose: () => void;
+    /** Invito rider (consegne a domicilio) invece che cameriere */
+    rider?: boolean;
 }
 
-const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ link, onClose }) => {
+const AddWaiterModal: React.FC<AddWaiterModalProps> = ({ link, onClose, rider }) => {
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative text-center">
                 <button onClick={onClose} aria-label="Chiudi" className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                     <XMarkIcon className="w-7 h-7" />
                 </button>
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">Invita Nuovo Cameriere</h2>
-                <p className="text-gray-600 mb-6">Mostra questo QR Code o condividi il link per completare la registrazione.</p>
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">{rider ? 'Invita nuovo rider' : 'Invita Nuovo Cameriere'}</h2>
+                <p className="text-gray-600 mb-6">
+                    Mostra questo QR Code o condividi il link per completare la registrazione.
+                    {rider && ' Il rider vedrà solo le consegne del giorno; dopo la registrazione va approvato qui.'}
+                </p>
                 <div className="bg-slate-100 p-6 rounded-lg inline-block">
                     <QRCode value={link} size={192} />
                 </div>

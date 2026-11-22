@@ -7,12 +7,14 @@ import { CategoryDto, FeatureCard } from '../../types';
 import { MapPin, Clock, MessageCircle, Phone } from 'lucide-react';
 import { usePreviewStyles } from '../usePreviewStyles';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
-import { MenuRule } from '../../Components/Client/MenuPrimitives';
+import { MenuMastheadTitle, MenuRule } from '../../Components/Client/MenuPrimitives';
 import ClientCategoriesList from '../../Components/Client/ClientCategoriesList';
 import { getTemplateDef } from '../menuTemplates';
 import { BookingForm, Btn, FbIcon, FeatureIcon, IgIcon, isDarkColor, LandingProps, SectionTitle, TkIcon } from '../landing/LandingPrimitives';
-import { DEFAULT_FEATURE_CARDS, parseLandingConfig } from '../landing/landingConfig';
+import { parseLandingConfig } from '../landing/landingConfig';
 import SectionsLanding from '../landing/SectionsLanding';
+import useDeliverySettings from '../../Hooks/useDeliverySettings';
+import { setOrderChannel } from '../delivery/deliveryUtils';
 
 /**
  * Sito vetrina pubblico del locale (`/:localname`).
@@ -53,6 +55,7 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
                     : <Btn variant="secondary" onClick={() => p.scrollTo('prenota')}>Prenota un tavolo</Btn>
             )}
             <Btn variant="ghost" ghostColor={onPhoto ? heroText : undefined} onClick={p.goToTakeaway}>Asporto</Btn>
+            {p.goToDelivery && <Btn variant="ghost" ghostColor={onPhoto ? heroText : undefined} onClick={p.goToDelivery}>Consegna a domicilio</Btn>}
         </div>
     );
 
@@ -68,7 +71,7 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
             )}
             <div className={`relative ${wrap} flex flex-col justify-end ${centered ? 'text-center items-center' : ''}`} style={{ minHeight: 'min(82vh, 700px)', paddingTop: 96, paddingBottom: 56 }}>
                 {facts.length > 0 && (
-                    <p className="menu-label" style={{ color: heroText, opacity: 0.85 }}>{facts.join('  ·  ')}</p>
+                    <p className="lp-facts" style={{ color: heroText, opacity: 0.85 }}>{facts.join(' · ')}</p>
                 )}
                 <h1
                     className="menu-h mt-3"
@@ -100,15 +103,19 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
                         style={{ borderRadius: 'var(--menu-radius)' }}
                     />
                 )}
-                {facts.length > 0 && <p className="menu-label">{facts.join('  ·  ')}</p>}
-                <h1 className="menu-h mt-3" style={{ fontSize: 'clamp(3rem, 14vw, 6.5rem)', lineHeight: 0.95, textAlign: centered ? 'center' : 'left' }}>
-                    {p.name}
-                </h1>
+                {facts.length > 0 && <p className="lp-facts">{facts.join(' · ')}</p>}
+                {look.headerStyle === 'plain' ? (
+                    <h1 className="menu-h mt-3" style={{ fontSize: 'clamp(3rem, 14vw, 6.5rem)', lineHeight: 0.95, textAlign: centered ? 'center' : 'left' }}>
+                        {p.name}
+                    </h1>
+                ) : (
+                    <div className="mt-4"><MenuMastheadTitle name={p.name} fontSize="clamp(2.6rem, 12vw, 5.6rem)" centered={centered} /></div>
+                )}
                 <MenuRule className={`mt-7 mb-6 ${centered ? 'mx-auto' : ''}`} style={{ maxWidth: centered ? 360 : undefined }} />
                 {p.description && (
                     <p
                         className={`max-w-xl ${centered ? 'mx-auto' : ''}`}
-                        style={{ color: 'var(--menu-muted)', fontSize: 'clamp(1.05rem, 3.8vw, 1.3rem)', lineHeight: 1.5, fontStyle: 'italic' }}
+                        style={{ color: 'var(--menu-muted)', fontSize: 'clamp(1.05rem, 3.8vw, 1.3rem)', lineHeight: 1.5 }}
                     >
                         {p.description}
                     </p>
@@ -200,7 +207,7 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
             {strip}
 
             {/* Perché noi */}
-            {p.showWhyUs && (
+            {p.showWhyUs && p.features.length > 0 && (
                 <section className={`${wrap} py-12`}>
                     {p.sectionWhyTitle && <SectionTitle title={p.sectionWhyTitle} centered={centered} />}
                     <ul className="grid grid-cols-2 md:grid-cols-4 gap-x-6">
@@ -219,7 +226,7 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
             {visibleCats.length > 0 && (
                 <section id="categories" className={`${wrap} py-12 scroll-mt-16`}>
                     <MenuRule className="mb-10" />
-                    <SectionTitle eyebrow="Dalla nostra cucina" title={p.sectionMenuTitle || 'Il menù'} centered={centered} />
+                    <SectionTitle title={p.sectionMenuTitle || 'Il menù'} centered={centered} />
                     <ClientCategoriesList
                         categories={p.categories}
                         onSelectCategory={id => p.navigate(`/${p.localname}/Products/${id}`)}
@@ -234,7 +241,7 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
             {(p.address || p.hours || p.phone || p.whatsapp || hasSocial) && (
                 <section id="info" className={`${wrap} py-12 scroll-mt-16`}>
                     <MenuRule className="mb-10" />
-                    <SectionTitle eyebrow="Informazioni" title="Dove siamo" centered={centered} />
+                    <SectionTitle title="Dove siamo" centered={centered} />
                     <dl className={`grid grid-cols-1 sm:grid-cols-2 gap-x-10 ${centered ? 'text-center' : ''}`}>
                         {p.address && (
                             <div className="py-4" style={{ borderTop: '1px solid var(--menu-border)' }}>
@@ -281,7 +288,7 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
             {p.showBooking && (
                 <section id="prenota" className={`${look.width === 'narrow' ? 'max-w-2xl' : 'max-w-3xl'} mx-auto px-5 md:px-8 py-12 scroll-mt-16`}>
                     <MenuRule className="mb-10" />
-                    <SectionTitle eyebrow="Prenotazioni" title={p.sectionBookingTitle || 'Prenota un tavolo'} centered={centered} />
+                    <SectionTitle title={p.sectionBookingTitle || 'Prenota un tavolo'} centered={centered} />
                     <p className={`-mt-4 mb-6 ${centered ? 'text-center' : ''}`} style={{ color: 'var(--menu-muted)', fontSize: '0.92rem' }}>
                         Compila il modulo: ti ricontattiamo per confermare.
                     </p>
@@ -326,6 +333,7 @@ const VenueLandingPage: React.FC = () => {
     const { localname } = useParams<{ localname: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { deliveryEnabled } = useDeliverySettings(localname);
 
     useEffect(() => {
         const tableId = searchParams.get('table');
@@ -345,7 +353,7 @@ const VenueLandingPage: React.FC = () => {
     if (typeof rawFeatures === 'string') {
         try { rawFeatures = JSON.parse(rawFeatures); } catch { rawFeatures = undefined; }
     }
-    const features: FeatureCard[] = (rawFeatures as FeatureCard[] | undefined)?.length ? rawFeatures as FeatureCard[] : DEFAULT_FEATURE_CARDS;
+    const features: FeatureCard[] = (rawFeatures as FeatureCard[] | undefined)?.length ? rawFeatures as FeatureCard[] : [];
 
     const categories = Array.from(categoriesMap.values()).filter(c => c.available);
 
@@ -366,7 +374,10 @@ const VenueLandingPage: React.FC = () => {
     // cliccare "Sfoglia il menù" e atterrare su /Categories / Products mantenendo lo
     // stesso draftTheme via postMessage (vedi MenuThemeProvider + usePreviewStyles).
     const goToMenu     = () => navigate(`/${localname}/Categories`);
-    const goToTakeaway = () => { localStorage.removeItem('rf_table_id'); navigate(`/${localname}/Categories`); };
+    const goToTakeaway = () => { localStorage.removeItem('rf_table_id'); if (localname) setOrderChannel(localname, 'TAKEAWAY'); navigate(`/${localname}/Categories`); };
+    const goToDelivery = deliveryEnabled && localname
+        ? () => { localStorage.removeItem('rf_table_id'); setOrderChannel(localname, 'DELIVERY'); navigate(`/${localname}/Categories`); }
+        : undefined;
     const scrollTo     = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
     const landingProps: LandingProps = {
@@ -395,6 +406,7 @@ const VenueLandingPage: React.FC = () => {
         heroOverlayOpacity,
         goToMenu,
         goToTakeaway,
+        goToDelivery,
         scrollTo,
         navigate,
     };

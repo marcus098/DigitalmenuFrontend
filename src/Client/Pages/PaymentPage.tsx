@@ -389,10 +389,13 @@ const PaymentPage: React.FC = () => {
             }
             if (cancelled) return;
             setSearchParams({}, { replace: true });
-            if (status === 'requires_capture') setManualCapture(true);
             if (status === 'succeeded' || status === 'processing' || status === 'requires_capture') {
                 const orderRes = await getClientOrderApi(comandId || '');
-                if (!cancelled && orderRes.success && orderRes.data) setComand(orderRes.data as unknown as Comand);
+                const cmd = orderRes.success && orderRes.data ? orderRes.data as unknown as Comand : null;
+                if (!cancelled && cmd) setComand(cmd);
+                // requires_capture anche per i normali pagamenti con carta (incasso alla presa in carico): il testo
+                // "autorizzato, addebitato se il locale accetta" vale solo per gli ordini su richiesta
+                if (status === 'requires_capture' && cmd?.approvalRequired) setManualCapture(true);
                 markSuccess();
             } else {
                 setError('Il pagamento non è andato a buon fine. Puoi riprovare con un altro metodo.');

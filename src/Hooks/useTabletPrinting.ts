@@ -53,12 +53,13 @@ export function useTabletPrinting() {
         ? "La stampa dal tablet funziona solo da Chrome su Android (app RawBT): da questo dispositivo non verrà stampato nulla."
         : null;
 
-    // Suggerimento una sola volta per sessione
+    // Suggerimento mostrato una sola volta per utente e locale (la chiusura si ricorda su questo dispositivo)
     useEffect(() => {
         if (!unavailableReason) return;
+        const key = `${HINT_KEY}:${user?.email ?? 'u'}:${idAgency ?? 'a'}`;
         try {
-            if (sessionStorage.getItem(HINT_KEY)) return;
-            sessionStorage.setItem(HINT_KEY, '1');
+            if (localStorage.getItem(key)) return;
+            localStorage.setItem(key, '1');
         } catch { /* storage non disponibile: mostra comunque */ }
         addNotification({message: unavailableReason, type: 'info'});
         // eslint-disable-next-line react-hooks/exhaustive-deps

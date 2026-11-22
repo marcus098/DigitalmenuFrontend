@@ -148,7 +148,8 @@ export interface ListToExport{
 export interface LoginContextType{
     loading: boolean
     user: User | null
-    _login: (email: string, password: string) => void
+    /** Restituisce il messaggio da mostrare se il server ha bloccato il tentativo (captcha / troppi tentativi). */
+    _login: (email: string, password: string, recaptchaToken?: string) => Promise<string | null>
     logout: () => void
     changePasswordFunc: (oldPassword: string, newPassword: string) => Promise<boolean>
     updateProfileFunc: (userProfile: UserProfile) => Promise<boolean>
@@ -623,6 +624,21 @@ export interface CheckoutResult {
     card: CardDto | null
 }
 
+/** GET /api/orders/checkout-history: un conto chiuso in cassa. */
+export interface CheckoutEntry {
+    comandId: string
+    idTable?: number | null
+    name?: string | null
+    type?: string | null
+    subtotalCents: number
+    discountCents: number
+    totalCents: number
+    paymentMethod: 'CASH' | 'CARD' | 'OTHER' | 'UNSPECIFIED'
+    /** Già pagato online: compare anche tra i pagamenti, non va sommato due volte */
+    paidOnline: boolean
+    closedAt: string
+}
+
 export interface CheckoutDaySummary {
     date: string
     totalCents: number
@@ -781,6 +797,8 @@ export interface SignupWaiter {
     password: string
     phone?: string
     code: string
+    /** Invito rider (?ruolo=rider): il server crea l'utente con ROLE_DELIVERY. Assente = cameriere. */
+    role?: 'ROLE_WAITER' | 'ROLE_DELIVERY'
 }
 
 export type PaymentStatus = 'PENDING' | 'AUTHORIZED' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REFUNDED' | 'PARTIALLY_REFUNDED'
@@ -796,6 +814,12 @@ export interface PaymentDto {
     /** Totale rimborsato (centesimi) */
     refundedCents?: number
     status: PaymentStatus | string
+    /** Provider del pagamento (account Stripe o SumUp del locale) */
+    provider?: 'STRIPE' | 'SUMUP'
+    /** SumUp (nessuna pre-autorizzazione): importo già addebitato anche se AUTHORIZED */
+    capturedUpfront?: boolean | null
+    /** Ordine "su richiesta": incassato all'approvazione */
+    approvalRequired?: boolean | null
     createdAt: string
     updatedAt: string
 }
@@ -1019,3 +1043,5 @@ export const IS_TRIAL= 5;
 export const IS_EMAIL_CONFIRMED = 7;
 export const IS_WAITER_CONFIRMED = 11;
 export const IS_SUPERADMIN = 13;
+/** Rider (ROLE_DELIVERY): vede solo la vista Consegne. */
+export const IS_DELIVERY = 17;

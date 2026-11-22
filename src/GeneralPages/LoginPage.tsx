@@ -4,6 +4,7 @@ import {useNotification} from "../Context/NotificationContext";
 import NotificationDisplay from "../Components/NotificationDisplay";
 import CustomLoading from "../Components/CustomLoading";
 import {useSearchParams} from "react-router-dom";
+import {getRecaptchaToken, useRecaptcha} from "../Utilities/recaptcha";
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -12,10 +13,13 @@ const LoginPage: React.FC = () => {
     const { _login, errorType, loading, transparentLoading } = useLoginContext()
     const { addNotification, notifications } = useNotification()
     const [searchParams] = useSearchParams()
+    useRecaptcha()
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        await _login(email, password);
+        const recaptchaToken = await getRecaptchaToken("login");
+        const blocked = await _login(email, password, recaptchaToken);
+        if (blocked) addNotification({ message: blocked, type: 'error' })
     };
 
     useEffect(() => {

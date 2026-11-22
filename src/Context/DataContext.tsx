@@ -322,9 +322,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     // Gli eventi ordine sono stub {id, status, idAgency, paid?}: si aggiorna lo stato
     // delle comande note, si rimuovono quelle chiuse, e per id sconosciuti si
     // ricarica la lista (mai sostituire la lista con gli stub).
-    const mergeOrderEvents = (events: { id?: string, status?: string, paid?: boolean }[]) => {
+    const mergeOrderEvents = (events: { id?: string, status?: string, paid?: boolean, deliveryStage?: string }[]) => {
         const known = new Set(comandsRef.current.map(c => c.id));
-        const updates = new Map<string, { status: Comand['status'], paid?: boolean }>();
+        const updates = new Map<string, { status: Comand['status'], paid?: boolean, deliveryStage?: string }>();
         let newOrders = 0;
         let unknown = false;
         setOrderEventTick(t => t + 1);
@@ -334,7 +334,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             // In attesa di pagamento: il locale non deve vederla (né refetch né notifiche)
             if (isHiddenStatus(e.status)) continue;
             if (known.has(e.id)) {
-                updates.set(e.id, { status: e.status as Comand['status'], paid: e.paid });
+                updates.set(e.id, { status: e.status as Comand['status'], paid: e.paid, deliveryStage: e.deliveryStage });
+                // Consegna a domicilio: la fase (in consegna / consegnato) non è nello stub, si rilegge la lista
+                if (comandsRef.current.some(c => c.id === e.id && (c as any).delivery)) unknown = true;
             } else if (!isClosedStatus(e.status)) {
                 unknown = true;
                 if (e.status === 'AWAIT' || e.status === 'PENDING') newOrders++;
@@ -347,7 +349,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                     const u = c.id ? updates.get(c.id) : undefined;
                     if (!u) return c;
                     // paid può tornare false (rimborso totale)
-                    return { ...c, status: u.status, ...(u.paid !== undefined ? { paid: u.paid } : {}) };
+                    const delivery = (c as any).delivery;
+                    return { ...c, status: u.status, ...(u.paid !== undefined ? { paid: u.paid } : {}),
+                        ...(u.deliveryStage && delivery ? { delivery: { ...delivery, stage: u.deliveryStage } } : {}) };
                 })));
         }
         if (unknown) scheduleComandsRefetch();
@@ -478,10 +482,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     const mapRawOrderToOrder = (hasComands?: Comand[]): Orders[] => {
         const orders: Orders[] = []
         const list: Comand[] = hasComands ? [...hasComands] : [...comands]
+        // Difensivo: una comanda arrivata due volte (refetch/SSE) non deve dare due card con la stessa key
+        const seen = new Set<string>()
 
         list.forEach((c) => {
+            if (c.id) {
+                if (seen.has(c.id)) return
+                seen.add(c.id)
+            }
             const items: OrderItem[] = []
-            ;(c.orders || []).forEach((o) => {
+            ;(c.orders || []).forEach((o, oIdx, all) => {
                     ;(o.products || []).forEach((p) => {
                         // productOption può essere null per prodotti senza opzioni (es. asporto Margherita).
                         const optPrice = p.productOption?.price ?? 0
@@ -505,6 +515,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                         })
                     })
                     const idTable: number = c.idTable || -1
+                    // Una sola card per comanda (con i prodotti di tutti i suoi ordini): il menu cliente invia un
+                    // "ordine" per riga di carrello, quindi prima un asporto con 3 righe compariva come 3 ordini
+                    if (oIdx !== all.length - 1) return
 
                     orders.push({
                         id: c.id || "",
@@ -520,7 +533,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                         paid: !!c.paid,
                         approvalDeadline: c.approvalDeadline,
                         approvalRequired: !!c.approvalRequired,
-                        paymentAuthorized: !!c.paymentAuthorized
+                        paymentAuthorized: !!c.paymentAuthorized,
+                        // Consegna a domicilio (snapshot del server)
+                        delivery: (c as any).delivery || undefined,
+                        orderType: (c as any).orderType,
+                        totalCents: c.totalCents,
+                        takenBy: c.takenBy?.name || undefined
                     })
                 }
 
@@ -1138,6 +1156,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                 return "ERROR"
             case 404:
                 return "TABLE_NOT_FOUND"
+            case 409:
             case 402:
                 return "NOT_EMPTY"
             case 401:

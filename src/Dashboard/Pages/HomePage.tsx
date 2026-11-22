@@ -11,14 +11,16 @@ import ShimmerButton from '../../Components/ui/ShimmerButton';
 import {
     TableCellsIcon, ShoppingCartIcon, CalendarDaysIcon, CurrencyEuroIcon,
     PlusCircleIcon, BuildingStorefrontIcon, TagIcon, UsersIcon,
-    ArrowTrendingUpIcon, ClockIcon,
+    ArrowTrendingUpIcon, ClockIcon, BeakerIcon,
 } from '@heroicons/react/24/outline';
-import { getPaymentsTodayTotalApi, getReservationsRangeApi } from '../../Utilities/api';
+import { getCheckoutSummaryApi, getPaymentsTodayTotalApi, getReservationsRangeApi } from '../../Utilities/api';
 import { localIsoDate } from '../../Utilities/dates';
 import AiInsightCard from '../../Components/Dashboard/AiInsightCard';
 import { tableLabel } from '../tableLabel';
 import { useAiInsights } from '../../Hooks/useAiInsights';
 import { timeAgo } from '../../Utilities/timeAgo';
+import { Bike } from 'lucide-react';
+import { deliveryTimeLabel, getDelivery, isDeliveryComand, STAGE_META } from '../../Components/Dashboard/delivery/deliveryUtils';
 
 // ── Animation variants ────────────────────────────────────────────────────────
 const pageVariants = {
@@ -160,7 +162,7 @@ const STATUS_LABELS: Record<string, string> = {
 const HomePage: React.FC = () => {
     const { localname } = useParams();
     const navigate = useNavigate();
-    const { loading, comands, tablesMap, productsMap, categoriesMap, styles } = useData();
+    const { loading, comands, tablesMap, productsMap, categoriesMap, ingredientsMap, styles } = useData();
     const { checkVariable } = useLoginContext();
 
     const isAdmin  = checkVariable(IS_ADMIN);
@@ -174,9 +176,12 @@ const HomePage: React.FC = () => {
     useEffect(() => {
         if (!isAdmin && !isWaiter) return;
         const today = localIsoDate();
-        getPaymentsTodayTotalApi().then(r => {
-            if (r.success && r.data)
-                setTodayRevenueCents((r.data as any).data?.amountCents ?? 0);
+        // Incassi di oggi = pagamenti online + conti chiusi in cassa (importo effettivo, sconti inclusi)
+        Promise.all([getPaymentsTodayTotalApi(), getCheckoutSummaryApi(today, today)]).then(([tr, cr]) => {
+            if (!tr.success && !cr.success) return;
+            const online = tr.success && tr.data ? ((tr.data as any).data?.amountCents ?? 0) : 0;
+            const cassa = cr.success && Array.isArray(cr.data) ? cr.data.reduce((s, x) => s + x.totalCents, 0) : 0;
+            setTodayRevenueCents(online + cassa);
         });
         getReservationsRangeApi(today, today).then(r => {
             if (r.success && r.data)
@@ -280,7 +285,7 @@ const HomePage: React.FC = () => {
                 <KpiCard
                     title="Incassi Oggi"
                     value={todayRevenueCents !== null ? formatEur(todayRevenueCents) : '—'}
-                    sub="pagamenti completati"
+                    sub="online + conti in cassa"
                     icon={CurrencyEuroIcon}
                     gradient="linear-gradient(135deg, #10b981, #059669)"
                     glowColor="rgba(16,185,129,0.15)"
@@ -355,6 +360,11 @@ const HomePage: React.FC = () => {
                                     onClick={() => navigate(`/${localname}/Dashboard/Categories`)}
                                 />
                                 <QuickAction
+                                    label="Ingredienti"
+                                    icon={BeakerIcon}
+                                    onClick={() => navigate(`/${localname}/Dashboard/Ingredients`)}
+                                />
+                                <QuickAction
                                     label="Camerieri"
                                     icon={UsersIcon}
                                     onClick={() => navigate(`/${localname}/Dashboard/Waiters`)}
@@ -402,6 +412,8 @@ const HomePage: React.FC = () => {
                                     0
                                 );
                                 const ago = timeAgo(cmd.updatedAt);
+                                const isDelivery = isDeliveryComand(cmd);
+                                const stage = getDelivery(cmd)?.stage;
 
                                 return (
                                     <motion.div
@@ -411,8 +423,10 @@ const HomePage: React.FC = () => {
                                         whileHover={{ background: '#f9fafb' }}
                                         transition={{ duration: 0.15 }}
                                     >
-                                        <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                                            {cmd.idTable && cmd.idTable > 0 ? (
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${isDelivery ? 'bg-violet-100' : 'bg-gray-100'}`}>
+                                            {isDelivery ? (
+                                                <Bike className="w-5 h-5 text-violet-600" />
+                                            ) : cmd.idTable && cmd.idTable > 0 ? (
                                                 <TableCellsIcon className="w-5 h-5 text-gray-500" />
                                             ) : (
                                                 <ShoppingCartIcon className="w-5 h-5 text-gray-500" />
@@ -422,11 +436,15 @@ const HomePage: React.FC = () => {
                                             <p className="text-sm font-semibold text-gray-800 truncate">
                                                 {cmd.idTable && cmd.idTable > 0
                                                     ? tableLabel(tablesMap.get(cmd.idTable)?.name, cmd.idTable)
+                                                    : isDelivery
+                                                    ? `Domicilio${cmd.name ? ` · ${cmd.name}` : ''}`
                                                     : cmd.name || 'Asporto'}
                                             </p>
                                             <p className="text-xs text-gray-400">
                                                 {totalItems}{' '}
                                                 {totalItems === 1 ? 'prodotto' : 'prodotti'} · {ago}
+                                                {isDelivery && cmd.time ? ` · consegna ${deliveryTimeLabel(cmd.time)}` : ''}
+                                                {isDelivery && stage && stage !== 'PREPARING' ? ` · ${STAGE_META[stage].label.toLowerCase()}` : ''}
                                             </p>
                                         </div>
                                         <span
@@ -444,7 +462,7 @@ const HomePage: React.FC = () => {
 
             {/* Stats footer */}
             <motion.div
-                className="grid grid-cols-3 gap-4 mt-6"
+                className={`grid gap-4 mt-6 ${isAdmin ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-3'}`}
                 variants={pageVariants}
             >
                 {[
@@ -461,6 +479,13 @@ const HomePage: React.FC = () => {
                         // La gestione categorie è del titolare: il cameriere va al menu
                         path: `/${localname}/Dashboard/${isAdmin ? 'Categories' : 'Menu'}`,
                     },
+                    // Gli ingredienti li gestisce solo il titolare
+                    ...(isAdmin ? [{
+                        label: 'Ingredienti',
+                        value: ingredientsMap.size,
+                        icon: BeakerIcon,
+                        path: `/${localname}/Dashboard/Ingredients`,
+                    }] : []),
                     {
                         label: 'Ordini Attivi',
                         value: comands.length,

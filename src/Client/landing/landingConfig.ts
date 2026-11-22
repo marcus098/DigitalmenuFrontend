@@ -226,7 +226,7 @@ export function newSection(type: SectionType): LandingSection {
         case 'announcement': return { ...base('announcement'), text: '', linkLabel: '', href: '', bgColor: '', textColor: '', style: defaultSectionStyle('none') };
         case 'text': return { ...base('text', ''), text: '' };
         case 'video': return { ...base('video', ''), videoUrl: '', caption: '' };
-        case 'categories': return { ...base('categories', 'Il menù'), eyebrow: 'Dalla nostra cucina', showButton: true };
+        case 'categories': return { ...base('categories', 'Il menù'), showButton: true };
         case 'ticker': return { ...base('ticker'), style: defaultSectionStyle('none') };
     }
 }
@@ -247,14 +247,14 @@ export function buildInitialConfig(style: Partial<StyleDto> | null | undefined):
     const keep = (sec: LandingSection): LandingSection => ({ ...sec, style: { ...sec.style, animation: 'none' } });
     const hero = newSection('hero') as HeroSection;
     const heroImg = cleanUrlish(s.heroImageUrl);
-    const features = Array.isArray(s.features) && s.features.length ? s.features as FeatureCard[] : DEFAULT_FEATURE_CARDS;
+    const features = Array.isArray(s.features) && s.features.length ? s.features as FeatureCard[] : [];  // niente vantaggi generici di riempimento
     const sections: LandingSection[] = [
         keep({ ...hero, variant: 'template', images: heroImg ? [{ src: heroImg, alt: '' }] : [], showTakeaway: true }),
         { ...(newSection('ticker') as TickerSection), enabled: s.showTicker ?? true },
         keep({ ...(newSection('features') as FeaturesSection), title: s.sectionWhyTitle || '', items: features.map(f => ({ ...f })), enabled: s.showWhyUs ?? true }),
         keep({ ...(newSection('categories') as CategoriesSection), title: s.sectionMenuTitle || 'Il menù' }),
-        keep({ ...(newSection('contact') as ContactSection), title: 'Dove siamo', eyebrow: 'Informazioni' }),
-        keep({ ...(newSection('reservations') as ReservationsSection), title: s.sectionBookingTitle || 'Prenota un tavolo', eyebrow: 'Prenotazioni' }),
+        keep({ ...(newSection('contact') as ContactSection), title: 'Dove siamo' }),
+        keep({ ...(newSection('reservations') as ReservationsSection), title: s.sectionBookingTitle || 'Prenota un tavolo' }),
     ];
     // id stabili: la configurazione iniziale viene ricalcolata finché il ristoratore non la modifica
     return { version: LANDING_CONFIG_VERSION, global: { ...DEFAULT_GLOBAL }, sections: sections.map(x => ({ ...x, id: `${x.type}-1` })) };

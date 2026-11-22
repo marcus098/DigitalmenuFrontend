@@ -1,6 +1,6 @@
 // src/pages/TablesPage.tsx
 
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef, useMemo} from "react";
 import {Responsive, WidthProvider, Layouts, Layout} from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -15,14 +15,31 @@ import {AddTable, IS_ADMIN, UpdateTableRow, UpdateTables} from "../../types";
 import {useLoginContext} from "../../Context/LoginContext";
 import CustomLoading from "../../Components/CustomLoading";
 import FreeBusyTableModal from "../../Components/Dashboard/FreeBusyTableModal";
+import TableInfo from "../Popup/TableInfo";
 import GroupSessionModal from "../../Components/Dashboard/GroupSessionModal";
+import CloseTableModal from "../../Components/Dashboard/CloseTableModal";
+import {TableDto} from "../../types";
 
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
+// Dimensioni di un tavolo in unità di griglia (24 colonne, righe da 30px): ~4 colonne x 4 righe.
+// Servono come default alla creazione e come ripiego per i tavoli salvati con w/h a 0.
+const DEFAULT_TABLE_W = 4;
+const DEFAULT_TABLE_H = 4;
+
+// Aggiornamento periodico della Sala (oltre agli eventi SSE): stato tavoli e sessioni
+const POLL_INTERVAL_MS = 60_000;
+
+const toTable = (tableDto: TableDto): Table => ({
+    id: tableDto.id.toString(), name: tableDto.name, status: tableDto.busy ? "Occupato" : "Libero",
+    x: tableDto.x, y: tableDto.y, w: tableDto.w, h: tableDto.h,
+    code: tableDto.code, location: tableDto.location, seats: tableDto.seats, busy: tableDto.busy
+});
+
 const TablesPage: React.FC = () => {
     // STATI COMPLETI
-    const { loading, tablesMap, setBusyTable, freeTableContext, forceFreeTableContext, addTableFunc, updateTablesFunc, updateSingleTableFunc, deleteTable, forceDeleteTable, refreshTables } = useData();
+    const { loading, tablesMap, setBusyTable, forceFreeTableContext, addTableFunc, updateTablesFunc, updateSingleTableFunc, deleteTable, forceDeleteTable, refreshTables } = useData();
     const { addNotification } = useNotification();
     // Modifica della sala (aggiungi/modifica tavoli, sposta/ridimensiona) solo per il titolare
     const { checkVariable } = useLoginContext();
@@ -46,11 +63,49 @@ const TablesPage: React.FC = () => {
     // Tavolo appena aperto: si mostra subito il codice d'accesso da dare ai clienti
     const [openedTable, setOpenedTable] = useState<{ id: number, name: string } | null>(null)
 
-    const [showBusyMessage, setShowBusyMessage] = useState(false);
-    const [tableOrders, setTableOrders] = useState<Record<OrderStatus, Item[]>>({ PENDING: [], PROGRESS: [], COMPLETED: [], CONFIRMED: [] });
-    const [orderTotal, setOrderTotal] = useState<Record<OrderStatus, number>>({ PENDING: 0, PROGRESS: 0, COMPLETED: 0, CONFIRMED: 0 });
-    const [loadingOrders, setLoadingOrders] = useState<boolean>(false);
+    // Tavolo di cui si sta confermando la chiusura (stato separato: gli altri modali azzerano selectedTable)
+    const [closingTable, setClosingTable] = useState<Table | null>(null);
     const [layoutCurrent, setLayoutCurrent] = useState<Layout[]>([])
+    // Incrementato a ogni aggiornamento periodico: il dettaglio tavolo ricarica sessione e ordini
+    const [pollTick, setPollTick] = useState(0);
+    const isModifiedRef = useRef(isModified);
+    isModifiedRef.current = isModified;
+    const refreshTablesRef = useRef(refreshTables);
+    refreshTablesRef.current = refreshTables;
+
+    // POLLING: ogni 60 s, solo a scheda visibile; al ritorno sulla scheda si aggiorna subito.
+    // Una sola richiesta alla volta; saltato se la disposizione è stata modificata e non salvata
+    // (il refresh riporterebbe i tavoli alle posizioni del server).
+    useEffect(() => {
+        let alive = true;
+        let inFlight = false;
+        let timer: ReturnType<typeof setInterval> | null = null;
+
+        const poll = async () => {
+            if (inFlight || document.visibilityState !== "visible" || isModifiedRef.current) return;
+            inFlight = true;
+            try {
+                await refreshTablesRef.current();
+                if (alive) setPollTick(t => t + 1);
+            } finally {
+                inFlight = false;
+            }
+        };
+        const start = () => { if (!timer) timer = setInterval(poll, POLL_INTERVAL_MS); };
+        const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+        const onVisibilityChange = () => {
+            if (document.visibilityState === "visible") { poll(); start(); }
+            else stop();
+        };
+
+        if (document.visibilityState === "visible") start();
+        document.addEventListener("visibilitychange", onVisibilityChange);
+        return () => {
+            alive = false;
+            stop();
+            document.removeEventListener("visibilitychange", onVisibilityChange);
+        };
+    }, []);
 
     const saveTableLayout = (l: any) => {
         console.log(l)
@@ -62,26 +117,35 @@ const TablesPage: React.FC = () => {
         const roomMap = new Map<string, Table[]>();
         tablesMap.forEach((tableDto) => {
             const location = tableDto.location || "Senza Sala";
-            const table: Table = {
-                id: tableDto.id.toString(), name: tableDto.name, status: tableDto.busy ? "Occupato" : "Libero",
-                x: tableDto.x, y: tableDto.y, w: tableDto.w, h: tableDto.h,
-                code: tableDto.code, location: tableDto.location, seats: tableDto.seats, busy: tableDto.busy
-            };
             if (!roomMap.has(location)) roomMap.set(location, []);
-            roomMap.get(location)?.push(table);
+            roomMap.get(location)?.push(toTable(tableDto));
         });
         const generatedRooms: Room[] = Array.from(roomMap.entries()).map(([name, tables], index) => ({ id: index, name, tables }));
         setRooms(generatedRooms);
 
-        const hash = window.location.hash.replace('#', '');
-        const initialRoom = generatedRooms.find(r => r.name === hash) || generatedRooms[0];
-        if (initialRoom) setSelectedRoom(initialRoom);
+        // Si resta sulla sala aperta (a ogni aggiornamento dei tavoli), altrimenti quella dell'hash o la prima
+        let hash = window.location.hash.replace('#', '');
+        try { hash = decodeURIComponent(hash); } catch { /* hash non codificato */ }
+        setSelectedRoom(prev =>
+            (prev && generatedRooms.find(r => r.name === prev.name))
+            || generatedRooms.find(r => r.name === hash)
+            || generatedRooms[0]
+            || null);
     }, [tablesMap]);
+
+    // Versione aggiornata (SSE/polling) del tavolo aperto nei modali: lo stato salvato al click
+    // è una copia e mostrerebbe occupato/libero, coperti e codice di quel momento
+    const liveTable = useMemo(() => (t: Table | null): Table | null => {
+        if (!t) return null;
+        const dto = tablesMap.get(Number(t.id));
+        return dto ? toTable(dto) : t;
+    }, [tablesMap]);
+    const detailTable = liveTable(selectedTable);
 
     // LOGICA PER I LAYOUT (STABILE)
     useEffect(() => {
         if (!selectedRoom) { setLayouts({}); return; }
-        const currentLayout = selectedRoom.tables.map(t => ({ i: t.id.toString(), x: t.x, y: t.y, w: t.w, h: t.h }));
+        const currentLayout = selectedRoom.tables.map(t => ({ i: t.id.toString(), x: t.x, y: t.y, w: t.w > 0 ? t.w : DEFAULT_TABLE_W, h: t.h > 0 ? t.h : DEFAULT_TABLE_H }));
         const newLayouts: Layouts = { lg: currentLayout, md: currentLayout, sm: currentLayout, xs: currentLayout, xxs: currentLayout };
         setLayouts(newLayouts);
         setIsModified(false);
@@ -98,15 +162,6 @@ const TablesPage: React.FC = () => {
         setLayoutCurrent([...currentLayout])
         setIsModified(true);
     };
-
-    // LOGICA DI FETCH DEGLI ORDINI
-    useEffect(() => {
-        if (selectedTable && selectedTable.status === "Occupato"){
-            fetchTableOrders(selectedTable.id);
-        }
-    }, [selectedTable]);
-
-    const fetchTableOrders = async (tableId: string) => { /* ... la tua logica di fetch qui ... */ };
 
 
     const handleSaveLayout = async () => {
@@ -180,36 +235,17 @@ const TablesPage: React.FC = () => {
         }
     }
 
-    const forceFreeTable = async (id: number) => {
-        const response = await forceFreeTableContext(id)
-        if(response)
-            addNotification({message: "Tavolo liberato!", type: "success"})
-        else
-            addNotification({message: "Errore", type: "error"})
-    }
-
-    const freeTable = async (id: number) => {
-        const response = await freeTableContext(id)
-        switch(response){
-            case "SUCCESS":
-                addNotification({message: "Tavolo liberato!", type: "success"})
-                break;
-            case "ERROR":
-                addNotification({message: "Errore", type: "error"})
-                break;
-            case "TABLE_NOT_FOUND":
-                addNotification({message: "Tavolo non trovato", type: "error"})
-                break;
-            case "NOT_EMPTY":
-                addNotification({message: "Tavolo occupato", type: "error"})
-                setShowBusyMessage(true)
-                return;
-            case "NOT_AUTHORIZED":
-                addNotification({message: "Non autorizzato", type: "error"})
-                break
+    // Chiusura del tavolo dopo la conferma: /freeAndClose libera il tavolo anche con ordini aperti
+    // (li segna completati) e chiude la sessione al tavolo. Il semplice /free risponderebbe 402 con
+    // ordini aperti, quindi la conferma (che avvisa di ordini e conto) passa sempre da qui.
+    const closeTable = async (id: number): Promise<boolean> => {
+        const ok = await forceFreeTableContext(id)   // in caso di errore la notifica la mostra già il contesto
+        if (ok) {
+            addNotification({message: "Tavolo chiuso!", type: "success"})
+            refreshTables()
         }
-        setShowBusyMessage(false)
-    };
+        return ok
+    }
 
     const setBusy = async (id: number, seats?: number) => {
         if(!seats) return
@@ -235,8 +271,8 @@ const TablesPage: React.FC = () => {
             type: "",
             x: 0,
             y: 0,
-            w: 0,
-            h: 0
+            w: DEFAULT_TABLE_W,
+            h: DEFAULT_TABLE_H
         }
         const response = await addTableFunc(addTable)
         if(response){
@@ -311,7 +347,7 @@ const TablesPage: React.FC = () => {
                                 onEdit={isAdmin ? handleEditClick : undefined}
                                 editable={canEditLayout}
                                 onRemove={() => handleRemoveClick(table)}
-                                onFree={(table: Table)        => {setSelectedTable(table); freeTable(Number(table.id))}}
+                                onFree={(table: Table)        => {setSelectedTable(table); setClosingTable(table)}}
                                 onOccupy={(table: Table)      => {setSelectedTable(table); setIsBusyModalOpen(true)}}
                                 onGroupSession={(table: Table) => {setSelectedTable(table); setIsGroupSessionModalOpen(true)}}
                             />
@@ -344,12 +380,13 @@ const TablesPage: React.FC = () => {
             {isDeletePopupOpen && selectedTable && <DeletePopup itemName={selectedTable.name} onConfirm={handleConfirmDelete} onCancel={() => setIsDeletePopupOpen(false)}/>}
             {isForceDeletePopupOpen && selectedTable && <DeletePopup itemName={"free_table"} onConfirm={handleForceConfirmDelete} onCancel={() => setIsForceDeletePopupOpen(false)}/>}
             {isBusyModalOpen && selectedTable && <FreeBusyTableModal table={selectedTable} onClose={() => {setIsBusyModalOpen(false); setSelectedTable(null)}} onSave={setBusy} />}
-            {showBusyMessage && selectedTable && <FreeBusyTableModal table={selectedTable} onClose={() => {setShowBusyMessage(false); setSelectedTable(null)}} onSave={forceFreeTable} />}
             {isGroupSessionModalOpen && selectedTable && (
                 <GroupSessionModal
                     tableId={Number(selectedTable.id)}
                     tableName={selectedTable.name}
+                    tableBusy={detailTable?.busy}
                     onChanged={refreshTables}
+                    onRequestClose={() => setClosingTable(detailTable)}
                     onClose={() => { setIsGroupSessionModalOpen(false); setSelectedTable(null); }}
                 />
             )}
@@ -357,19 +394,30 @@ const TablesPage: React.FC = () => {
                 <GroupSessionModal
                     tableId={openedTable.id}
                     tableName={openedTable.name}
+                    tableBusy={tablesMap.get(openedTable.id)?.busy}
                     onChanged={refreshTables}
+                    onRequestClose={() => { const dto = tablesMap.get(openedTable.id); if (dto) setClosingTable(toTable(dto)); }}
                     onClose={() => setOpenedTable(null)}
                 />
             )}
             {loading && <CustomLoading isFullPage={true} isTransparent={true} />}
 
-            {/* Qui puoi mettere il modale dei dettagli del tavolo (quello con gli ordini) */}
-            {isDetailModalOpen && selectedTable && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setIsDetailModalOpen(false)}>
-                    <div className="bg-white p-6 rounded-lg" onClick={e => e.stopPropagation()}>
-                        Dettagli per {selectedTable.name}
-                    </div>
-                </div>
+            {isDetailModalOpen && detailTable && (
+                <TableInfo
+                    table={detailTable}
+                    refreshKey={pollTick}
+                    onClose={() => setIsDetailModalOpen(false)}
+                    onCloseTable={() => setClosingTable(detailTable)}
+                    onOccupy={() => setIsBusyModalOpen(true)}
+                    onGroupSession={() => setIsGroupSessionModalOpen(true)}
+                />
+            )}
+            {closingTable && (
+                <CloseTableModal
+                    table={liveTable(closingTable) || closingTable}
+                    onCancel={() => setClosingTable(null)}
+                    onConfirm={() => closeTable(Number(closingTable.id))}
+                />
             )}
         </div>
     );
@@ -397,15 +445,3 @@ interface Room {
     name: string;
     tables: Table[];
 }
-
-interface Item {
-    additionalIngredients: string[]
-    option: string
-    productName: string
-    categoryName: string
-    removedIngredients: string[]
-    total: number
-    quantity: number
-}
-
-type OrderStatus = "PROGRESS" | "PENDING" | "COMPLETED" | "CONFIRMED";

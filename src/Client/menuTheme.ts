@@ -16,13 +16,19 @@
 
 import type { StyleDto } from '../types';
 import { FONT_BY_KEY } from '../Utilities/fonts';
-import { getTemplateDef, MenuTemplateDef, MenuTemplateKey, TemplateLook } from './menuTemplates';
+import {
+    applyLookOverrides, LookOverrides, MenuTemplateDef, MenuTemplateKey, parseTemplateValue, TEMPLATE_BY_KEY, TemplateLook,
+} from './menuTemplates';
 
 export type { MenuTemplateKey } from './menuTemplates';
 
 export interface MenuTokens {
     template: MenuTemplateKey;
     look: TemplateLook;
+    /** Ritocchi del ristoratore (già applicati a `look` e ai font). */
+    overrides: LookOverrides;
+    /** Famiglie Google Fonts da caricare (template o abbinamento scelto). */
+    fontsGoogle: string[];
     /** Toggle dashboard "Mostra immagini nelle card". */
     showImages: boolean;
     bg: string;
@@ -67,7 +73,10 @@ export const TEMPLATE_FONT_KEY = 'template';
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function getMenuTokens(styles: StyleDto | null | undefined): MenuTokens {
-    const def: MenuTemplateDef = getTemplateDef(styles?.landingTemplate);
+    const parsed = parseTemplateValue(styles?.landingTemplate);
+    const def: MenuTemplateDef = TEMPLATE_BY_KEY[parsed.key];
+    const ov = parsed.overrides;
+    const look = applyLookOverrides(def.look, ov);
     const p = def.palette;
 
     // Apply user overrides from existing StyleDto fields when present.
@@ -83,15 +92,19 @@ export function getMenuTokens(styles: StyleDto | null | undefined): MenuTokens {
         : styles?.backgroundGradient?.[0])?.trim() || p.bg;
 
     const cardStyle = (styles?.cardStyle || '') as string;
-    const radius = RADIUS_OVERRIDE[cardStyle] ?? `${def.look.radius}px`;
+    // Ritocco "Angoli" (r) > vecchio campo cardStyle > template.
+    const radius = typeof ov.r === 'number' ? `${ov.r}px` : (RADIUS_OVERRIDE[cardStyle] ?? `${def.look.radius}px`);
 
     // Font scelto dalla dashboard (chiave del catalogo Utilities/fonts.ts).
     // 'template', vuoto o sconosciuto → abbinamento del template.
     const fontKey = (styles?.font || '').trim();
     const fontOpt = fontKey && fontKey !== TEMPLATE_FONT_KEY ? FONT_BY_KEY[fontKey] : undefined;
-    const fontBody    = fontOpt?.family || def.fonts.body;
-    const fontDisplay = fontOpt?.family || def.fonts.display;
-    const fontPrice   = fontOpt?.family || def.fonts.price || def.fonts.body;
+    // Abbinamento di un altro template (ritocco fp) se scelto; il font singolo vince su tutto.
+    const fonts = (ov.fp && TEMPLATE_BY_KEY[ov.fp]?.fonts) || def.fonts;
+    const fontBody    = fontOpt?.family || fonts.body;
+    const fontDisplay = fontOpt?.family || fonts.display;
+    const fontPrice   = fontOpt?.family || fonts.price || fonts.body;
+    const fontAccent  = fontOpt?.family || fonts.accent;
 
     // ── Derived tokens ──────────────────────────────────────────────────────
     // Capiamo se la palette è chiara o scura guardando la luminanza del fondo
@@ -107,7 +120,9 @@ export function getMenuTokens(styles: StyleDto | null | undefined): MenuTokens {
 
     return {
         template: def.key,
-        look: def.look,
+        look,
+        overrides: ov,
+        fontsGoogle: fonts.google,
         showImages: styles?.showImages !== false,
         bg,
         surface,
@@ -130,6 +145,7 @@ export function getMenuTokens(styles: StyleDto | null | undefined): MenuTokens {
         fontBody,
         fontDisplay,
         fontPrice,
+        fontAccent,
         isDark: userIsDark,
         heroGradient: buildHeroGradient(bg, userIsDark),
     };

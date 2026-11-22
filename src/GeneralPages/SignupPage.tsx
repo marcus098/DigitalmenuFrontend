@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {registerAgency} from "../Utilities/api";
+import {getRecaptchaToken, useRecaptcha} from "../Utilities/recaptcha";
 
 const SignupPage: React.FC = () => {
     const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ const SignupPage: React.FC = () => {
         password: '',
         privacyAccepted: false,
     });
+    useRecaptcha();
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const {name, value, type, checked, files} = e.target;
@@ -48,7 +50,12 @@ const SignupPage: React.FC = () => {
         //if (file) {
         //    data.append("file", file);
         //}
+        const recaptchaToken = await getRecaptchaToken("signup");
+        if (recaptchaToken) data.append("recaptchaToken", recaptchaToken)
         const response = await registerAgency(data);
+        if (!response.success && response.status === 403) {
+            alert(response.message || "Verifica di sicurezza non superata. Ricarica la pagina e riprova.");
+        }
         console.log('Form Data Submitted:', response);
     };
 

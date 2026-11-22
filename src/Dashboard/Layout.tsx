@@ -7,7 +7,7 @@ import {MOBILE_WIDTH} from "../Utilities/Utilities";
 import Sidebar from "./Sidebar";
 import NotificationDisplay from "../Components/NotificationDisplay";
 import {Navigate, Outlet, useLocation, useParams} from "react-router-dom";
-import {IS_ADMIN, IS_WAITER} from "../types";
+import {IS_ADMIN, IS_DELIVERY, IS_WAITER} from "../types";
 import ImpersonationBanner from "../Components/ImpersonationBanner";
 import {useUtilitiesContext} from "../Context/UtilitiesContext";
 import {useEffect} from "react";
@@ -16,7 +16,9 @@ import Footer from "../Components/Footer";
 
 // Pagine della dashboard aperte al cameriere: tutto il resto (menu in modifica, cassa, analytics,
 // camerieri, impostazioni...) è solo del titolare e il backend risponderebbe comunque con un errore.
-const WAITER_PAGES = ["home", "menu", "tables", "orders", "reservations", "profile"];
+const WAITER_PAGES = ["home", "menu", "tables", "orders", "reservations", "consegne", "profile"];
+// Rider (ROLE_DELIVERY): solo la vista Consegne e il profilo.
+const RIDER_PAGES = ["consegne", "profile"];
 
 const Layout: React.FC = () => {
     const { loading, isSuperadmin, checkVariable } = useLoginContext()
@@ -31,9 +33,14 @@ const Layout: React.FC = () => {
     // Il superadmin (fuori da una sessione di supporto) non ha un locale: torna alla console
     if (!loading && isSuperadmin) return <Navigate to="/superadmin" replace />
 
+    const page = (location.pathname.split("/Dashboard/")[1] || "").split("/")[0].toLowerCase()
+    const isRider = !loading && checkVariable(IS_DELIVERY) && !checkVariable(IS_ADMIN) && !checkVariable(IS_WAITER)
+
+    // Rider: vede solo le consegne (anche la Home dopo il login porta lì)
+    if (isRider && !RIDER_PAGES.includes(page)) return <Navigate to={`/${localname}/Dashboard/Consegne`} replace />
+
     // Cameriere su una pagina riservata al titolare → torna alla Home
     if (!loading && checkVariable(IS_WAITER) && !checkVariable(IS_ADMIN)) {
-        const page = (location.pathname.split("/Dashboard/")[1] || "").split("/")[0].toLowerCase()
         if (page && !WAITER_PAGES.includes(page)) return <Navigate to={`/${localname}/Dashboard/Home`} replace />
     }
 
@@ -51,7 +58,7 @@ const Layout: React.FC = () => {
                     {/*screen.screen === "DESKTOP" && <Sidebar />*/}
 
                     {/* Contenuto principale */}
-                    <div className="flex-1 bg-slate-100 p-6">
+                    <div className={`flex-1 bg-slate-100 ${page === "consegne" ? "px-3 py-4 sm:p-6" : "p-6"}`}>
                         <Outlet />
                     </div>
 

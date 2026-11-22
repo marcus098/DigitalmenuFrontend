@@ -52,6 +52,8 @@ const CassaPage            = lazy(() => import("./Dashboard/Pages/CassaPage"));
 const PaymentsSettingsPage = lazy(() => import("./Dashboard/Pages/PaymentsSettingsPage"));
 const AnalyticsPage        = lazy(() => import("./Dashboard/Pages/AnalyticsPage"));
 const WaiterAnalyticsPage  = lazy(() => import("./Dashboard/Pages/WaiterAnalyticsPage"));
+const DeliverySettingsPage = lazy(() => import("./Dashboard/Pages/DeliverySettingsPage"));
+const RiderPage            = lazy(() => import("./Dashboard/Pages/RiderPage"));
 
 // Superadmin (console piattaforma) — lazy loaded
 const SuperadminLayout     = lazy(() => import("./Superadmin/SuperadminLayout"));
@@ -68,6 +70,7 @@ const CartPage             = lazy(() => import("./Client/Pages/CartPage"));
 const HistoryOrdersPage    = lazy(() => import("./Client/Pages/HistoryOrdersPage"));
 const OrderStatusPage      = lazy(() => import("./Client/Pages/OrderStatusPage"));
 const PaymentPage          = lazy(() => import("./Client/Pages/PaymentPage"));
+const DeliveryCheckoutPage = lazy(() => import("./Client/Pages/DeliveryCheckoutPage"));
 const TableAccessCodePage      = lazy(() => import("./Client/Pages/TableAccessCodePage"));
 const TableSessionWaitingPage  = lazy(() => import("./Client/Pages/TableSessionWaitingPage"));
 const TableLivePage            = lazy(() => import("./Client/Pages/TableLivePage"));
@@ -112,6 +115,7 @@ const ClientRoutes = () => (
             <Route path="/history" element={<HistoryOrdersPage />} />
             <Route path="/order-status/:comandId" element={<OrderStatusPage />} />
             <Route path="/payment/:comandId" element={<PaymentPage />} />
+            <Route path="/delivery" element={<DeliveryCheckoutPage />} />
             <Route path="/table-access" element={<TableAccessCodePage />} />
             <Route path="/table-session" element={<TableSessionWaitingPage />} />
             <Route path="/table-live" element={<TableLivePage />} />
@@ -157,6 +161,8 @@ const DashboardRoutes = () => (
                 <Route path={"PaymentsSettings"} element={<PaymentsSettingsPage />} />
                 <Route path={"Analytics"} element={<AnalyticsPage />} />
                 <Route path={"WaiterAnalytics"} element={<WaiterAnalyticsPage />} />
+                <Route path={"Delivery"} element={<DeliverySettingsPage />} />
+                <Route path={"Consegne"} element={<RiderPage />} />
               </Route>
             </Routes>
           </Suspense>

@@ -4,7 +4,7 @@ import { useData } from '../../Context/DataContext';
 import { resolveImageUrl } from '../../Utilities/Utilities';
 import { buildGoogleFontsHref, FONT_BY_KEY } from '../../Utilities/fonts';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
-import { MenuPrice, MenuRule } from '../../Components/Client/MenuPrimitives';
+import { MenuMastheadTitle, MenuPrice, MenuRule } from '../../Components/Client/MenuPrimitives';
 import ClientCategoriesList from '../../Components/Client/ClientCategoriesList';
 import type { MenuTokens } from '../menuTheme';
 import type { ProductDto } from '../../types';
@@ -242,6 +242,7 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
                             : <Btn key={i} variant="secondary" onClick={b.onClick} href={b.href}>{b.label}</Btn>
                 ))}
                 {s.showTakeaway && <Btn variant="ghost" ghostColor={onPhoto ? heroText : undefined} onClick={p.goToTakeaway}>Asporto</Btn>}
+                {s.showTakeaway && p.goToDelivery && <Btn variant="ghost" ghostColor={onPhoto ? heroText : undefined} onClick={p.goToDelivery}>Consegna a domicilio</Btn>}
             </div>
         );
     };
@@ -267,7 +268,7 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
                     </>
                 )}
                 <div data-reveal={reveal} className={`relative ${wrap} flex flex-col justify-end ${centered ? 'text-center items-center' : ''}`} style={{ minHeight, paddingTop: 96, paddingBottom: 56 }}>
-                    {facts.length > 0 && <p className="menu-label" style={{ color: heroText, opacity: 0.85 }}>{facts.join('  ·  ')}</p>}
+                    {facts.length > 0 && <p className="lp-facts" style={{ color: heroText, opacity: 0.85 }}>{facts.join(' · ')}</p>}
                     <h1 className="menu-h mt-3" style={{ color: heroText, fontSize: 'clamp(3rem, 15vw, 7.5rem)', lineHeight: 0.95, textShadow: shown.length && heroDark ? '0 1px 18px rgba(0,0,0,0.35)' : 'none' }}>
                         {title}
                     </h1>
@@ -301,7 +302,7 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
             <section id={`sec-${s.id}`} className="overflow-hidden" style={sectionColors(s.style, t)}>
                 <div className={`${wrap} grid grid-cols-1 ${im ? 'md:grid-cols-2' : ''} gap-8 md:gap-12 items-center py-10 md:py-16`} style={{ minHeight: s.height === 'medium' ? undefined : minHeight }}>
                     <div data-reveal={reveal} className={centered ? 'text-center flex flex-col items-center' : ''}>
-                        {facts.length > 0 && <p className="menu-label">{facts.join('  ·  ')}</p>}
+                        {facts.length > 0 && <p className="lp-facts">{facts.join(' · ')}</p>}
                         <h1 className="menu-h mt-3" style={{ fontSize: 'clamp(2.6rem, 9vw, 5.5rem)', lineHeight: 0.98, textAlign: centered ? 'center' : 'left' }}>{title}</h1>
                         {subtitle && <p className="mt-4 max-w-xl" style={{ color: 'var(--menu-muted)', fontSize: 'clamp(1rem, 3.4vw, 1.2rem)', lineHeight: 1.5 }}>{subtitle}</p>}
                         {ctas(false)}
@@ -321,7 +322,7 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
             <section id={`sec-${s.id}`} style={sectionColors(s.style, t)}>
                 <div data-reveal={reveal} className={`${wrap} flex flex-col justify-center ${centered ? 'text-center items-center' : ''}`} style={{ minHeight: s.height === 'medium' ? 280 : s.height === 'large' ? 440 : minHeight, paddingTop: 56, paddingBottom: 56 }}>
                     {p.logoImg && <img src={p.logoImg} alt="" className="w-16 h-16 object-cover mb-6" style={{ borderRadius: 'var(--menu-radius)' }} />}
-                    {facts.length > 0 && <p className="menu-label">{facts.join('  ·  ')}</p>}
+                    {facts.length > 0 && <p className="lp-facts">{facts.join(' · ')}</p>}
                     <h1 className="menu-h mt-3" style={{ fontSize: 'clamp(3rem, 13vw, 6.5rem)', lineHeight: 0.95, textAlign: centered ? 'center' : 'left' }}>{title}</h1>
                     {subtitle && <p className="mt-5 max-w-xl" style={{ color: 'var(--menu-muted)', fontSize: 'clamp(1.05rem, 3.8vw, 1.3rem)', lineHeight: 1.5 }}>{subtitle}</p>}
                     {ctas(false)}
@@ -338,11 +339,13 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
                 {p.logoImg && (
                     <img src={p.logoImg} alt="" className={`w-16 h-16 object-cover mb-6 ${centered ? 'mx-auto' : ''}`} style={{ borderRadius: 'var(--menu-radius)' }} />
                 )}
-                {facts.length > 0 && <p className="menu-label">{facts.join('  ·  ')}</p>}
-                <h1 className="menu-h mt-3" style={{ fontSize: 'clamp(3rem, 14vw, 6.5rem)', lineHeight: 0.95, textAlign: centered ? 'center' : 'left' }}>{title}</h1>
+                {facts.length > 0 && <p className="lp-facts">{facts.join(' · ')}</p>}
+                {c.t.look.headerStyle === 'plain'
+                    ? <h1 className="menu-h mt-3" style={{ fontSize: 'clamp(3rem, 14vw, 6.5rem)', lineHeight: 0.95, textAlign: centered ? 'center' : 'left' }}>{title}</h1>
+                    : <div className="mt-4"><MenuMastheadTitle name={title} fontSize="clamp(2.6rem, 12vw, 5.6rem)" centered={centered} /></div>}
                 <MenuRule className={`mt-7 mb-6 ${centered ? 'mx-auto' : ''}`} style={{ maxWidth: centered ? 360 : undefined }} />
                 {subtitle && (
-                    <p className={`max-w-xl ${centered ? 'mx-auto' : ''}`} style={{ color: 'var(--menu-muted)', fontSize: 'clamp(1.05rem, 3.8vw, 1.3rem)', lineHeight: 1.5, fontStyle: 'italic' }}>
+                    <p className={`max-w-xl ${centered ? 'mx-auto' : ''}`} style={{ color: 'var(--menu-muted)', fontSize: 'clamp(1.05rem, 3.8vw, 1.3rem)', lineHeight: 1.5 }}>
                         {subtitle}
                     </p>
                 )}

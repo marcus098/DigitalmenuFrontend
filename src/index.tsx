@@ -5,9 +5,11 @@ import App from './App';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { initSentry, Sentry } from './Utilities/sentry';
 import { registerServiceWorker } from './Utilities/registerServiceWorker';
+import { installStaleBundleReload } from './Utilities/staleBundle';
 import ErrorFallback from './Components/ErrorFallback';
 
 initSentry();
+installStaleBundleReload();
 registerServiceWorker();
 
 const root = ReactDOM.createRoot(

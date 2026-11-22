@@ -5,6 +5,7 @@ import { CategoryDto, FeatureCard } from '../../types';
 import { FEATURE_ICON_MAP } from '../../Utilities/featureIcons';
 import { localIsoDate } from '../../Utilities/dates';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
+import { MenuSectionHeading } from '../../Components/Client/MenuPrimitives';
 
 /**
  * Mattoni condivisi dal sito vetrina pubblico: sia la versione "classica"
@@ -41,6 +42,8 @@ export interface LandingProps {
     heroOverlayOpacity: number;
     goToMenu: () => void;
     goToTakeaway: () => void;
+    /** Solo se il locale offre la consegna a domicilio */
+    goToDelivery?: () => void;
     scrollTo: (id: string) => void;
     navigate: (path: string) => void;
 }
@@ -89,19 +92,27 @@ export const Btn: React.FC<{
         secondary: { background: 'var(--menu-secondary)', color: 'var(--menu-secondary-text)', border: heavy ? '2px solid var(--menu-text)' : '1px solid var(--menu-secondary)' },
         ghost:     { background: 'transparent', color: ghostColor || 'var(--menu-text)', border: `1px solid ${ghostColor || 'var(--menu-rule)'}` },
     };
+    // Stile pulsanti del template / ritocco: 'outline' e 'underline' cambiano solo primario e secondario.
+    if (look.buttonStyle === 'outline') {
+        palette.primary = { background: 'transparent', color: 'var(--menu-emph)', border: '1.5px solid var(--menu-emph)' };
+        palette.secondary = { background: 'transparent', color: 'var(--menu-text)', border: '1px solid var(--menu-text)' };
+    } else if (look.buttonStyle === 'underline') {
+        const u: React.CSSProperties = { background: 'transparent', border: '1px solid transparent', textDecoration: 'underline', textUnderlineOffset: 6, textDecorationThickness: 2 };
+        palette.primary = { ...u, color: 'var(--menu-emph)' };
+        palette.secondary = { ...u, color: 'var(--menu-text)' };
+    }
     const className = `menu-focus inline-flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-60 ${full ? 'w-full' : ''}`;
     const style: React.CSSProperties = {
+        textDecoration: 'none',
         ...palette[variant],
         minHeight: 48,
         padding: '0 22px',
         // --lp-btn-radius: forma dei pulsanti scelta nel sito a sezioni (assente = come il template)
         borderRadius: 'var(--lp-btn-radius, var(--menu-radius))',
         fontFamily: 'var(--menu-font-body)',
-        fontSize: '0.86rem',
+        fontSize: '0.95rem',
         fontWeight: 600,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        textDecoration: 'none',
+        ...(look.buttonStyle === 'underline' && variant !== 'ghost' ? { padding: '0 6px' } : {}),
         boxShadow: heavy && variant !== 'ghost' ? '3px 3px 0 var(--menu-text)' : 'none',
     };
     if (href) {
@@ -119,9 +130,21 @@ export const Btn: React.FC<{
     );
 };
 
-export const SectionTitle: React.FC<{ eyebrow?: string; title: string; centered: boolean }> = ({ eyebrow, title, centered }) => (
+export const SectionTitle: React.FC<{ eyebrow?: string; title: string; centered: boolean }> = ({ eyebrow, title, centered }) => {
+    const { look } = useMenuLook();
+    if (look.sectionHeader !== 'plain') {
+        return (
+            <div className="mb-8">
+                <MenuSectionHeading eyebrow={eyebrow} title={title} centered={centered} fontSize="clamp(1.9rem, 7vw, 3rem)" />
+            </div>
+        );
+    }
+    return <PlainSectionTitle eyebrow={eyebrow} title={title} centered={centered} />;
+};
+
+const PlainSectionTitle: React.FC<{ eyebrow?: string; title: string; centered: boolean }> = ({ eyebrow, title, centered }) => (
     <div className={`mb-8 ${centered ? 'text-center' : ''}`}>
-        {eyebrow && <p className="menu-label" style={{ color: 'var(--menu-emph)' }}>{eyebrow}</p>}
+        {eyebrow && <p className="lp-eyebrow">{eyebrow}</p>}
         <h2 className="menu-h mt-2" style={{ fontSize: 'clamp(1.9rem, 7vw, 3rem)', textAlign: centered ? 'center' : 'left' }}>
             {title}
         </h2>
@@ -132,7 +155,7 @@ export const SectionTitle: React.FC<{ eyebrow?: string; title: string; centered:
 
 export const Field: React.FC<{ id: string; label: string; children: React.ReactNode }> = ({ id, label, children }) => (
     <div>
-        <label htmlFor={id} className="menu-label block mb-1.5">{label}</label>
+        <label htmlFor={id} className="block mb-1.5" style={{ fontFamily: 'var(--menu-font-body)', fontSize: '0.9rem', fontWeight: 600, color: 'var(--menu-text)' }}>{label}</label>
         {children}
     </div>
 );

@@ -50,6 +50,13 @@ const STRINGS = {
     dietLactoseFree: {it: 'Senza lattosio', en: 'Lactose-free', de: 'Laktosefrei', fr: 'Sans lactose', es: 'Sin lactosa', nl: 'Lactosevrij', pl: 'Bez laktozy', pt: 'Sem lactose', zh: '无乳糖'},
     dietVegan: {it: 'Vegano', en: 'Vegan', de: 'Vegan', fr: 'Végan', es: 'Vegano', nl: 'Veganistisch', pl: 'Wegańskie', pt: 'Vegano', zh: '纯素'},
     dietVegetarian: {it: 'Vegetariano', en: 'Vegetarian', de: 'Vegetarisch', fr: 'Végétarien', es: 'Vegetariano', nl: 'Vegetarisch', pl: 'Wegetariańskie', pt: 'Vegetariano', zh: '素食'},
+    // ── Ricerca piatti ──
+    searchPlaceholder: {it: 'Cerca un piatto o un ingrediente', en: 'Search a dish or ingredient', de: 'Gericht oder Zutat suchen', fr: 'Chercher un plat ou un ingrédient', es: 'Buscar un plato o ingrediente', nl: 'Zoek een gerecht of ingrediënt', pl: 'Szukaj dania lub składnika', pt: 'Procurar um prato ou ingrediente', zh: '搜索菜品或配料'},
+    searchLabel: {it: 'Cerca nel menù', en: 'Search the menu', de: 'Speisekarte durchsuchen', fr: 'Rechercher dans le menu', es: 'Buscar en el menú', nl: 'Zoeken in het menu', pl: 'Szukaj w menu', pt: 'Pesquisar no menu', zh: '搜索菜单'},
+    searchClear: {it: 'Cancella ricerca', en: 'Clear search', de: 'Suche löschen', fr: 'Effacer la recherche', es: 'Borrar búsqueda', nl: 'Zoekopdracht wissen', pl: 'Wyczyść wyszukiwanie', pt: 'Limpar pesquisa', zh: '清除搜索'},
+    searchNoResults: {it: 'Nessun piatto trovato', en: 'No dishes found', de: 'Keine Gerichte gefunden', fr: 'Aucun plat trouvé', es: 'Ningún plato encontrado', nl: 'Geen gerechten gevonden', pl: 'Nie znaleziono dań', pt: 'Nenhum prato encontrado', zh: '未找到菜品'},
+    searchNoResultsHint: {it: 'Prova con un altro nome o ingrediente.', en: 'Try another name or ingredient.', de: 'Versuchen Sie einen anderen Namen oder eine andere Zutat.', fr: 'Essayez un autre nom ou ingrédient.', es: 'Prueba con otro nombre o ingrediente.', nl: 'Probeer een andere naam of ingrediënt.', pl: 'Spróbuj innej nazwy lub składnika.', pt: 'Experimente outro nome ou ingrediente.', zh: '请尝试其他名称或配料。'},
+    searchResults: {it: 'Risultati', en: 'Results', de: 'Ergebnisse', fr: 'Résultats', es: 'Resultados', nl: 'Resultaten', pl: 'Wyniki', pt: 'Resultados', zh: '结果'},
 } as const;
 
 /**

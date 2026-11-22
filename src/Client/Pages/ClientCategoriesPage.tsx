@@ -11,7 +11,11 @@ import useCartCount from '../../Utilities/useCartCount';
 import { clearTableSession, getTableSession, resolveImageUrl } from '../../Utilities/Utilities';
 import { lookupTableSessionApi } from '../../Utilities/api';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
-import { MenuRule } from '../../Components/Client/MenuPrimitives';
+import OrderChannelPicker from '../../Components/Client/OrderChannelPicker';
+import useDeliverySettings from '../../Hooks/useDeliverySettings';
+import { getOrderChannel, OrderChannel, setOrderChannel } from '../delivery/deliveryUtils';
+import { MenuMastheadTitle, MenuRule } from '../../Components/Client/MenuPrimitives';
+import MenuSearch from '../../Components/Client/MenuSearch';
 
 const ClientCategoriesPage: React.FC = () => {
     const { loading, categoriesMap, waiters, setSelectedAllergens, styles } = useData();
@@ -25,6 +29,12 @@ const ClientCategoriesPage: React.FC = () => {
     const primaryColor = styles?.primary?.trim() || '#f97316';
     const { look } = useMenuLook();
     const centered = look.align === 'center';
+
+    // Senza tavolo: il cliente sceglie asporto o consegna a domicilio (se il locale la offre)
+    const noTable = !waiters && !searchParams.get('table') && !localStorage.getItem('rf_table_id') && !getTableSession();
+    const { settings: deliverySettings, deliveryEnabled } = useDeliverySettings(noTable ? localname : undefined);
+    const [channel, setChannel] = useState<OrderChannel>(() => (localname ? getOrderChannel(localname) : 'TAKEAWAY'));
+    const changeChannel = (c: OrderChannel) => { if (localname) setOrderChannel(localname, c); setChannel(c); };
 
     useEffect(() => {
         const tableId = searchParams.get('table');
@@ -140,9 +150,17 @@ const ClientCategoriesPage: React.FC = () => {
                                 </div>
                             )}
                             <div className={`px-5 md:px-6 pt-8 pb-2 menu-fade-up ${centered ? 'text-center' : ''}`}>
-                                <h1 className="menu-h" style={{ fontSize: 'clamp(2.2rem, 10vw, 3.6rem)', textAlign: centered ? 'center' : 'left' }}>
-                                    {styles?.restaurantName || localname}
-                                </h1>
+                                {look.headerStyle === 'plain' ? (
+                                    <h1 className="menu-h" style={{ fontSize: 'clamp(2.2rem, 10vw, 3.6rem)', textAlign: centered ? 'center' : 'left' }}>
+                                        {styles?.restaurantName || localname}
+                                    </h1>
+                                ) : (
+                                    <MenuMastheadTitle
+                                        name={styles?.restaurantName || localname || ''}
+                                        fontSize="clamp(2.2rem, 10vw, 3.6rem)"
+                                        centered={centered}
+                                    />
+                                )}
                                 {(styles as any)?.description && (
                                     <p className="mt-3" style={{ color: 'var(--menu-muted)', fontSize: '0.95rem', fontStyle: 'italic' }}>
                                         {(styles as any).description}
@@ -155,19 +173,27 @@ const ClientCategoriesPage: React.FC = () => {
                         </>
                     )}
 
-                    {/* Indice */}
+                    {noTable && deliveryEnabled && deliverySettings && tableGateState === 'ok' && (
+                        <div className="px-4 md:px-6 pt-6">
+                            <OrderChannelPicker settings={deliverySettings} value={channel} onChange={changeChannel} />
+                        </div>
+                    )}
+
+                    {/* Ricerca su tutto il menu, poi l'indice */}
                     <div className="px-4 md:px-6 pt-6 pb-12">
-                        <MenuRule className="mb-5" />
-                        <h2
-                            className="menu-label mb-2"
-                            style={{ textAlign: centered ? 'center' : 'left', color: 'var(--menu-emph)' }}
-                        >
-                            Menù
-                        </h2>
-                        <ClientCategoriesList
-                            categories={Array.from(categoriesMap.values())}
-                            onSelectCategory={handleCategorySelect}
-                        />
+                        <MenuSearch centered={centered} className="mb-6">
+                            <MenuRule className="mb-5" />
+                            <h2
+                                className="menu-label mb-2"
+                                style={{ textAlign: centered ? 'center' : 'left', color: 'var(--menu-emph)' }}
+                            >
+                                Menù
+                            </h2>
+                            <ClientCategoriesList
+                                categories={Array.from(categoriesMap.values())}
+                                onSelectCategory={handleCategorySelect}
+                            />
+                        </MenuSearch>
                     </div>
                 </main>
             </div>

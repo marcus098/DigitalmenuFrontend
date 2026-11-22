@@ -16,9 +16,13 @@ interface GroupSessionModalProps {
     onClose: () => void;
     /** Chiamato dopo apertura/chiusura del tavolo: la Sala aggiorna subito lo stato (rosso/verde) */
     onChanged?: () => void;
+    /** Tavolo segnato come occupato in Sala (anche senza sessione gruppo aperta) */
+    tableBusy?: boolean;
+    /** Se presente, "Chiudi tavolo" apre la conferma di chiusura della Sala (avvisi su ordini e conto) */
+    onRequestClose?: () => void;
 }
 
-const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableName, onClose, onChanged }) => {
+const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableName, onClose, onChanged, tableBusy, onRequestClose }) => {
     const { addNotification } = useNotification();
     const [loading, setLoading] = useState<boolean>(true);
     const [busy, setBusy] = useState<boolean>(false);
@@ -62,6 +66,11 @@ const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableNam
     };
 
     const handleClose = async () => {
+        if (onRequestClose) {
+            onClose();
+            onRequestClose();
+            return;
+        }
         setBusy(true);
         const result = await closeTableSessionApi(tableId);
         setBusy(false);
@@ -118,6 +127,22 @@ const GroupSessionModal: React.FC<GroupSessionModalProps> = ({ tableId, tableNam
                 <div className="p-5 space-y-5">
                     {loading ? (
                         <p className="text-sm text-zinc-500">Caricamento...</p>
+                    ) : !session && tableBusy ? (
+                        // Tavolo occupato senza sessione gruppo (es. aperto dal cameriere): non si può riaprire,
+                        // ma la chiusura deve restare raggiungibile
+                        <div className="space-y-3">
+                            <p className="text-sm text-zinc-600">
+                                Il tavolo è occupato ma non ha una sessione gruppo attiva: i clienti non possono collegarsi con il codice.
+                            </p>
+                            <button
+                                onClick={handleClose}
+                                disabled={busy}
+                                className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-red-500 text-white font-bold rounded-lg disabled:opacity-50"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Chiudi tavolo
+                            </button>
+                        </div>
                     ) : !session ? (
                         <div>
                             <p className="text-sm text-zinc-600 mb-3">

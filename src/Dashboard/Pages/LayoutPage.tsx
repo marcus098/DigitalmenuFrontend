@@ -8,6 +8,7 @@ import CustomLoading from "../../Components/CustomLoading";
 import { FEATURE_ICONS } from "../../Utilities/featureIcons";
 import { AVAILABLE_FONTS } from "../../Utilities/fonts";
 import TemplateLibrary from "../../Components/Dashboard/TemplateLibrary";
+import LookCustomizer from "../../Components/Dashboard/LookCustomizer";
 import LandingEditor, { LandingUpdater } from "../../Components/Dashboard/landing/LandingEditor";
 import { ColorInput, ToggleInput } from "../../Components/Dashboard/landing/EditorFields";
 import {
@@ -322,14 +323,8 @@ const ControlPanel: React.FC<{
             {activeTab === 'layout' && (
                 <div className="space-y-4">
                     <ToggleInput label="Mostra Immagini nelle Card" checked={draftTheme.showImages} onChange={v => updateThemeValue('showImages', v)} />
-                    <div>
-                        <label className="label-style">Stile Angoli Card</label>
-                        <select value={draftTheme.cardStyle} onChange={e => updateThemeValue('cardStyle', e.target.value)} className="input-style mt-1">
-                            <option value="soft">Come da template (consigliato)</option>
-                            <option value="rounded">Arrotondato</option>
-                            <option value="sharp">Squadrato</option>
-                        </select>
-                    </div>
+                    <hr />
+                    <LookCustomizer draftTheme={draftTheme} updateThemeValue={updateThemeValue} />
                     <hr />
                     {parseLandingConfig((draftTheme as any).landingConfig) && (
                         <p className="text-xs bg-sky-50 border border-sky-200 text-sky-900 rounded-lg p-2">

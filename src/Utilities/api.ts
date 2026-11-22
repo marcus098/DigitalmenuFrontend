@@ -4,7 +4,7 @@ import {
     AddComandOrder,
     AddComandWaiter,
     AddIngredient, AddTable,
-    ApiResponse, CardDto, CardMovement, PublicCardStatus, CheckoutDaySummary, CheckoutResult, LoyaltySettings,
+    ApiResponse, CardDto, CardMovement, PublicCardStatus, CheckoutDaySummary, CheckoutEntry, CheckoutResult, LoyaltySettings,
     CategoryDto, FileDto, FolderDto, IdWithOrder,
     IngredientDto,
     JoinResponse,
@@ -21,6 +21,7 @@ import {apiCall, ApiCallResult, clientApiCall} from "./helper";
 import {endImpersonation, getImpersonationToken, IMPERSONATION_FORBIDDEN_EVENT, isImpersonating} from "./impersonation";
 import {UserProfile} from "../Dashboard/Pages/ProfilePage";
 import {CheckoutRequest, Comand} from "../ComandType";
+import {DeliverySettings, DeliveryStage, GeoResult, DeliveryAddress, DeliveryPaymentChoice, DeliveryOrderResponse} from "../deliveryTypes";
 
 const ADD_INGREDIENT = "/api/ingredients/insert";
 const ADD_CATEGORY = "/api/categories/addCategory";
@@ -84,6 +85,7 @@ const CARD_MOVEMENTS = (id: number) => `/api/cards/${id}/movements`
 const CARD_DETAILS = (id: number) => `/api/cards/${id}/details`
 const RESET_ALL_CARDS = "/api/cards/reset-all"
 const CHECKOUT_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/checkout`
+const CHECKOUT_HISTORY = (from: string, to: string) => `/api/orders/checkout-history?from=${from}&to=${to}`
 const CHECKOUT_SUMMARY = (from: string, to: string) => `/api/orders/checkout-summary?from=${from}&to=${to}`
 const TOP_PRODUCTS = (from: string, to: string, limit: number) => `/api/orders/top-products?from=${from}&to=${to}&limit=${limit}`
 const GET_FILES = (folderId: number) => "/api/filemanager/files/" + folderId
@@ -123,6 +125,8 @@ const PAYMENT_SETTINGS = "/api/payments/settings"
 const GET_PAYMENTS = "/api/payments"
 const GET_PAYMENTS_TODAY_TOTAL = "/api/payments/today-total"
 const REFUND_PAYMENT = (id: number) => `/api/payments/${id}/refund`
+const CANCEL_PAYMENT = (id: number) => `/api/payments/${id}/cancel`
+const COMAND_PAYMENTS = (comandId: string) => `/api/payments/by-comand/${encodeURIComponent(comandId)}`
 const PAYMENT_PROVIDER = "/api/payments/provider"
 const PAYMENT_PROVIDER_STRIPE = "/api/payments/provider/stripe"
 const PAYMENT_PROVIDER_SUMUP = "/api/payments/provider/sumup"
@@ -143,10 +147,11 @@ const POST = 'POST'
 const PUT = 'PUT'
 const DELETE = 'DELETE'
 
-export const login = async (emailUsername: string, password: string): Promise<ApiCallResult<LoginResponse>> => {
+/** recaptchaToken: token reCAPTCHA v3 (azione "login"), assente se reCAPTCHA è disattivato. */
+export const login = async (emailUsername: string, password: string, recaptchaToken?: string): Promise<ApiCallResult<LoginResponse>> => {
     return clientApiCall<LoginResponse>({
         method: POST,
-        data: { type: "LoginUser", emailUsername, password },
+        data: { type: "LoginUser", emailUsername, password, ...(recaptchaToken ? { recaptchaToken } : {}) },
         url: LOGIN,
         fixed: true,
     });
@@ -236,8 +241,8 @@ export const registerAgency = async (data: FormData) => {
     return apiCall<boolean>({method: POST, isFormData: true, url: REGISTER_AGENCY, fixed: true, data: data})
 }
 
-export const registerWaiterApi = async (data: SignupWaiter) => {
-    return apiCall<boolean>({method: POST, isFormData: false, url: REGISTER_WAITER, fixed: true, data: data})
+export const registerWaiterApi = async (data: SignupWaiter, recaptchaToken?: string) => {
+    return apiCall<boolean>({method: POST, isFormData: false, url: REGISTER_WAITER, fixed: true, data: recaptchaToken ? {...data, recaptchaToken} : data})
 }
 
 
@@ -450,6 +455,10 @@ export const resetAllCardsApi = async () =>
 export const checkoutComandApi = async (comandId: string, req: CheckoutRequest) =>
     apiCall<CheckoutResult>({method: POST, fixed: true, url: CHECKOUT_COMAND(comandId), data: req})
 
+/** Conti chiusi in cassa nel periodo (yyyy-MM-dd, estremi inclusi), dal più recente. */
+export const getCheckoutHistoryApi = async (from: string, to: string) =>
+    apiCall<CheckoutEntry[]>({method: GET, fixed: true, url: CHECKOUT_HISTORY(from, to)})
+
 /** Incassi di cassa per giorno (yyyy-MM-dd, estremi inclusi). */
 export const getCheckoutSummaryApi = async (from: string, to: string) =>
     apiCall<CheckoutDaySummary[]>({method: GET, fixed: true, url: CHECKOUT_SUMMARY(from, to)})
@@ -580,7 +589,7 @@ export const updateReservationStaffApi = async (id: number, data: Partial<StaffR
 // takeaway
 export const sendTakeawayOrderApi = async (
     localname: string,
-    data: { customerName: string; customerPhone: string; pickupTime?: string; orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[]; variants?: { groupId: string; choiceId: string }[] }[] }[] }
+    data: { customerName: string; customerPhone: string; pickupTime?: string; phoneToken?: string; orders: { products: { idProduct: number; productOption: string; note: string; quantity: number; ingredientsMinus: number[]; ingredientsPlus: number[]; variants?: { groupId: string; choiceId: string }[] }[] }[] }
 ) => {
     return clientApiCall<CreatedOrderResponse>({ method: POST, fixed: true, url: SEND_TAKEAWAY_ORDER(localname), data })
 }
@@ -690,6 +699,17 @@ export const refundPaymentApi = async (paymentId: number, amountCents?: number) 
         method: POST, fixed: true, url: REFUND_PAYMENT(paymentId), data: amountCents != null ? { amountCents } : {},
     })
 }
+
+/**
+ * "Annulla pagamento": rilascia un'autorizzazione carta non ancora incassata (nessun addebito, nessuna commissione).
+ * 409 se il pagamento è già incassato (serve il rimborso) o l'ordine è ancora da approvare.
+ */
+export const cancelPaymentApi = async (paymentId: number) =>
+    apiCall<{ data: { status: string; amountCents: number } }>({ method: POST, fixed: true, url: CANCEL_PAYMENT(paymentId), data: {} })
+
+/** Pagamenti online di una comanda del locale (dal più recente). */
+export const getComandPaymentsApi = async (comandId: string) =>
+    apiCall<{ data: PaymentDto[] }>({ method: GET, fixed: true, url: COMAND_PAYMENTS(comandId) })
 
 // provider di pagamento del locale (account Stripe/SumUp propri, chiavi cifrate lato server)
 export const getPaymentProviderApi = async () =>
@@ -928,3 +948,134 @@ clientInstance.interceptors.response.use(response => {
     // Posso aggiungere un trattamento degli errori qui
     return Promise.reject(error);
 });
+// ── Consegna a domicilio (dashboard + rider) — contratto: docs/DOMICILIO.md nel backend ──────────
+const DELIVERY_SETTINGS = "/api/delivery/settings"
+const DELIVERY_ORDERS = "/api/delivery/orders"
+const DELIVERY_ROUTE_INFO = "/api/delivery/route-info"
+const DELIVERY_ORDER_STAGE = (id: string) => `/api/delivery/orders/${encodeURIComponent(id)}/stage`
+const GEO_SEARCH_PUBLIC = (localname: string, q: string) =>
+    `/api/public/geo/search?localname=${encodeURIComponent(localname)}&q=${encodeURIComponent(q)}`
+const GEO_REVERSE_PUBLIC = (localname: string, lat: number, lng: number) =>
+    `/api/public/geo/reverse?localname=${encodeURIComponent(localname)}&lat=${lat}&lng=${lng}`
+
+/** Alcuni endpoint rispondono col DTO "nudo", altri dentro { data }: si accettano entrambi. */
+const unwrapDelivery = <T,>(res: ApiCallResult<any>, isPayload: (x: any) => boolean): ApiCallResult<T> => {
+    const body = res.data
+    if (body && !isPayload(body) && body.data !== undefined && isPayload(body.data)) return { ...res, data: body.data as T }
+    return res as ApiCallResult<T>
+}
+
+export const getDeliverySettingsApi = async () =>
+    unwrapDelivery<DeliverySettings>(
+        await apiCall<any>({ method: GET, fixed: true, url: DELIVERY_SETTINGS }),
+        x => typeof x?.enabled === 'boolean')
+
+export const saveDeliverySettingsApi = async (settings: DeliverySettings) =>
+    unwrapDelivery<DeliverySettings>(
+        await apiCall<any>({ method: PUT, fixed: true, url: DELIVERY_SETTINGS, data: settings }),
+        x => typeof x?.enabled === 'boolean')
+
+/** Ricerca indirizzi (proxy Nominatim lato server): solo su pulsante/invio, mai a ogni tasto. */
+export const geoSearchApi = async (localname: string, q: string) =>
+    unwrapDelivery<GeoResult[]>(
+        await apiCall<any>({ method: GET, fixed: true, url: GEO_SEARCH_PUBLIC(localname, q) }),
+        x => Array.isArray(x))
+
+export const geoReverseApi = async (localname: string, lat: number, lng: number) =>
+    unwrapDelivery<GeoResult>(
+        await apiCall<any>({ method: GET, fixed: true, url: GEO_REVERSE_PUBLIC(localname, lat, lng) }),
+        x => typeof x?.label === 'string')
+
+/** Consegne del giorno (rider, camerieri, titolare). Il server usa deliveryTime/customerName: si riportano ai campi della comanda. */
+export const getDeliveryOrdersApi = async () => {
+    const res = unwrapDelivery<any[]>(
+        await apiCall<any>({ method: GET, fixed: true, url: DELIVERY_ORDERS }),
+        x => Array.isArray(x))
+    if (!Array.isArray(res.data)) return res as ApiCallResult<Comand[]>
+    const data: Comand[] = res.data.map((c: any) => ({
+        ...c,
+        time: c.time ?? c.deliveryTime,
+        name: c.name ?? c.customerName,
+        updatedAt: c.updatedAt ?? c.delivery?.deliveredAt ?? c.delivery?.outForDeliveryAt ?? c.createdAt,
+        orders: c.orders ?? [],
+    }))
+    return { ...res, data }
+}
+
+/** Risposta di GET /api/delivery/route-info (rider, camerieri, titolare). */
+export interface DeliveryRouteInfo {
+    enabled: boolean
+    /** Impostazione "Calcolo del percorso per i rider" (predefinita spenta). */
+    routePlanning: boolean
+    originLat?: number | null
+    originLng?: number | null
+    originAddress?: string | null
+}
+
+/** Consegna attiva, calcolo del percorso e punto di partenza (niente zone né pagamenti). */
+export const getDeliveryRouteInfoApi = async () =>
+    unwrapDelivery<DeliveryRouteInfo>(
+        await apiCall<any>({ method: GET, fixed: true, url: DELIVERY_ROUTE_INFO }),
+        x => typeof x?.routePlanning === 'boolean')
+
+export const setDeliveryStageApi = async (id: string, stage: Exclude<DeliveryStage, 'PREPARING'>, cashCollected?: boolean) =>
+    apiCall<any>({
+        method: POST, fixed: true, url: DELIVERY_ORDER_STAGE(id),
+        data: cashCollected === undefined ? { stage } : { stage, cashCollected },
+    })
+
+// ── Consegna a domicilio (menu cliente, pubblico) — contratto: docs/DOMICILIO.md nel backend ─────
+const DELIVERY_SETTINGS_PUBLIC = (localname: string) => `/api/public/delivery/${encodeURIComponent(localname)}`
+const DELIVERY_SLOTS_PUBLIC = (localname: string, date: string) => `/api/public/delivery/${encodeURIComponent(localname)}/slots/${date}`
+const SEND_DELIVERY_ORDER = (localname: string) => `/api/public/orders/delivery/${encodeURIComponent(localname)}`
+const OTP_SEND_PUBLIC = "/api/public/otp/send"
+const OTP_VERIFY_PUBLIC = "/api/public/otp/verify"
+
+/** Impostazioni pubbliche della consegna del locale (zone, minimi, pagamento, OTP asporto). */
+export const getPublicDeliverySettingsApi = async (localname: string) =>
+    unwrapDelivery<import('../Client/delivery/deliveryUtils').PublicDeliveryInfo>(
+        await clientApiCall<any>({ method: GET, fixed: true, url: DELIVERY_SETTINGS_PUBLIC(localname) }),
+        x => typeof x?.enabled === 'boolean')
+
+/** Fasce di consegna del giorno (capienza propria, stessa forma degli slot asporto). */
+export const getPublicDeliverySlotsApi = async (localname: string, date: string) =>
+    unwrapDelivery<Slot[]>(
+        await clientApiCall<any>({ method: GET, fixed: true, url: DELIVERY_SLOTS_PUBLIC(localname, date) }),
+        x => Array.isArray(x))
+
+/** Ricerca indirizzi per il cliente (proxy Nominatim): solo su pulsante/invio. */
+export const publicGeoSearchApi = async (localname: string, q: string) =>
+    unwrapDelivery<GeoResult[]>(
+        await clientApiCall<any>({ method: GET, fixed: true, url: GEO_SEARCH_PUBLIC(localname, q) }),
+        x => Array.isArray(x))
+
+export const publicGeoReverseApi = async (localname: string, lat: number, lng: number) =>
+    unwrapDelivery<GeoResult>(
+        await clientApiCall<any>({ method: GET, fixed: true, url: GEO_REVERSE_PUBLIC(localname, lat, lng) }),
+        x => typeof x?.label === 'string')
+
+/** 200 {sent:true}; 429 limite SMS. */
+export const sendOtpApi = async (localname: string, phone: string) =>
+    clientApiCall<{ sent: boolean }>({ method: POST, fixed: true, url: OTP_SEND_PUBLIC, data: { localname, phone } })
+
+/** 200 {phoneToken, expiresAt}; 401 codice non valido. */
+export const verifyOtpApi = async (localname: string, phone: string, code: string) =>
+    unwrapDelivery<{ phoneToken: string; expiresAt: string }>(
+        await clientApiCall<any>({ method: POST, fixed: true, url: OTP_VERIFY_PUBLIC, data: { localname, phone, code } }),
+        x => typeof x?.phoneToken === 'string')
+
+export const sendDeliveryOrderApi = async (localname: string, data: DeliveryOrderRequest) =>
+    unwrapDelivery<DeliveryOrderResponse>(
+        await clientApiCall<any>({ method: POST, fixed: true, url: SEND_DELIVERY_ORDER(localname), data }),
+        x => typeof x?.id === 'string')
+
+export interface DeliveryOrderRequest {
+    customerName: string
+    customerPhone: string
+    /** solo con la verifica SMS attiva sul server (PublicDeliveryInfo.phoneVerification) */
+    phoneToken?: string
+    address: DeliveryAddress
+    deliveryTime: string
+    paymentChoice: DeliveryPaymentChoice
+    orders: ReturnType<typeof import('./Utilities').cartToAddComandOrders>
+}

@@ -64,7 +64,7 @@ const NAV = [
 const FAQ: { q: string; a: string }[] = [
     {
         q: 'I clienti devono scaricare un’app?',
-        a: 'No. Inquadrano il QR e il menu si apre nel browser del telefono. Anche Omnivo Sala, l’app dei camerieri, si usa dal browser dello smartphone: niente store, niente installazioni.',
+        a: 'No. Inquadrano il QR e il menu si apre nel browser del telefono. Anche DineUp Sala, l’app dei camerieri, si usa dal browser dello smartphone: niente store, niente installazioni.',
     },
     {
         q: 'Cos’è il QR dinamico?',
@@ -207,19 +207,19 @@ const VideoDialog: React.FC<{ open: boolean; onClose: () => void }> = ({ open, o
     return (
         <dialog
             ref={ref}
-            className="omn-dialog"
+            className="du-dialog"
             aria-label={`Il video di ${BRAND_NAME} (35 secondi)`}
             onClose={() => { videoRef.current?.pause(); onClose(); }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}
         >
-            <div className="omn-dialog-inner">
-                <button type="button" className="omn-close" aria-label="Chiudi il video" onClick={onClose} autoFocus>
+            <div className="du-dialog-inner">
+                <button type="button" className="du-close" aria-label="Chiudi il video" onClick={onClose} autoFocus>
                     <X size={22} aria-hidden="true" />
                 </button>
                 {open && (
                     <video
                         ref={videoRef}
-                        src="/landing/omnivo-teaser.mp4"
+                        src="/landing/dineup-teaser.mp4"
                         poster="/landing/hero-poster.webp"
                         controls
                         playsInline

@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useState} from "react";
+import React, {useContext, useEffect, useRef, useState} from "react";
 import OrderModal from "../../Components/OrderModal";
 import OrderCard from "../../Components/OrderCard";
 import {useData} from "../../Context/DataContext";
@@ -12,6 +12,7 @@ import {LoginContext} from "../../Context/LoginContext";
 import {useTabletPrinting} from "../../Hooks/useTabletPrinting";
 import {SelectedVariant} from "../../ComandType";
 import SelectedVariantChips from "../../Components/Dashboard/SelectedVariantChips";
+import {ComandDelivery} from "../../deliveryTypes";
 
 /** Countdown "m:ss" verso una scadenza ISO; "scaduto" se passata. */
 const Countdown: React.FC<{ deadline?: string }> = ({deadline}) => {
@@ -63,21 +64,60 @@ export interface Orders {
     approvalRequired?: boolean
     /** Importo autorizzato, incassato all'accettazione */
     paymentAuthorized?: boolean
+    /** Consegna a domicilio: snapshot indirizzo/tariffa/pagamento/fase */
+    delivery?: ComandDelivery
+    orderType?: string
+    /** Totale calcolato dal server (prodotti + consegna), centesimi */
+    totalCents?: number
+    /** Nome del cameriere/operatore che ha preso l'ordine (assente = ordine del cliente) */
+    takenBy?: string
 }
 
+/** Totale di un ordine in centesimi (server se presente, altrimenti prodotti + consegna). */
+export const orderTotalCents = (o: Orders): number =>
+    typeof o.totalCents === 'number' && o.totalCents > 0 ? o.totalCents
+        : Math.round(o.items.reduce((s, it) => s + (it.total || 0) * it.quantity, 0) * 100) + (o.delivery?.feeCents ?? 0)
+
+
+type StatusFilter = 'ALL' | 'AWAIT' | 'PENDING' | 'PROGRESS' | 'COMPLETED' | 'DELETED'
+
+// Classi Tailwind scritte per intero: con `bg-${color}-600` il purge non le generava e il filtro attivo non si vedeva
+const STATUS_FILTERS: { label: string, value: StatusFilter, active: string, idle: string }[] = [
+    {label: 'Tutti', value: 'ALL', active: 'bg-gray-700 text-white border-gray-700', idle: 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'},
+    {label: 'Nuovi', value: 'AWAIT', active: 'bg-amber-500 text-white border-amber-500', idle: 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'},
+    {label: 'In attesa', value: 'PENDING', active: 'bg-blue-600 text-white border-blue-600', idle: 'bg-white text-blue-700 border-blue-300 hover:bg-blue-50'},
+    {label: 'In cucina', value: 'PROGRESS', active: 'bg-yellow-500 text-white border-yellow-500', idle: 'bg-white text-yellow-700 border-yellow-300 hover:bg-yellow-50'},
+    {label: 'Completati', value: 'COMPLETED', active: 'bg-green-600 text-white border-green-600', idle: 'bg-white text-green-700 border-green-300 hover:bg-green-50'},
+    {label: 'Cancellati', value: 'DELETED', active: 'bg-red-600 text-white border-red-600', idle: 'bg-white text-red-700 border-red-300 hover:bg-red-50'},
+]
+
+const isHistorical = (s: StatusFilter) => s === 'COMPLETED' || s === 'DELETED'
+
+/** Giorno locale (YYYY-MM-DD) di una data ISO del server. */
+const isSameDay = (iso: string | undefined, day: string): boolean => {
+    if (!iso) return false
+    const d = new Date(iso)
+    return Number.isNaN(d.getTime()) ? iso.startsWith(day) : localIsoDate(d) === day
+}
 
 const OrdersPage: React.FC = () => {
-    const { comands, tablesMap, mapRawOrderToOrder, changeComandStatus, approveComand, rejectComand } = useData()
+    const { comands, tablesMap, mapRawOrderToOrder, changeComandStatus, approveComand, rejectComand, orderEventTick } = useData()
     const loginCtx = useContext(LoginContext)
     const [pause, setPause] = useState<TakeawayPauseStatus | null>(null)
     const [pauseBusy, setPauseBusy] = useState(false)
     const [busyId, setBusyId] = useState<string | null>(null)
     const [singleOrder, setSingleOrder] = useState<Orders | null>(null)
     const [ordersList, setOrdersList] = useState<Orders[]>([]);
-    const [filterStatus, setFilterStatus] = useState<'ALL' | 'AWAIT' | 'PENDING' | 'PROGRESS' | 'COMPLETED' | 'DELETED'>('ALL');
-    const [filterDate, setFilterDate] = useState<string>(localIsoDate())
+    const [filterStatus, setFilterStatus] = useState<StatusFilter>('ALL');
+    // '' = tutti i giorni (solo per gli ordini aperti); completati/cancellati si leggono sempre per giorno (default oggi)
+    const [filterDate, setFilterDate] = useState<string>('')
+    const historicalDate = filterDate || localIsoDate()
+    // Solo l'ultima richiesta dello storico può aggiornare la lista (cambi rapidi di filtro/data)
+    const historicalReq = useRef(0)
     const [myLoading, setMyLoading] = useState<boolean>(false)
     const [historicalOrders, setHistoricalOrders] = useState<Orders[]>([]);
+    // Solo consegne a domicilio
+    const [onlyDelivery, setOnlyDelivery] = useState(false)
 
     const { addNotification } = useNotification()
     const tablet = useTabletPrinting()
@@ -111,11 +151,8 @@ const OrdersPage: React.FC = () => {
 
     useEffect(() => {
         setOrdersList([...mapRawOrderToOrder()])
-    }, [comands]);
-
-    useEffect(() => {
-        setOrdersList([...mapRawOrderToOrder()])
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [comands, tablesMap]);
 
     // Stato "Sospendi asporto" (accesso rapido nei momenti di punta)
     useEffect(() => {
@@ -166,39 +203,48 @@ const OrdersPage: React.FC = () => {
         .filter(o => o.status === 'AWAIT_APPROVAL')
         .sort((a, b) => (a.approvalDeadline || '').localeCompare(b.approvalDeadline || ''))
 
-    const loadHistorical = async (completed: boolean) => {
-        setMyLoading(true)
-        const response = completed ? await getCompletedApi(filterDate) : await getDeletedApi(filterDate)
-        if(response.status === 200){
+    const loadHistorical = async (completed: boolean, silent: boolean) => {
+        const req = ++historicalReq.current
+        if (!silent) setMyLoading(true)
+        const response = completed ? await getCompletedApi(historicalDate) : await getDeletedApi(historicalDate)
+        if (req !== historicalReq.current) return
+        if (response.success) {
             setHistoricalOrders(mapRawOrderToOrder(response.data || []) || [])
-        }else{
+        } else {
             addNotification({message: "Errore caricamento", type: "error"})
         }
         setMyLoading(false)
     }
 
     useEffect(() => {
-        if (filterStatus === 'COMPLETED') {
-            loadHistorical(true)
-        } else if(filterStatus === 'DELETED') {
-            loadHistorical(false)
-        }else{
+        if (isHistorical(filterStatus)) {
+            loadHistorical(filterStatus === 'COMPLETED', false)
+        } else {
+            historicalReq.current++
+            setMyLoading(false)
             setHistoricalOrders([])
         }
-    }, [filterStatus, filterDate]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filterStatus, historicalDate]);
+
+    // Un ordine completato/cancellato mentre si guarda lo storico: si rilegge senza overlay
+    useEffect(() => {
+        if (orderEventTick > 0 && isHistorical(filterStatus)) loadHistorical(filterStatus === 'COMPLETED', true)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [orderEventTick]);
 
     const handleChangeStatus = async (value: string, newStatus: "PROGRESS" | "COMPLETED" | "DELETED" | "PENDING") => {
         await changeComandStatus(value, newStatus)
     }
 
-    const filteredOrders = filterStatus === 'COMPLETED' || filterStatus === 'DELETED'
-        ? historicalOrders.filter(o => {
-            const matchStatus = o.status === filterStatus;
-            const matchDate = filterDate ? o.createdAt.startsWith(filterDate) : true;
-            return matchStatus && matchDate;
-        })
+    // Storico: il server filtra già per stato e giorno. Ordini aperti: stato e (se scelto) giorno di creazione.
+    const filteredByStatus = isHistorical(filterStatus)
+        ? historicalOrders.filter(o => o.status === filterStatus)
         : ordersList.filter(o => o.status !== 'AWAIT_APPROVAL' && o.status !== 'AWAIT_PAYMENT'
-            && (filterStatus === 'ALL' || o.status === filterStatus));
+            && (filterStatus === 'ALL' || o.status === filterStatus)
+            && (!filterDate || isSameDay(o.createdAt, filterDate)));
+    const deliveryCount = filteredByStatus.filter(o => !!o.delivery).length
+    const filteredOrders = onlyDelivery ? filteredByStatus.filter(o => !!o.delivery) : filteredByStatus
 
 
     return (
@@ -277,39 +323,55 @@ const OrdersPage: React.FC = () => {
                 </div>
             )}
 
-            <div className="mb-6 flex flex-wrap gap-2">
-                {[
-                    {label: 'Tutti', value: 'ALL', color: 'gray'},
-                    {label: 'Nuovi', value: 'AWAIT', color: 'amber'},
-                    {label: 'Pending', value: 'PENDING', color: 'yellow'},
-                    {label: 'In Corso', value: 'PROGRESS', color: 'blue'},
-                    {label: 'Completati', value: 'COMPLETED', color: 'green'},
-                    {label: 'Cancellati', value: 'DELETED', color: 'red'},
-                ].map(({label, value, color}) => (
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+                {STATUS_FILTERS.map(({label, value, active, idle}) => (
                     <button
                         key={value}
-                        onClick={() => setFilterStatus(value as any)}
-                        className={`
-                            px-4 py-2 rounded-full text-sm font-semibold border
-                            transition-all duration-200
-                            ${filterStatus === value
-                            ? `bg-${color}-600 text-black border-${color}-600`
-                            : `bg-white text-${color}-700 border-${color}-300 hover:bg-${color}-100`}
-                        `}
-                        >
-                            {label}
-                        </button>
+                        onClick={() => setFilterStatus(value)}
+                        aria-pressed={filterStatus === value}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-200 ${
+                            filterStatus === value ? active : idle
+                        }`}
+                    >
+                        {label}
+                    </button>
                 ))}
 
-                {['COMPLETED', 'DELETED'].includes(filterStatus) && (
+                {(deliveryCount > 0 || onlyDelivery) && (
+                    <button
+                        onClick={() => setOnlyDelivery(v => !v)}
+                        aria-pressed={onlyDelivery}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-200 ${
+                            onlyDelivery ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-violet-700 border-violet-300 hover:bg-violet-50'
+                        }`}
+                    >
+                        Solo domicilio ({deliveryCount})
+                    </button>
+                )}
+
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                    Giorno
                     <input
                         type="date"
-                        value={filterDate}
+                        value={isHistorical(filterStatus) ? historicalDate : filterDate}
+                        max={localIsoDate()}
                         onChange={(e) => setFilterDate(e.target.value)}
                         className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                </label>
+                {filterDate && (
+                    <button
+                        onClick={() => setFilterDate('')}
+                        className="px-3 py-2 rounded-full text-sm font-semibold border bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                    >
+                        {isHistorical(filterStatus) ? 'Oggi' : 'Tutti i giorni'}
+                    </button>
                 )}
             </div>
+
+            {filteredOrders.length === 0 && !myLoading && (
+                <p className="text-sm text-gray-500">Nessun ordine per i filtri selezionati.</p>
+            )}
 
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -4,9 +4,10 @@ import { useLoginContext } from '../Context/LoginContext';
 import {
     Menu, Bell, X, Plus, UserCircle, LogOut, Settings,
     LayoutDashboard, UtensilsCrossed, LayoutGrid, ClipboardList,
-    CalendarDays, Receipt, Palette, BarChart2, Users, FileBarChart, ChevronDown, Clock, CreditCard, Printer, Languages,
+    CalendarDays, Receipt, Palette, BarChart2, Users, FileBarChart, ChevronDown, Clock, CreditCard, Printer, Languages, Bike, Award,
 } from 'lucide-react';
-import { IS_ADMIN, IS_WAITER } from '../types';
+import { IS_ADMIN, IS_DELIVERY, IS_WAITER } from '../types';
+import { useDeliveryEnabled } from '../Hooks/useDeliveryEnabled';
 
 /* ── Navigation definition ─────────────────────────── */
 const PRIMARY_LINKS = [
@@ -18,12 +19,17 @@ const PRIMARY_LINKS = [
     { name: 'Cassa',         short: 'Cassa',       icon: Receipt,         href: 'Cassa',            waiter: false },
 ];
 
+/** Vista rider: titolare, camerieri e rider (solo se la consegna a domicilio è attiva). */
+const DELIVERY_LINK = { name: 'Consegne', short: 'Consegne', icon: Bike, href: 'Consegne', waiter: true };
+
 const ADMIN_MORE_LINKS = [
     { name: 'Template',         icon: Palette,      href: 'Layout'          },
     { name: 'Lingue del menu',  icon: Languages,    href: 'Languages'       },
     { name: 'Slot Asporto',     icon: Clock,        href: 'Slots'           },
+    { name: 'Domicilio',        icon: Bike,         href: 'Delivery'        },
     { name: 'Stampanti',        icon: Printer,      href: 'Printers'        },
     { name: 'Analytics',        icon: BarChart2,    href: 'Analytics'       },
+    { name: 'Tessere fedeltà',  icon: Award,        href: 'Cards'           },
     { name: 'Camerieri',        icon: Users,        href: 'Waiters'         },
     { name: 'Report Camerieri', icon: FileBarChart, href: 'WaiterAnalytics' },
     { name: 'Pagamenti online', icon: CreditCard,   href: 'PaymentsSettings' },
@@ -78,7 +84,12 @@ const Header: React.FC = () => {
     const isAdmin  = checkVariable(IS_ADMIN);
     const isWaiter = checkVariable(IS_WAITER);
 
-    const visiblePrimary = PRIMARY_LINKS.filter(l => isAdmin || (l.waiter && isWaiter));
+    const isRider  = checkVariable(IS_DELIVERY) && !isAdmin && !isWaiter;
+    const deliveryEnabled = useDeliveryEnabled(isAdmin || isWaiter);
+
+    const visiblePrimary = isRider
+        ? [DELIVERY_LINK]
+        : [...PRIMARY_LINKS.filter(l => isAdmin || (l.waiter && isWaiter)), ...(deliveryEnabled ? [DELIVERY_LINK] : [])];
 
     /* ── Shared nav link style ── */
     const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -98,7 +109,7 @@ const Header: React.FC = () => {
 
                         {/* ── Logo ── */}
                         <NavLink
-                            to={`/${localname}/Dashboard/Home`}
+                            to={`/${localname}/Dashboard/${isRider ? 'Consegne' : 'Home'}`}
                             className="flex-shrink-0 flex items-center gap-2"
                         >
                             <span className="text-base font-extrabold text-primary-600 tracking-tight leading-none">
@@ -176,7 +187,8 @@ const Header: React.FC = () => {
 
                         {/* ── Right actions ── */}
                         <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-                            {/* Nuovo Ordine */}
+                            {/* Nuovo Ordine (non per il rider) */}
+                            {!isRider && (
                             <button
                                 onClick={() => navigate(`/Waiters/${localname}/Categories`)}
                                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 active:scale-95 transition-all"
@@ -184,6 +196,7 @@ const Header: React.FC = () => {
                                 <Plus className="w-4 h-4" />
                                 <span className="hidden lg:inline">Nuovo Ordine</span>
                             </button>
+                            )}
 
                             {/* Bell */}
                             <button aria-label="Notifiche" className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
@@ -315,6 +328,7 @@ const Header: React.FC = () => {
 
                         {/* Bottom actions */}
                         <div className="px-3 py-3 border-t border-gray-100 flex flex-col gap-1">
+                            {!isRider && (
                             <button
                                 onClick={() => { navigate(`/Waiters/${localname}/Categories`); setIsMobileOpen(false); }}
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-primary-500 hover:bg-primary-600 transition-colors"
@@ -322,6 +336,7 @@ const Header: React.FC = () => {
                                 <Plus className="w-5 h-5" />
                                 Nuovo Ordine
                             </button>
+                            )}
                             <NavLink
                                 to={`/${localname}/Dashboard/Profile`}
                                 onClick={() => setIsMobileOpen(false)}

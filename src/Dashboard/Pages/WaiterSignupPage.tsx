@@ -1,8 +1,9 @@
 import React, {useEffect, useState} from 'react';
 import {getAgencyByIdApi, registerWaiterApi} from "../../Utilities/api";
 import {SignupWaiter} from "../../types";
-import {useParams} from "react-router-dom";
+import {useParams, useSearchParams} from "react-router-dom";
 import {useNotification} from "../../Context/NotificationContext";
+import {getRecaptchaToken, useRecaptcha} from "../../Utilities/recaptcha";
 
 const WaiterSignupPage: React.FC = () => {
     const [formData, setFormData] = useState({
@@ -16,9 +17,13 @@ const WaiterSignupPage: React.FC = () => {
         privacyAccepted: false,
     });
     const [isShowSuccess, setIsShowSuccess] = useState<boolean>(false)
+    useRecaptcha()
     const [loading, setLoading] = useState<boolean>(true)
     const [localname, setLocalname] = useState<string>("")
     const {id, code} = useParams()
+    // Link di invito per i rider: /urlInvite/:id/:code?ruolo=rider
+    const [searchParams] = useSearchParams()
+    const isRider = searchParams.get("ruolo") === "rider"
     const { addNotification } = useNotification()
 
     useEffect(() => {
@@ -72,13 +77,15 @@ const WaiterSignupPage: React.FC = () => {
             phone: formData.phone || "",
             password: formData.password,
             idAgency: Number(id),
-            code: code
+            code: code,
+            ...(isRider ? {role: 'ROLE_DELIVERY' as const} : {})
         }
-        const response = await registerWaiterApi(registerWaiter);
+        const recaptchaToken = await getRecaptchaToken("signup_staff");
+        const response = await registerWaiterApi(registerWaiter, recaptchaToken);
         if(response.success){
             setIsShowSuccess(true)
         }else{
-            addNotification({message: "Errore", type: "error"})
+            addNotification({message: response.status === 403 && response.message ? response.message : "Errore", type: "error"})
         }
     };
 
@@ -97,7 +104,10 @@ const WaiterSignupPage: React.FC = () => {
                 </div>
                 :
                 <div className="w-full max-w-lg bg-white p-8 rounded-2xl shadow-2xl">
-                    <h2 className="text-3xl font-extrabold text-center mb-6 text-gray-800">Inserisci i tuoi dati</h2>
+                    <h2 className="text-3xl font-extrabold text-center mb-2 text-gray-800">Inserisci i tuoi dati</h2>
+                    <p className="text-center text-sm text-gray-500 mb-6">
+                        {isRider ? "Registrazione come rider per le consegne a domicilio" : "Registrazione come cameriere"}{localname ? ` · ${localname}` : ""}
+                    </p>
                     <form onSubmit={handleFormSubmit}>
                         <div className="mb-4">
                             <label htmlFor="firstName" className="block text-sm font-semibold text-gray-600">

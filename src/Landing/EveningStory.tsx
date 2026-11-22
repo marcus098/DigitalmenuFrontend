@@ -33,7 +33,7 @@ const SCENES: Scene[] = [
     },
     {
         id: 'sala', time: '20:41', title: 'La sala lo sa subito',
-        text: 'L’ordine arriva su Omnivo Sala, l’app dei camerieri, con aggiunte e note già scritte.',
+        text: 'L’ordine arriva su DineUp Sala, l’app dei camerieri, con aggiunte e note già scritte.',
         img: '/landing/sala.webp',
         alt: 'Una cameriera in sala controlla un nuovo ordine sul telefono',
         place: 'left-6 bottom-6',

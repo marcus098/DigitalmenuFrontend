@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { isStaleBundleError, reloadForNewVersion } from '../Utilities/staleBundle';
 
 type Props = {
     error: unknown;
     resetError: () => void;
 };
 
-const ErrorFallback: React.FC<Props> = ({ resetError }) => {
+const ErrorFallback: React.FC<Props> = ({ error, resetError }) => {
+    // Versione vecchia della pagina dopo un aggiornamento: si ricarica da sola
+    const stale = isStaleBundleError(error);
+    useEffect(() => { if (stale) reloadForNewVersion(); }, [stale]);
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
             <div className="max-w-md text-center">
@@ -14,7 +18,9 @@ const ErrorFallback: React.FC<Props> = ({ resetError }) => {
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900">Qualcosa è andato storto</h1>
                 <p className="mt-3 text-sm text-slate-600">
-                    Si è verificato un errore imprevisto. Il nostro team è stato avvisato automaticamente.
+                    {stale
+                        ? 'È disponibile una versione aggiornata: ricarica la pagina per continuare.'
+                        : 'Si è verificato un errore imprevisto. Il nostro team è stato avvisato automaticamente.'}
                 </p>
                 <div className="mt-6 flex justify-center gap-3">
                     <button

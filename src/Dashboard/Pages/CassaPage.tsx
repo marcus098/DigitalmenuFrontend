@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    getCheckoutSummaryApi, getInfoCardApi, getLoyaltySettingsApi, getToCheckoutApi,
-    getPaymentsApi, getPaymentsTodayTotalApi, refundPaymentApi,
+    getCheckoutSummaryApi, getCheckoutHistoryApi, getInfoCardApi, getLoyaltySettingsApi, getToCheckoutApi,
+    getPaymentsApi, getPaymentsTodayTotalApi,
 } from '../../Utilities/api';
 import { useData } from '../../Context/DataContext';
 import { useNotification } from '../../Context/NotificationContext';
-import { CardDto, LoyaltySettings, PaymentDto, OptionInProduct, ProductDto } from '../../types';
+import { CardDto, CheckoutEntry, LoyaltySettings, PaymentDto, OptionInProduct, ProductDto } from '../../types';
 import { Comand, Product } from '../../ComandType';
 import CustomLoading from '../../Components/CustomLoading';
 import { tableLabel } from '../tableLabel';
@@ -17,6 +17,9 @@ import {
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import SelectedVariantChips from '../../Components/Dashboard/SelectedVariantChips';
 import { defaultVariantsDelta, lineUnitPrice } from '../../Components/Dashboard/variantUtils';
+import DeliveryInfo, { PaymentChip } from '../../Components/Dashboard/delivery/DeliveryInfo';
+import PaymentActionDialog, { isRefundablePayment, isVoidable } from '../../Components/Dashboard/PaymentActionDialog';
+import { deliveryFeeCents, deliveryTimeLabel, getDelivery, isDeliveryComand } from '../../Components/Dashboard/delivery/deliveryUtils';
 
 // Caricato solo quando si apre lo scanner della tessera
 const QrScanner = React.lazy(() => import('react-qr-scanner'));
@@ -44,7 +47,7 @@ type ComandKind = 'table' | 'takeaway' | 'home';
 const comandKind = (c: Comand): ComandKind => {
     // idTable -1 = nessun tavolo (asporto/domicilio)
     if (c.idTable && c.idTable > 0) return 'table';
-    if (c.comandWaiterType === 'HOME' || c.address) return 'home';
+    if (isDeliveryComand(c) || c.comandWaiterType === 'HOME' || c.address) return 'home';
     return 'takeaway';
 };
 
@@ -53,13 +56,16 @@ const comandLabel = (c: Comand, tablesMap: Map<number, { name: string }>): strin
         const t = tablesMap.get(c.idTable);
         return tableLabel(t?.name, c.idTable);
     }
-    if (c.comandWaiterType === 'HOME' || c.address) return `Domicilio${c.name ? ` · ${c.name}` : ''}`;
+    if (isDeliveryComand(c) || c.comandWaiterType === 'HOME' || c.address) return `Domicilio${c.name ? ` · ${c.name}` : ''}`;
     return `Asporto${c.name ? ` · ${c.name}` : ''}`;
 };
 
+// Consegna a domicilio: la tariffa entra nel totale (riga "Consegna")
+const deliveryFee = (c: Comand) => deliveryFeeCents(c) / 100;
+
 const comandTotal = (c: Comand) =>
     c.orders.reduce((s, o) =>
-        s + o.products.reduce((ps, p) => ps + itemUnitPrice(p) * p.quantity, 0), 0);
+        s + o.products.reduce((ps, p) => ps + itemUnitPrice(p) * p.quantity, 0), 0) + deliveryFee(c);
 
 const comandItems = (c: Comand) =>
     c.orders.reduce((s, o) => s + o.products.reduce((ps, p) => ps + p.quantity, 0), 0);
@@ -109,11 +115,12 @@ interface CheckoutState {
     redeemStamps: boolean;     // tessera a visite: riscatta il premio (scala `scope` visite)
     pointsToUse: number;       // tessera a punti: punti da scalare
     pointsValue: string;       // valore in € dei punti usati (sconto tessera)
+    paymentMethod: 'UNSPECIFIED' | 'CASH' | 'CARD' | 'OTHER'; // solo per lo storico
 }
 
 const freshState = (): CheckoutState => ({
     quantities: {}, extras: [], discountMode: 'pct', discountPct: 0, finalPrice: '',
-    card: null, earn: true, redeemStamps: false, pointsToUse: 0, pointsValue: '',
+    card: null, earn: true, redeemStamps: false, pointsToUse: 0, pointsValue: '', paymentMethod: 'UNSPECIFIED',
 });
 
 const parseEur = (v: string): number | null => {
@@ -128,7 +135,8 @@ const checkoutSubtotal = (comand: Comand, state: CheckoutState) =>
     comand.orders.reduce((s, order) =>
         s + order.products.reduce((ps, p, idx) =>
             ps + itemUnitPrice(p) * (state.quantities[`${order.id}_${idx}`] ?? p.quantity), 0), 0) +
-    state.extras.reduce((s, e) => s + e.price * e.qty, 0);
+    state.extras.reduce((s, e) => s + e.price * e.qty, 0) +
+    deliveryFee(comand);
 
 /**
  * Totale del conto. Con il "prezzo finale" il totale è quello digitato (include già ogni sconto,
@@ -396,6 +404,7 @@ const CheckoutPanel: React.FC<PanelProps> = ({
 
     // Totals
     const subtotal = checkoutSubtotal(comand, state);
+    const delivery = getDelivery(comand);
     const totals = computeTotals(subtotal, state, loyalty);
     const { total } = totals;
     const finalInvalid = state.discountMode === 'final' && totals.final === null;
@@ -430,6 +439,11 @@ const CheckoutPanel: React.FC<PanelProps> = ({
 
             {/* Scrollable items area */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 min-h-0">
+
+                {delivery && (
+                    <DeliveryInfo delivery={delivery} phone={comand.phone} time={comand.time}
+                                  totalCents={Math.round(subtotal * 100)} paid={comand.paid}/>
+                )}
 
                 {/* Original order items */}
                 {lineItems.map(({ key, p, qty }) => {
@@ -515,6 +529,16 @@ const CheckoutPanel: React.FC<PanelProps> = ({
                             </div>
                         ))}
                     </>
+                )}
+
+                {/* Tariffa di consegna (non modificabile in cassa) */}
+                {delivery && (
+                    <div className="flex items-center gap-3 p-3 rounded-xl border border-violet-100 bg-violet-50/50">
+                        <p className="flex-1 text-sm font-semibold text-gray-800">Consegna</p>
+                        <p className="text-sm font-bold w-16 text-right text-gray-700">
+                            {deliveryFee(comand) > 0 ? formatEur(deliveryFee(comand)) : 'Gratis'}
+                        </p>
+                    </div>
                 )}
 
                 {/* Add product toggle */}
@@ -687,6 +711,23 @@ const CheckoutPanel: React.FC<PanelProps> = ({
                     </div>
                 </div>
 
+                {/* Metodo di pagamento (facoltativo, solo per lo storico: il pagamento avviene sul terminale del locale) */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs text-gray-500 mr-1">Pagato con</span>
+                    {([['CASH', 'Contanti'], ['CARD', 'Carta'], ['OTHER', 'Altro']] as const).map(([key, label]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => onChange({ ...state, paymentMethod: state.paymentMethod === key ? 'UNSPECIFIED' : key })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                                state.paymentMethod === key ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Action buttons */}
                 <div className="flex gap-2">
                     <button
@@ -725,7 +766,11 @@ const PAY_STATUS: Record<string, { label: string; dot: string; badge: string }> 
     AUTHORIZED:         { label: 'Autorizzato',           dot: 'bg-indigo-400', badge: 'bg-indigo-100 text-indigo-700' },
 };
 
-const isRefundable = (p: PaymentDto) => p.status === 'COMPLETED' || p.status === 'PARTIALLY_REFUNDED';
+const PAY_METHOD_LABEL: Record<string, string> = {
+    CASH: 'Contanti', CARD: 'Carta', OTHER: 'Altro', UNSPECIFIED: 'Metodo non specificato',
+};
+
+const isRefundable = isRefundablePayment;
 const refundedOf = (p: PaymentDto) => p.refundedCents ?? 0;
 const netCents = (p: PaymentDto) => p.amountCents - refundedOf(p);
 const matchesPayFilter = (p: PaymentDto, f: PayFilter) =>
@@ -750,6 +795,8 @@ const CassaPage: React.FC = () => {
     const [tab,         setTab]         = useState<Tab>('checkout');
     const [kindFilter,  setKindFilter]  = useState<KindFilter>('all');
     const [payments,    setPayments]    = useState<PaymentDto[]>([]);
+    // Conti chiusi in cassa (non passano dai pagamenti online): compaiono nello Storico accanto ai pagamenti
+    const [cashEntries, setCashEntries] = useState<CheckoutEntry[]>([]);
     const [todayCents,  setTodayCents]  = useState<number | null>(null);
     const [payLoading,  setPayLoading]  = useState(true);
     const [payFilter,   setPayFilter]   = useState<PayFilter>('ALL');
@@ -758,9 +805,8 @@ const CassaPage: React.FC = () => {
     const [checkout,    setCheckout]    = useState<CheckoutState>(freshState());
     const [confirming,  setConfirming]  = useState(false);
 
-    const [refundTarget,  setRefundTarget]  = useState<PaymentDto | null>(null);
-    const [refundAmount,  setRefundAmount]  = useState('');
-    const [refunding,     setRefunding]     = useState(false);
+    // Annulla pagamento (autorizzazione non incassata, gratis) / Rimborsa (incassato, commissione persa)
+    const [payAction, setPayAction] = useState<{ p: PaymentDto; mode: 'cancel' | 'refund' } | null>(null);
 
     // Load payment history
     const loadPayments = useCallback(async () => {
@@ -769,9 +815,11 @@ const CassaPage: React.FC = () => {
         const today = iso(d);
         // Storico: solo gli ultimi PAYMENTS_HISTORY_DAYS giorni (si ricarica a ogni evento ordine)
         const since = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (PAYMENTS_HISTORY_DAYS - 1));
-        const [pr, tr, cr, toc] = await Promise.all([
+        const [pr, tr, cr, toc, hr] = await Promise.all([
             getPaymentsApi(iso(since), today), getPaymentsTodayTotalApi(), getCheckoutSummaryApi(today, today), getToCheckoutApi(),
+            getCheckoutHistoryApi(iso(since), today),
         ]);
+        if (hr.success && Array.isArray(hr.data)) setCashEntries(hr.data.filter(e => !e.paidOnline));
         if (pr.success && pr.data) setPayments((pr.data as any).data ?? pr.data);
         if (toc.success && Array.isArray(toc.data)) setServed(toc.data);
         // Incassi di oggi = online + conti chiusi in cassa (importo effettivo, sconti inclusi)
@@ -800,31 +848,8 @@ const CassaPage: React.FC = () => {
 
     useEffect(() => () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); }, []);
 
-    const openRefund = (p: PaymentDto) => {
-        setRefundTarget(p);
-        setRefundAmount((netCents(p) / 100).toFixed(2));
-    };
-
-    const handleRefund = async () => {
-        if (!refundTarget) return;
-        const remaining = netCents(refundTarget);
-        const cents = Math.round(parseFloat(refundAmount.replace(',', '.')) * 100);
-        if (!Number.isFinite(cents) || cents <= 0 || cents > remaining) {
-            addNotification({ type: 'warning', message: `Importo non valido (massimo ${formatEurCents(remaining)})` });
-            return;
-        }
-        setRefunding(true);
-        const res = await refundPaymentApi(refundTarget.id, cents === remaining ? undefined : cents);
-        setRefunding(false);
-        if (res.success) {
-            addNotification({ type: 'success', message: 'Rimborso avviato: lo stato si aggiornerà a breve' });
-            setRefundTarget(null);
-            // Lo stato REFUNDED può arrivare in differita (webhook del provider): ricarica dopo qualche secondo
-            scheduleRefresh(4000);
-        } else {
-            addNotification({ type: 'error', message: res.message && !res.message.startsWith('Request failed') ? res.message : 'Errore durante il rimborso' });
-        }
-    };
+    const openRefund = (p: PaymentDto) => setPayAction({ p, mode: 'refund' });
+    const openCancel = (p: PaymentDto) => setPayAction({ p, mode: 'cancel' });
 
     // Da incassare = comande attive + comande già servite (COMPLETED dalla pagina Ordini) ma non ancora chiuse in cassa.
     // Escluse quelle eliminate, in attesa di pagamento/approvazione o senza id.
@@ -874,6 +899,7 @@ const CassaPage: React.FC = () => {
                 pointsToUse: state.card?.typePoints ? state.pointsToUse : 0,
                 redeemStamps: state.redeemStamps,
                 earn: state.earn,
+                paymentMethod: state.paymentMethod,
             });
             if (!res) return;
             const closedId = selected.id;
@@ -896,15 +922,22 @@ const CassaPage: React.FC = () => {
     };
 
     // Payment history
-    const filteredPayments = useMemo(() =>
-        payments.filter(p => matchesPayFilter(p, payFilter)),
-        [payments, payFilter]);
+    // Righe dello Storico: pagamenti online + conti chiusi in cassa, dal più recente
+    type HistoryRow = { kind: 'online'; at: string; p: PaymentDto } | { kind: 'cash'; at: string; e: CheckoutEntry };
+    const historyRows = useMemo<HistoryRow[]>(() => {
+        const online: HistoryRow[] = payments.filter(p => matchesPayFilter(p, payFilter)).map(p => ({ kind: 'online', at: p.createdAt, p }));
+        // I conti di cassa sono sempre "completati": compaiono in Tutti e Completati
+        const cash: HistoryRow[] = payFilter === 'ALL' || payFilter === 'COMPLETED'
+            ? cashEntries.map(e => ({ kind: 'cash', at: e.closedAt, e })) : [];
+        return [...online, ...cash].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+    }, [payments, cashEntries, payFilter]);
 
+    const cashTotal = useMemo(() => cashEntries.reduce((s, e) => s + e.totalCents, 0), [cashEntries]);
     const totalCompleted = useMemo(() =>
         payments.filter(p => p.status === 'COMPLETED' || p.status === 'PARTIALLY_REFUNDED')
-            .reduce((s, p) => s + netCents(p), 0), [payments]);
+            .reduce((s, p) => s + netCents(p), 0) + cashTotal, [payments, cashTotal]);
     const totalAll = useMemo(() =>
-        payments.reduce((s, p) => s + p.amountCents, 0), [payments]);
+        payments.reduce((s, p) => s + p.amountCents, 0) + cashTotal, [payments, cashTotal]);
 
     return (
         <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
@@ -1014,6 +1047,7 @@ const CassaPage: React.FC = () => {
                                                             Pagato
                                                         </span>
                                                     )}
+
                                                 </div>
                                             </div>
 
@@ -1025,12 +1059,17 @@ const CassaPage: React.FC = () => {
                                             </div>
 
                                             {/* Extra info for delivery/takeaway */}
-                                            {(c.name || c.phone || c.address || c.time) && (
+                                            {(c.name || c.phone || c.address || c.time || getDelivery(c)) && (
                                                 <div className="mt-2 pt-2 border-t border-gray-100 space-y-0.5">
                                                     {c.name  && <p className="text-xs text-gray-500 truncate">{c.name}</p>}
                                                     {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
-                                                    {c.address && <p className="text-xs text-gray-400 truncate">{c.address}</p>}
-                                                    {c.time  && <p className="text-xs text-gray-400">⏱ {c.time}</p>}
+                                                    {(getDelivery(c)?.label || c.address) && <p className="text-xs text-gray-400 truncate">{getDelivery(c)?.label || c.address}</p>}
+                                                    {c.time  && <p className="text-xs text-gray-400">⏱ {getDelivery(c) ? deliveryTimeLabel(c.time) : c.time}</p>}
+                                                    {getDelivery(c) && (
+                                                        <div className="pt-1">
+                                                            <PaymentChip delivery={getDelivery(c)!} paid={c.paid} totalCents={Math.round(total * 100)} />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </button>
@@ -1087,8 +1126,8 @@ const CassaPage: React.FC = () => {
                         {/* Filter pills */}
                         <div className="flex gap-2 flex-wrap mb-4">
                             {([
-                                { key: 'ALL',       label: `Tutti (${payments.length})` },
-                                { key: 'COMPLETED', label: `Completati (${payments.filter(p => p.status === 'COMPLETED').length})` },
+                                { key: 'ALL',       label: `Tutti (${payments.length + cashEntries.length})` },
+                                { key: 'COMPLETED', label: `Completati (${payments.filter(p => p.status === 'COMPLETED').length + cashEntries.length})` },
                                 { key: 'PENDING',   label: `In attesa (${payments.filter(p => p.status === 'PENDING').length})` },
                                 { key: 'FAILED',    label: `Falliti (${payments.filter(p => p.status === 'FAILED').length})` },
                                 { key: 'REFUNDED',  label: `Rimborsati (${payments.filter(p => matchesPayFilter(p, 'REFUNDED')).length})` },
@@ -1109,15 +1148,37 @@ const CassaPage: React.FC = () => {
 
                         {/* Payments list */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                            {filteredPayments.length === 0 ? (
+                            {historyRows.length === 0 ? (
                                 <div className="py-16 text-center">
                                     <CurrencyEuroIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                                     <p className="text-sm text-gray-400">Nessun pagamento trovato</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-gray-50">
-                                    {filteredPayments.map(p => (
-                                        <div key={p.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
+                                    {historyRows.map(row => row.kind === 'cash' ? (
+                                        <div key={`cash-${row.e.comandId}`} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
+                                            <div className="w-2 h-2 rounded-full shrink-0 bg-green-500" />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-gray-800 truncate">
+                                                    {row.e.idTable && row.e.idTable > 0
+                                                        ? tableLabel(tablesMap.get(row.e.idTable)?.name, row.e.idTable)
+                                                        : (row.e.name || (row.e.type === 'TAKEAWAY' ? 'Asporto' : 'Conto'))}
+                                                    <span className="font-normal text-gray-400"> · Conto in cassa</span>
+                                                </p>
+                                                <p className="text-xs text-gray-400 mt-0.5">
+                                                    {formatTime(row.e.closedAt)}
+                                                    {` · ${PAY_METHOD_LABEL[row.e.paymentMethod] ?? PAY_METHOD_LABEL.UNSPECIFIED}`}
+                                                    {row.e.discountCents > 0 ? ` · sconto ${formatEurCents(row.e.discountCents)}` : ''}
+                                                </p>
+                                            </div>
+                                            <span className="px-2.5 py-1 rounded-full text-xs font-bold shrink-0 bg-green-100 text-green-700">Incassato</span>
+                                            <span className="shrink-0 min-w-[80px] text-right">
+                                                <span className="block text-base font-black text-gray-900">{formatEurCents(row.e.totalCents)}</span>
+                                            </span>
+                                            <span className="shrink-0 w-9" />
+                                        </div>
+                                    ) : (
+                                        (p => <div key={p.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
                                             <div className={`w-2 h-2 rounded-full shrink-0 ${(PAY_STATUS[p.status] ?? PAY_STATUS.PENDING).dot}`} />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-semibold text-gray-800 truncate">
@@ -1145,13 +1206,22 @@ const CassaPage: React.FC = () => {
                                                 <button
                                                     onClick={() => openRefund(p)}
                                                     className="shrink-0 p-2 rounded-lg text-gray-500 hover:text-purple-700 hover:bg-purple-50 transition-colors"
-                                                    title="Rimborsa"
+                                                    title="Rimborsa (la commissione non viene restituita)"
                                                     aria-label="Rimborsa"
                                                 >
                                                     <ArrowUturnLeftIcon className="w-5 h-5" />
                                                 </button>
+                                            ) : isVoidable(p) ? (
+                                                <button
+                                                    onClick={() => openCancel(p)}
+                                                    className="shrink-0 p-2 rounded-lg text-gray-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                                                    title="Annulla pagamento (non ancora incassato: nessuna commissione)"
+                                                    aria-label="Annulla pagamento"
+                                                >
+                                                    <XMarkIcon className="w-5 h-5" />
+                                                </button>
                                             ) : <span className="shrink-0 w-9" />}
-                                        </div>
+                                        </div>)(row.p)
                                     ))}
                                 </div>
                             )}
@@ -1160,41 +1230,18 @@ const CassaPage: React.FC = () => {
                 )
             )}
 
-            {/* ── Conferma rimborso ───────────────────────────────────── */}
-            {refundTarget && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => !refunding && setRefundTarget(null)}>
-                    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-xl font-bold text-gray-800 mb-1">Rimborsare il pagamento?</h3>
-                        <p className="text-sm text-gray-500 mb-5">
-                            {refundTarget.comandId ? `Ordine ${refundTarget.comandId.slice(0, 8)}… · ` : ''}
-                            pagato {formatEurCents(refundTarget.amountCents)}
-                            {refundedOf(refundTarget) > 0 ? `, già rimborsati ${formatEurCents(refundedOf(refundTarget))}` : ''}.
-                            Il cliente riceverà l'importo sul metodo di pagamento usato (di solito in 5-10 giorni lavorativi).
-                        </p>
-                        <label className="label-style">Importo da rimborsare (€)</label>
-                        <input
-                            type="number"
-                            inputMode="decimal"
-                            min="0.01"
-                            step="0.01"
-                            max={(netCents(refundTarget) / 100).toFixed(2)}
-                            value={refundAmount}
-                            onChange={e => setRefundAmount(e.target.value)}
-                            className="input-style"
-                        />
-                        <p className="text-xs text-gray-400 mt-1">Massimo {formatEurCents(netCents(refundTarget))}. L'operazione non è annullabile.</p>
-                        <div className="flex justify-end gap-3 mt-6">
-                            <button onClick={() => setRefundTarget(null)} disabled={refunding} className="btn-secondary">Annulla</button>
-                            <button
-                                onClick={handleRefund}
-                                disabled={refunding}
-                                className="px-4 py-2 rounded-lg font-semibold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
-                            >
-                                {refunding ? 'Rimborso…' : 'Rimborsa'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {/* ── Annulla pagamento / rimborso ─────────────────────────── */}
+            {payAction && (
+                <PaymentActionDialog
+                    payment={payAction.p}
+                    mode={payAction.mode}
+                    onClose={() => setPayAction(null)}
+                    onDone={() => {
+                        setPayAction(null);
+                        // Lo stato REFUNDED può arrivare in differita (webhook del provider): ricarica dopo qualche secondo
+                        scheduleRefresh(payAction.mode === 'cancel' ? 500 : 4000);
+                    }}
+                />
             )}
         </div>
     );

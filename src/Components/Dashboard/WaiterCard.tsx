@@ -7,6 +7,8 @@ export interface Waiter{
     id: number
     name: string
     email: string
+    /** ROLE_WAITER | ROLE_DELIVERY (rider), se il server lo restituisce */
+    role?: string
 }
 
 interface WaiterCardProps {
@@ -22,7 +24,14 @@ const WaiterCard: React.FC<WaiterCardProps> = ({ waiter, onEdit, onDelete }) => 
                 <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-primary/20 rounded-full">
                     <UserIcon className="w-7 h-7 text-primary" />
                 </div>
-                <span className="text-lg font-bold text-gray-800">{waiter.name}</span>
+                <div className="min-w-0">
+                    <span className="text-lg font-bold text-gray-800">{waiter.name}</span>
+                    <span className={`ml-2 align-middle inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
+                        waiter.role === 'ROLE_DELIVERY' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                        {waiter.role === 'ROLE_DELIVERY' ? 'Rider' : 'Cameriere'}
+                    </span>
+                </div>
             </div>
             <div className="flex items-center gap-2">
                 <button

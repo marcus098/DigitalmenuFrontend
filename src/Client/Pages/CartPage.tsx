@@ -16,7 +16,13 @@ import CartPopupWaiter from '../../Components/Waiters/CartPopupWaiter';
 import ShimmerButton from '../../Components/ui/ShimmerButton';
 import useCartCount from '../../Utilities/useCartCount';
 import { localIsoDate } from '../../Utilities/dates';
-import { ArrowLeft, ShoppingBasket, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ShoppingBasket, CheckCircle, Bike } from 'lucide-react';
+import useDeliverySettings from '../../Hooks/useDeliverySettings';
+import OrderChannelPicker from '../../Components/Client/OrderChannelPicker';
+import SlotPicker from '../../Components/Client/SlotPicker';
+import PhoneVerification from '../../Components/Client/PhoneVerification';
+import { CHANNEL_CHANGED_EVENT, forgetPhoneToken, getOrderChannel, OrderChannel, phoneVerificationOn, setOrderChannel } from '../delivery/deliveryUtils';
+import { useDeliveryT } from '../delivery/deliveryI18n';
 
 interface CartPageProps {
     waiter: boolean;
@@ -61,6 +67,22 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
     const tableSession = !waiter ? getTableSession() : null;
     const isGroupSession = !waiter && !!tableSession;
     const isTakeaway = !waiter && !isGroupSession && !localStorage.getItem('rf_table_id');
+
+    // Consegna a domicilio: scelta del canale (solo senza tavolo) e OTP opzionale per l'asporto
+    const dt = useDeliveryT();
+    const { settings: deliverySettings, deliveryEnabled } = useDeliverySettings(isTakeaway ? localname : undefined);
+    const [channel, setChannel] = useState<OrderChannel>(() => (localname ? getOrderChannel(localname) : 'TAKEAWAY'));
+    useEffect(() => {
+        if (!localname) return;
+        const sync = () => setChannel(getOrderChannel(localname));
+        window.addEventListener(CHANNEL_CHANGED_EVENT, sync);
+        return () => window.removeEventListener(CHANNEL_CHANGED_EVENT, sync);
+    }, [localname]);
+    const isDelivery = isTakeaway && deliveryEnabled && channel === 'DELIVERY';
+    const changeChannel = (c: OrderChannel) => { if (localname) setOrderChannel(localname, c); setChannel(c); };
+    const takeawayOtp = isTakeaway && !!deliverySettings?.requirePhoneOtpTakeaway && phoneVerificationOn(deliverySettings);
+    const [takeawayToken, setTakeawayToken] = useState<{ token: string | null; phone: string | null }>({ token: null, phone: null });
+    const [otpKey, setOtpKey] = useState(0);
 
     useEffect(() => {
         const storageKey = waiter ? 'waiter' : undefined;
@@ -184,14 +206,27 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                 addNotification({ message: "Scegli un orario di ritiro disponibile", type: 'error' });
                 return;
             }
+            if (takeawayOtp && !takeawayToken.token) {
+                addNotification({ message: dt('verifyFirst'), type: 'error' });
+                return;
+            }
             setIsSubmitting(true);
             const result = await sendTakeawayOrderApi(localname!, {
                 customerName: takeawayForm.name,
-                customerPhone: takeawayForm.phone,
+                customerPhone: takeawayOtp && takeawayToken.phone ? takeawayToken.phone : takeawayForm.phone,
                 pickupTime: takeawayForm.time || undefined,
+                ...(takeawayOtp && takeawayToken.token ? { phoneToken: takeawayToken.token } : {}),
                 orders,
             });
             setIsSubmitting(false);
+            if (!result.success && result.status === 401 && takeawayOtp && takeawayToken.phone) {
+                // token scaduto o revocato: si richiede di nuovo l'SMS
+                forgetPhoneToken(takeawayToken.phone);
+                setTakeawayToken({ token: null, phone: null });
+                setOtpKey(k => k + 1);
+                addNotification({ message: dt('verifyFirst'), type: 'error' });
+                return;
+            }
             if (result.success && result.data) {
                 emptyCart();
                 window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
@@ -331,14 +366,17 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                 className="mt-8 pt-6"
                                 style={{ borderTop: '1px solid var(--menu-border)' }}
                             >
+                                {isTakeaway && deliveryEnabled && deliverySettings && (
+                                    <OrderChannelPicker settings={deliverySettings} value={isDelivery ? 'DELIVERY' : 'TAKEAWAY'} onChange={changeChannel} className="mb-5" />
+                                )}
                                 {/* Takeaway form */}
-                                {prepaymentRequired && !isGroupSession && (
+                                {prepaymentRequired && !isGroupSession && !isDelivery && (
                                     <p className="mb-4 text-xs" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
                                         Il locale richiede il pagamento online anticipato: dopo l'invio verrai portato al pagamento
                                         (l'ordine viene annullato se non paghi entro 15 minuti).
                                     </p>
                                 )}
-                                {isTakeaway && (
+                                {isTakeaway && !isDelivery && (
                                     <motion.div
                                         initial={{ opacity: 0, y: 12 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -355,6 +393,21 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                             Asporto — Dati di contatto
                                         </p>
                                         <div className="space-y-2">
+                                            {takeawayOtp ? (
+                                                <div className="mb-2">
+                                                    <PhoneVerification
+                                                        key={otpKey}
+                                                        localname={localname!}
+                                                        idPrefix="rf-takeaway-otp"
+                                                        intro={dt('phoneOtpTakeaway')}
+                                                        name={takeawayForm.name}
+                                                        phone={takeawayForm.phone}
+                                                        onNameChange={v => setTakeawayForm(f => ({ ...f, name: v }))}
+                                                        onPhoneChange={v => setTakeawayForm(f => ({ ...f, phone: v }))}
+                                                        onToken={(token, phone) => setTakeawayToken({ token, phone })}
+                                                    />
+                                                </div>
+                                            ) : (<>
                                             <input
                                                 type="text"
                                                 placeholder="Nome e Cognome *"
@@ -373,6 +426,7 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                                 }
                                                 className="dark-input"
                                             />
+                                            </>)}
                                             {slotsLoading ? (
                                                 <p className="text-xs" style={{ color: 'var(--menu-muted)' }}>Caricamento orari disponibili…</p>
                                             ) : takeawayPaused ? (
@@ -381,27 +435,15 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                                 </p>
                                             ) : takeawaySlots.length === 0 ? (
                                                 <p className="text-xs" style={{ color: 'var(--menu-muted)' }}>
-                                                    Nessuno slot disponibile per asporto. Contattaci telefonicamente.
+                                                    Nessun orario disponibile per l'asporto. Contattaci telefonicamente.
                                                 </p>
                                             ) : (
-                                                <select
+                                                <SlotPicker
+                                                    mode="pickup"
+                                                    days={takeawaySlots}
                                                     value={takeawayForm.time}
-                                                    onChange={e => setTakeawayForm(f => ({ ...f, time: e.target.value }))}
-                                                    className="dark-input"
-                                                >
-                                                    <option value="">Scegli orario ritiro…</option>
-                                                    {takeawaySlots.map(day => (
-                                                        <optgroup key={day.date} label={day.label}>
-                                                            {day.slots.map(s => (
-                                                                <option key={`${day.date}T${s.time}`} value={`${day.date}T${s.time}`}>
-                                                                    {s.status === 'ON_REQUEST'
-                                                                        ? `${s.time} — su richiesta`
-                                                                        : `${s.time} — ${s.maxOrders - s.orderCount} post${s.maxOrders - s.orderCount === 1 ? 'o' : 'i'} liber${s.maxOrders - s.orderCount === 1 ? 'o' : 'i'}`}
-                                                                </option>
-                                                            ))}
-                                                        </optgroup>
-                                                    ))}
-                                                </select>
+                                                    onChange={v => setTakeawayForm(f => ({ ...f, time: v }))}
+                                                />
                                             )}
                                             {selectedSlot?.status === 'ON_REQUEST' && (
                                                 <p className="text-xs p-2 rounded-lg" style={{ color: 'var(--menu-text)', background: 'var(--menu-input-bg)' }}>
@@ -431,6 +473,22 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                     </div>
                                 </div>
 
+                                {isDelivery ? (
+                                <ShimmerButton
+                                    onClick={() => navigate(`/${localname}/delivery`)}
+                                    className="w-full py-4 rounded-2xl"
+                                    style={{
+                                        background: primaryColor,
+                                        color: 'var(--menu-accent-text)',
+                                        boxShadow: `0 8px 24px ${primaryColor}44`,
+                                        fontSize: '1rem',
+                                        fontFamily: 'var(--menu-font-body)',
+                                    }}
+                                >
+                                    <Bike className="w-5 h-5" />
+                                    {dt('continueDelivery')}
+                                </ShimmerButton>
+                                ) : (
                                 <ShimmerButton
                                     onClick={handleOrder}
                                     disabled={isSubmitting || (isTakeaway && takeawayPaused)}
@@ -454,6 +512,7 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                         ? 'Invia Ordine Asporto'
                                         : 'Conferma Ordine'}
                                 </ShimmerButton>
+                                )}
                             </motion.div>
                         </>
                     )}

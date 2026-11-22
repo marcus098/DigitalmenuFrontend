@@ -30,6 +30,8 @@ services:
         REACT_APP_SENTRY_DSN: ${SENTRY_DSN:-}
         REACT_APP_SENTRY_ENV: production
         REACT_APP_SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+        # reCAPTCHA v3 su login/registrazioni: site key PUBBLICA (vuota = disattivato)
+        REACT_APP_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
     ports:
       - "${BIND_ADDR:-127.0.0.1}:3000:80"
     depends_on:
@@ -64,8 +66,17 @@ services:
       # (poi rimuovere la password da .env). Vedi deploy.md §6b.
       APP_SUPERADMIN_EMAIL: ${APP_SUPERADMIN_EMAIL:-}
       APP_SUPERADMIN_PASSWORD: ${APP_SUPERADMIN_PASSWORD:-}
+      # reCAPTCHA v3: secret per la verifica server-side di login/registrazioni (vuoto = verifica disattivata)
+      RECAPTCHA_SECRET: ${RECAPTCHA_SECRET:-}
       # Destinatario del modulo "Contattaci" del sito vetrina (vuoto = modulo disattivato, risponde 503)
       APP_CONTACT_TO: ${APP_CONTACT_TO:-}
+      # Verifica SMS (consegna a domicilio / asporto) con Prelude Verify: senza la chiave la verifica è disattivata
+      # e gli ordini passano senza codice (il telefono è solo validato). Vedi docs/DOMICILIO.md nel backend.
+      PRELUDE_API_KEY: ${PRELUDE_API_KEY:-}
+      PRELUDE_PREFERRED_CHANNEL: ${PRELUDE_PREFERRED_CHANNEL:-}
+      # false = verifica SMS spenta anche con la chiave impostata
+      APP_OTP_ENABLED: ${APP_OTP_ENABLED:-true}
+      APP_OTP_DEV_MODE: "false"
       # Traduzione del menu con Ollama (vuoto/false = disattivata; le traduzioni a mano funzionano comunque)
       APP_AI_ENABLED: ${APP_AI_ENABLED:-false}
       APP_AI_OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}

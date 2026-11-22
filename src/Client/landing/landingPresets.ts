@@ -47,7 +47,7 @@ export const LANDING_PRESETS: LandingPreset[] = [
                 showTakeaway: true, style: anim('zoom'),
             }),
             sec('ticker'),
-            sec('highlights', { title: 'Le nostre pizze', eyebrow: 'Dal forno', layout: 'cards', style: anim('stagger') }),
+            sec('highlights', { title: 'Le nostre pizze', layout: 'cards', style: anim('stagger') }),
             sec('features', {
                 title: 'Perché da noi', style: { animation: 'stagger', bg: 'secondary' },
                 items: feats(['flame', 'Forno a legna', 'Cottura tradizionale'], ['wheat', 'Impasto lento', 'Lievitazione lunga'], ['leaf', 'Ingredienti scelti', 'Freschi ogni giorno'], ['truck', 'Asporto', 'Ordina e ritira']),
@@ -78,7 +78,7 @@ export const LANDING_PRESETS: LandingPreset[] = [
             sec('categories', { style: anim('fade') }),
             sec('hours', { style: anim('fade') }),
             sec('reservations', { style: anim('slide-up') }),
-            sec('contact', { title: 'Dove siamo', eyebrow: 'Informazioni', style: anim('fade') }),
+            sec('contact', { title: 'Dove siamo', style: anim('fade') }),
         ],
     },
     {

@@ -37,12 +37,12 @@ const WaitersPage: React.FC = () => {
             setWaiters([...tmp])
     }
 
-    const generateWaiterLink = async (): Promise<string> => {
+    const generateWaiterLink = async (rider = false): Promise<string> => {
         const tmp = await getWaiterInvitationUrl()
         if(tmp === null)
             addNotification({message: "Errore", type: "error"})
         else
-            return window.location.origin + '/urlInvite/' + (user?.idAgency || 0) + "/" + tmp
+            return window.location.origin + '/urlInvite/' + (user?.idAgency || 0) + "/" + tmp + (rider ? "?ruolo=rider" : "")
         return ""
     };
 
@@ -69,6 +69,7 @@ const WaitersPage: React.FC = () => {
     const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
     const [selectedWaiter, setSelectedWaiter] = useState<Waiter | null>(null);
     const [newWaiterLink, setNewWaiterLink] = useState<string | null>(null);
+    const [inviteRider, setInviteRider] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,10 +77,11 @@ const WaitersPage: React.FC = () => {
         return waiters.filter(w => w.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [waiters, searchTerm]);
 
-    const handleAddClick = async () => {
+    const handleAddClick = async (rider = false) => {
         setIsSubmitting(true);
-        const link = await generateWaiterLink();
+        const link = await generateWaiterLink(rider);
         if (link) {
+            setInviteRider(rider);
             setNewWaiterLink(link);
             setIsAddModalOpen(true);
         }
@@ -128,7 +130,7 @@ const WaitersPage: React.FC = () => {
         <>
             {/* Sezione Modali */}
             {isSubmitting && <CustomLoading isTransparent={true} />}
-            {isAddModalOpen && newWaiterLink && <AddWaiterModal link={newWaiterLink} onClose={() => setIsAddModalOpen(false)} />}
+            {isAddModalOpen && newWaiterLink && <AddWaiterModal link={newWaiterLink} rider={inviteRider} onClose={() => setIsAddModalOpen(false)} />}
             {isEditModalOpen && selectedWaiter && <EditWaiterModal waiter={selectedWaiter} onClose={() => setIsEditModalOpen(false)} onSave={handleSaveEdit} />}
             {isDeletePopupOpen && selectedWaiter && (
                 <DeletePopup
@@ -142,10 +144,16 @@ const WaitersPage: React.FC = () => {
             <div className="p-4 md:p-6 bg-slate-50 min-h-screen">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
                     <h1 className="text-3xl font-bold text-gray-800">Gestione Camerieri</h1>
-                    <button onClick={handleAddClick} className="bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-primary-dark font-semibold flex items-center justify-center gap-2">
-                        <PlusIcon className="w-5 h-5"/>
-                        <span>Aggiungi Cameriere</span>
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                        <button onClick={() => handleAddClick(true)} className="bg-white border-2 border-violet-200 text-violet-700 px-5 py-2.5 rounded-lg shadow-sm hover:bg-violet-50 font-semibold flex items-center justify-center gap-2">
+                            <PlusIcon className="w-5 h-5"/>
+                            <span>Invita rider</span>
+                        </button>
+                        <button onClick={() => handleAddClick(false)} className="bg-primary text-white px-5 py-2.5 rounded-lg shadow-md hover:bg-primary-dark font-semibold flex items-center justify-center gap-2">
+                            <PlusIcon className="w-5 h-5"/>
+                            <span>Aggiungi Cameriere</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="mb-6">

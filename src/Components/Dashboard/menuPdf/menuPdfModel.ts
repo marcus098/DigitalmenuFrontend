@@ -1,5 +1,6 @@
 import type { CategoryDto, IngredientDto, ProductDto } from '../../../types';
 import type { PublicMenuTranslation } from '../../../Utilities/translationApi';
+import type { MenuTemplateKey } from '../../../Client/menuTemplates';
 import { defaultVariantSelection, getVariantGroups, translateVariantGroups, variantAllergens } from '../../../Utilities/variants';
 
 /**
@@ -17,6 +18,20 @@ export interface MenuPdfOptions {
     allergenStyle: AllergenStyle;
     /** 'it' oppure una lingua tradotta del menu. */
     lang: string;
+    /** Descrizioni dei piatti. Default: sì. */
+    showDescriptions?: boolean;
+    /** Allergeni, tracce e legenda. Default: sì. */
+    showAllergens?: boolean;
+
+    // ── Ritocchi di stampa (tutti facoltativi: assente = come da template) ──
+    /** Colore d'accento (#rrggbb). I prezzi lo usano solo se leggibile (≥ 4.5:1 sul fondo). */
+    accent?: string;
+    /** Abbinamento di font di un template (il proprio o uno di `pairsWith`). */
+    fontPair?: MenuTemplateKey;
+    /** Spaziatura: aerata o compatta. */
+    density?: 'airy' | 'compact';
+    /** Colonne dell'elenco piatti. */
+    columns?: 1 | 2;
 }
 
 export interface PdfPrice {
@@ -74,7 +89,7 @@ export function buildPdfMenu(
     categoriesMap: Map<number, CategoryDto>,
     productsMap: Map<number, ProductDto>,
     ingredientsMap: Map<number, IngredientDto>,
-    options: Pick<MenuPdfOptions, 'includeSoldOut' | 'includeImages'>,
+    options: Pick<MenuPdfOptions, 'includeSoldOut' | 'includeImages' | 'showDescriptions' | 'showAllergens'>,
     translation?: PublicMenuTranslation | null,
 ): PdfMenuData {
     const t = translation?.texts;
@@ -82,6 +97,8 @@ export function buildPdfMenu(
     const variantTexts = (id: number) =>
         (t as Record<string, Record<string, Record<string, string>> | undefined> | undefined)?.VARIANT?.[String(id)];
 
+    const withDescriptions = options.showDescriptions !== false;
+    const withAllergens = options.showAllergens !== false;
     const used = new Set<number>();
     let hasFrozen = false;
 
@@ -97,15 +114,17 @@ export function buildPdfMenu(
                 .map((p): PdfProduct => {
                     const ptr = tr('PRODUCT', p.id);
                     const info = variantAllergens(p, ingredientsMap, defaultVariantSelection(p));
-                    info.effective.forEach(id => used.add(id));
-                    info.traces.forEach(id => used.add(id));
+                    const effective = withAllergens ? info.effective : [];
+                    const traces = withAllergens ? info.traces : [];
+                    effective.forEach(id => used.add(id));
+                    traces.forEach(id => used.add(id));
                     if (info.frozen) hasFrozen = true;
                     const groups = translateVariantGroups(getVariantGroups(p), variantTexts(p.id)) ?? [];
                     const opts = (p.options ?? []).filter(o => o && Number.isFinite(Number(o.price)));
                     return {
                         id: p.id,
                         name: ptr?.NAME || p.name,
-                        description: shortDescription(ptr?.DESCRIPTION ?? p.description),
+                        description: withDescriptions ? shortDescription(ptr?.DESCRIPTION ?? p.description) : '',
                         prices: opts.length > 1
                             ? opts.map(o => ({ label: (o.name || '').trim(), price: Number(o.price) }))
                             : opts.length === 1 ? [{ label: '', price: Number(opts[0].price) }] : [],
@@ -115,8 +134,8 @@ export function buildPdfMenu(
                                 .filter(ch => options.includeSoldOut || ch.available !== false)
                                 .map(ch => ({ name: ch.name, delta: Number(ch.priceDelta) || 0, soldOut: ch.available === false })),
                         })).filter(g => g.choices.length > 1 || g.choices.some(ch => ch.delta !== 0)),
-                        allergens: info.effective,
-                        traces: info.traces,
+                        allergens: effective,
+                        traces: traces,
                         frozen: info.frozen,
                         tags: p.tags ?? [],
                         image: options.includeImages && p.image ? p.image : undefined,

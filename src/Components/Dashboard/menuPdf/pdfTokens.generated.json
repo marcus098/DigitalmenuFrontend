@@ -110,7 +110,32 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "roman",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 700,
+        "headingTracking": "0",
+        "align": "center",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 2
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1f1a14",
+        "accentSwatches": [
+          "#7a2318",
+          "#1f1a14"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -256,7 +281,32 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "arabic",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 800,
+        "headingTracking": "-0.025em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#111111",
+        "accentSwatches": [
+          "#d0281b",
+          "#111111"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -406,7 +456,32 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "airy",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "lowercase",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0",
+        "align": "center",
+        "descStyle": "italic",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "centered",
+        "columns": 1,
+        "priceColor": "#1a1916",
+        "accentSwatches": [
+          "#6b2b23",
+          "#1a1916"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -556,7 +631,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 900,
+        "headingTracking": "-0.005em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 3
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#2a1f16",
+        "accentSwatches": [
+          "#a3241a",
+          "#2f4a2a",
+          "#2a1f16"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -706,7 +807,32 @@
         "ink": "chalk",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.01em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#f1d27a",
+        "accentSwatches": [
+          "#f1d27a",
+          "#f0ede4"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -857,7 +983,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 2
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#d9a441",
+        "accentSwatches": [
+          "#d9a441",
+          "#7a2e1c",
+          "#f2e6cc"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -1007,7 +1159,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.02em",
+        "align": "center",
+        "descStyle": "ingredients",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#d2ab62",
+        "accentSwatches": [
+          "#d2ab62",
+          "#7c2c24",
+          "#ece4d2"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -1153,7 +1331,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 800,
+        "headingTracking": "-0.01em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 3
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#2a1d15",
+        "accentSwatches": [
+          "#7f3612",
+          "#2f5e4e",
+          "#2a1d15"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -1303,7 +1507,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.005em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 4
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#b8301a",
+        "accentSwatches": [
+          "#b8301a",
+          "#2e6b3b",
+          "#24170f"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -1454,7 +1684,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "badge"
+        "price": "badge",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 12
+      },
+      "print": {
+        "productLayout": "cards",
+        "columns": 2,
+        "priceColor": "#0b0b0b",
+        "accentSwatches": [
+          "#ffcc00",
+          "#d42e12",
+          "#0b0b0b"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -1602,7 +1858,32 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": true,
+        "categoryNumbers": "arabic",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 600,
+        "headingTracking": "0.04em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1b1b1b",
+        "accentSwatches": [
+          "#b3302a",
+          "#1b1b1b"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -1752,7 +2033,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "roman",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.03em",
+        "align": "center",
+        "descStyle": "italic",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "twocol",
+        "columns": 2,
+        "priceColor": "#2a1b17",
+        "accentSwatches": [
+          "#6d1a2a",
+          "#2f3a26",
+          "#2a1b17"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -1902,7 +2209,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "below",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0",
+        "align": "center",
+        "descStyle": "auto",
+        "imageShape": "arch",
+        "radius": 14
+      },
+      "print": {
+        "productLayout": "grid",
+        "columns": 3,
+        "priceColor": "#b03f56",
+        "accentSwatches": [
+          "#b03f56",
+          "#a9c3a0",
+          "#3a2626"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "arch",
@@ -2053,7 +2386,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.12em",
+        "align": "center",
+        "descStyle": "italic",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1c2620",
+        "accentSwatches": [
+          "#8e1b1b",
+          "#1e3a2f",
+          "#1c2620"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -2205,7 +2564,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "arabic",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 800,
+        "headingTracking": "0.02em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#efe5d4",
+        "accentSwatches": [
+          "#d4583c",
+          "#e6d6bc",
+          "#efe5d4"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -2355,7 +2740,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 700,
+        "headingTracking": "-0.01em",
+        "align": "left",
+        "descStyle": "ingredients",
+        "imageShape": "round",
+        "radius": 14
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#5b6a17",
+        "accentSwatches": [
+          "#5b6a17",
+          "#d08a2c",
+          "#2e2a17"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "round",
@@ -2505,7 +2916,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.08em",
+        "align": "center",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1d4f9e",
+        "accentSwatches": [
+          "#1d4f9e",
+          "#e3ad2f",
+          "#14284a"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -2657,7 +3094,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 700,
+        "headingTracking": "0.02em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 10
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#c41e2c",
+        "accentSwatches": [
+          "#c41e2c",
+          "#1d6f6b",
+          "#171717"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -2806,7 +3269,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "compact",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.02em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "twocol",
+        "columns": 2,
+        "priceColor": "#f1e8d6",
+        "accentSwatches": [
+          "#f26a4f",
+          "#efe5d0",
+          "#f1e8d6"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -2955,7 +3444,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 700,
+        "headingTracking": "0",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 2
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#2a1f15",
+        "accentSwatches": [
+          "#8b2c1c",
+          "#3e5232",
+          "#2a1f15"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -3104,7 +3619,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": true,
+        "categoryNumbers": "arabic",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 600,
+        "headingTracking": "0.06em",
+        "align": "center",
+        "descStyle": "auto",
+        "imageShape": "arch",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "cards",
+        "columns": 2,
+        "priceColor": "#a83f27",
+        "accentSwatches": [
+          "#a83f27",
+          "#17595f",
+          "#1d2629"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "arch",
@@ -3253,7 +3794,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "below",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 700,
+        "headingTracking": "0.04em",
+        "align": "center",
+        "descStyle": "italic",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "grid",
+        "columns": 3,
+        "priceColor": "#2a2420",
+        "accentSwatches": [
+          "#2c4a87",
+          "#c4894a",
+          "#2a2420"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -3403,7 +3970,32 @@
         "ink": "letterpress",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 700,
+        "headingTracking": "0.07em",
+        "align": "center",
+        "descStyle": "italic",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1d1a17",
+        "accentSwatches": [
+          "#ad2219",
+          "#1d1a17"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -3553,7 +4145,32 @@
         "ink": "misregister",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "below",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "arabic",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.005em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "grid",
+        "columns": 3,
+        "priceColor": "#22347a",
+        "accentSwatches": [
+          "#ff4fa3",
+          "#22347a"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -3701,7 +4318,33 @@
         "ink": "none",
         "numberStyle": "boxed",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "compact",
+        "productNumbers": true,
+        "categoryNumbers": "arabic",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 900,
+        "headingTracking": "0.02em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "twocol",
+        "columns": 2,
+        "priceColor": "#2a1616",
+        "accentSwatches": [
+          "#c2102c",
+          "#0f5c4d",
+          "#2a1616"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -3850,7 +4493,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 4
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1f6a39",
+        "accentSwatches": [
+          "#1f6a39",
+          "#e9b425",
+          "#22201a"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -4001,7 +4670,32 @@
         "ink": "typed",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "arabic",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.04em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1e1d1b",
+        "accentSwatches": [
+          "#ab271f",
+          "#1e1d1b"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -4153,7 +4847,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.01em",
+        "align": "center",
+        "descStyle": "italic",
+        "imageShape": "round",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#2d5a4c",
+        "accentSwatches": [
+          "#2d5a4c",
+          "#c8a66a",
+          "#33201a"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "round",
@@ -4303,7 +5023,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.005em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "round",
+        "radius": 18
+      },
+      "print": {
+        "productLayout": "cards",
+        "columns": 2,
+        "priceColor": "#b8431a",
+        "accentSwatches": [
+          "#b8431a",
+          "#e0a02a",
+          "#3b2314"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "round",
@@ -4449,7 +5195,32 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "inline",
+        "density": "airy",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "lowercase",
+        "headingStyle": "normal",
+        "headingWeight": 800,
+        "headingTracking": "-0.03em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#2b2118",
+        "accentSwatches": [
+          "#a3263a",
+          "#2b2118"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -4599,7 +5370,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "accent"
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.01em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 4
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#b8005f",
+        "accentSwatches": [
+          "#b8005f",
+          "#00704a",
+          "#2b1a12"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -4751,7 +5548,32 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": false,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "compact",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "uppercase",
+        "headingStyle": "normal",
+        "headingWeight": 700,
+        "headingTracking": "0.06em",
+        "align": "center",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#f4f1ea",
+        "accentSwatches": [
+          "#ef5b47",
+          "#f4f1ea"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",
@@ -4901,7 +5723,33 @@
         "ink": "none",
         "numberStyle": "plain",
         "leaders": true,
-        "price": "plain"
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "normal",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 600,
+        "headingTracking": "0.01em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 2
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1f1a14",
+        "accentSwatches": [
+          "#1a5aa6",
+          "#5e331b",
+          "#1f1a14"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
       },
       "look": {
         "imageShape": "square",

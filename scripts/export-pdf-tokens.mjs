@@ -120,6 +120,28 @@ const templates = MENU_TEMPLATES.map(t => {
             numberStyle: t.look.numberStyle,
             leaders: t.look.leaders,
             price: t.look.price,
+            pricePosition: t.look.pricePosition,
+            density: t.look.density,
+            productNumbers: t.look.productNumbers,
+            categoryNumbers: t.look.categoryNumbers,
+            headingCase: t.look.headingCase,
+            headingStyle: t.look.headingStyle,
+            headingWeight: t.look.headingWeight,
+            headingTracking: t.look.headingTracking,
+            align: t.look.align,
+            descStyle: t.look.descStyle,
+            imageShape: t.look.imageShape,
+            radius: t.look.radius,
+        },
+        /** Impaginazione nel PDF: colonne di default (come MenuPrintDocument). */
+        print: {
+            productLayout: t.look.productLayout,
+            columns: t.look.productLayout === 'twocol' || t.look.productLayout === 'cards' ? 2 : t.look.productLayout === 'grid' ? 3 : 1,
+            /** Colore dei prezzi in stampa: accento solo se ≥ 4.5:1 sul fondo (come applyPrintOverrides). */
+            priceColor: t.look.price === 'accent' && ratio(p.accent, p.bg) >= 4.5 ? p.accent : p.text,
+            /** Controlli del dialog PDF: alternative proposte. */
+            accentSwatches: Array.from(new Set([p.accent, p.secondary, p.text].map(c => c.toLowerCase()))),
+            densities: ['airy', 'compact'],
         },
         look: t.look,
         contrast,

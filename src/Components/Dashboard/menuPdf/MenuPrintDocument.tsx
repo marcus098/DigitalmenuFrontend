@@ -25,6 +25,10 @@ export interface MenuPrintDocumentProps {
     logoUrl?: string;
     heroBg: string;
     allergenStyle: AllergenStyle;
+    /** Allergeni e legenda (default sì). */
+    showAllergens?: boolean;
+    /** Colonne dell'elenco piatti: assente = come l'impaginazione del template. */
+    columns?: 1 | 2;
     lang: string;
     imageBase: string;
 }
@@ -99,8 +103,8 @@ const Details: React.FC<{ product: PdfProduct; allergenStyle: AllergenStyle; lan
                 </p>
             ))}
             {tags.length > 0 && (
-                <p style={{ ...small, fontSize: '6.8pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--menu-emph)' }}>
-                    {tags.join('  ·  ')}
+                <p style={{ ...small, fontSize: '7.8pt', fontWeight: 600, fontStyle: 'italic', color: 'var(--menu-emph)' }}>
+                    {tags.join(' · ')}
                 </p>
             )}
             {(product.allergens.length > 0 || product.traces.length > 0) && (
@@ -192,7 +196,7 @@ const RowItem: React.FC<ItemProps & { narrow?: boolean }> = ({ product, index, t
 
 /** Fine dining: blocco centrato. */
 const CenteredItem: React.FC<ItemProps> = ({ product, index, tokens, allergenStyle, lang, imageBase }) => (
-    <div className="pdf-item" style={{ textAlign: 'center', padding: `0 8% ${rowPad(tokens) + 5}pt` }}>
+    <div className="pdf-item pdf-item--block" style={{ textAlign: 'center', padding: `0 8% ${rowPad(tokens) + 5}pt` }}>
         {/* il filetto sta dentro il blocco: non resta mai da solo in fondo alla pagina */}
         {index > 1 ? <div style={{ padding: `0 22% ${rowPad(tokens) + 5}pt` }}><MenuRule /></div> : <div style={{ height: `${rowPad(tokens) + 5}pt` }} />}
         <div style={{ opacity: product.soldOut ? 0.55 : 1 }}>
@@ -273,9 +277,10 @@ const CategorySection: React.FC<{
     position: number;
     tokens: MenuTokens;
     allergenStyle: AllergenStyle;
+    columns?: 1 | 2;
     lang: string;
     imageBase: string;
-}> = ({ category, position, tokens, allergenStyle, lang, imageBase }) => {
+}> = ({ category, position, tokens, allergenStyle, columns, lang, imageBase }) => {
     const l = tokens.look;
     const centered = l.align === 'center';
     const number = formatIndex(position, l.categoryNumbers);
@@ -284,24 +289,29 @@ const CategorySection: React.FC<{
     const common = { tokens, allergenStyle, lang, imageBase };
 
     let body: React.ReactNode;
-    switch (l.productLayout) {
+    // Colonne forzate dal dialog: l'elenco "menu" su 2 colonne diventa "twocol" e viceversa
+    const layout = columns === 2 && l.productLayout === 'menu' ? 'twocol'
+        : columns === 1 && l.productLayout === 'twocol' ? 'menu'
+        : l.productLayout;
+    const gridCols = columns ?? (layout === 'grid' ? 3 : 2);
+    switch (layout) {
         case 'grid':
             body = (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8pt', paddingTop: '6pt' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns === 1 ? 2 : gridCols}, minmax(0, 1fr))`, gap: '8pt', paddingTop: '6pt' }}>
                     {items.map(it => <CardItem key={it.product.id} {...it} {...common} vertical />)}
                 </div>
             );
             break;
         case 'cards':
             body = (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8pt', paddingTop: '6pt' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns ?? 2}, minmax(0, 1fr))`, gap: '8pt', paddingTop: '6pt' }}>
                     {items.map(it => <CardItem key={it.product.id} {...it} {...common} vertical={false} />)}
                 </div>
             );
             break;
         case 'centered':
             body = (
-                <div>
+                <div className={columns === 2 ? 'pdf-cols' : undefined}>
                     {items.map(it => <CenteredItem key={it.product.id} {...it} {...common} />)}
                 </div>
             );
@@ -374,19 +384,19 @@ const Masthead: React.FC<MenuPrintDocumentProps> = ({ tokens, venueName, venueSu
 };
 
 const MenuPrintDocument: React.FC<MenuPrintDocumentProps> = (props) => {
-    const { tokens, menu, allergenStyle, lang, imageBase } = props;
+    const { tokens, menu, allergenStyle, lang, imageBase, columns, showAllergens = true } = props;
     const centered = tokens.look.align === 'center';
     return (
         <MenuLookProvider tokens={tokens}>
             <Masthead {...props} />
             <main>
                 {menu.categories.map((c, i) => (
-                    <CategorySection key={c.id} category={c} position={i + 1} tokens={tokens} allergenStyle={allergenStyle} lang={lang} imageBase={imageBase} />
+                    <CategorySection key={c.id} category={c} position={i + 1} tokens={tokens} allergenStyle={allergenStyle} columns={columns} lang={lang} imageBase={imageBase} />
                 ))}
             </main>
             <footer className="pdf-legend" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)', fontSize: '7.4pt', lineHeight: 1.5, textAlign: centered ? 'center' : 'left' }}>
                 <MenuRule style={{ marginBottom: '8pt' }} />
-                {allergenStyle === 'numbers' && (
+                {showAllergens && allergenStyle === 'numbers' && (
                     <>
                         <p style={{ margin: '0 0 3pt', fontWeight: 700, color: 'var(--menu-text)', textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: '7pt' }}>
                             {menuText('allergens', lang)}

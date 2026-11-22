@@ -123,6 +123,7 @@ const HeroEditor: React.FC<{ s: HeroSection; up: Upd<HeroSection>; draft: StyleD
         <>
             <SelectField label="Tipo di intestazione" value={s.variant} onChange={v => up({ variant: v })} options={[
                 ['template', 'Come da template'], ['image', 'Foto a tutta pagina con velo'], ['split', 'Foto e testo affiancati'], ['slideshow', 'Presentazione (fino a 5 foto)'], ['minimal', 'Solo testo'],
+                ['poster', 'Manifesto: nome enorme e foto sfalsata'], ['card', "Cartoncino del menu con l'indice delle sezioni"], ['board', 'Lavagna o bacheca con le voci del menù'],
             ]} />
             <TextField
                 label="Titolo" value={s.title} max={LIMITS.title} placeholder={draft.restaurantName || 'Nome del locale'}
@@ -195,14 +196,15 @@ const AboutEditor: React.FC<{ s: AboutSection; up: Upd<AboutSection> }> = ({ s, 
         <TitleFields s={s} up={up} action={<AiAssist kind="about" hasText={!!s.text.trim()} onResult={r => up({ title: r.title || s.title, text: r.text })} />} />
         <TextField label="Testo" value={s.text} max={LIMITS.text} multiline rows={6} placeholder="Chi siete, da dove venite, cosa vi rende speciali…" hint="Lascia una riga vuota per andare a capo con un nuovo paragrafo" onChange={v => up({ text: v })} />
         <ImageSlot label="Foto" image={s.image} onChange={img => up({ image: img })} aspect="4 / 3" />
-        <Segmented label="Posizione della foto" value={s.imagePosition} onChange={v => up({ imagePosition: v })} options={[['left', 'A sinistra'], ['right', 'A destra']]} />
+        <SelectField label="Impaginazione" value={s.variant} onChange={v => up({ variant: v })} options={[['side', 'Foto a lato del testo'], ['editorial', 'Editoriale: foto larga e capolettera'], ['note', 'Biglietto scritto a mano con foto appuntata']]} />
+        {s.variant === 'side' && <Segmented label="Posizione della foto" value={s.imagePosition} onChange={v => up({ imagePosition: v })} options={[['left', 'A sinistra'], ['right', 'A destra']]} />}
     </>
 );
 
 const GalleryEditor: React.FC<{ s: GallerySection; up: Upd<GallerySection> }> = ({ s, up }) => (
     <>
         <TitleFields s={s} up={up} />
-        <Segmented label="Disposizione" value={s.layout} onChange={v => up({ layout: v })} options={[['grid', 'Griglia'], ['masonry', 'Mosaico'], ['carousel', 'Carosello']]} />
+        <SelectField label="Disposizione" value={s.layout} onChange={v => up({ layout: v })} options={[['grid', 'Griglia'], ['masonry', 'Mosaico'], ['carousel', 'Carosello'], ['filmstrip', 'Provino a contatto (pellicola)'], ['collage', 'Collage con didascalie numerate']]} />
         <ImageListEditor label="Foto" items={s.items} max={LIMITS.gallery} withCaption update={fn => up(cur => ({ items: fn(cur.items) }))} />
     </>
 );
@@ -259,7 +261,7 @@ const HighlightsEditor: React.FC<{ s: HighlightsSection; up: Upd<HighlightsSecti
     return (
         <>
             <TitleFields s={s} up={up} />
-            <Segmented label="Disposizione" value={s.layout} onChange={v => up({ layout: v })} options={[['cards', 'Schede con foto'], ['list', 'Elenco']]} />
+            <SelectField label="Disposizione" value={s.layout} onChange={v => up({ layout: v })} options={[['cards', 'Schede con foto'], ['list', 'Elenco'], ['menu', 'Menù stampato su due colonne'], ['polaroid', 'Polaroid sul bancone'], ['index', 'Indice numerato (stile svizzero)']]} />
             <ToggleInput label="Mostra i prezzi" checked={s.showPrices} onChange={v => up({ showPrices: v })} />
             <div>
                 <p className="label-style text-sm">Piatti scelti ({s.productIds.length}/{LIMITS.highlights})</p>

@@ -2,7 +2,7 @@ import React from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import type { StyleDto } from '../../../types';
-import { getMenuTokens, tokensToCssVars, TEMPLATE_FONT_KEY } from '../../../Client/menuTheme';
+import { getMenuTokens, MenuTokens, tokensToCssVars, TEMPLATE_FONT_KEY } from '../../../Client/menuTheme';
 import { MenuTemplateKey, parseTemplateValue, TEMPLATE_BY_KEY } from '../../../Client/menuTemplates';
 import { buildGoogleFontsHref } from '../../../Utilities/fonts';
 import { escapeHtml } from '../../../Utilities/Utilities';
@@ -84,6 +84,54 @@ export function printTokens(styles: StyleDto | null | undefined, templateKey: Me
     return getMenuTokens({ landingTemplate: templateKey, font: TEMPLATE_FONT_KEY } as StyleDto);
 }
 
+// ── Contrasto (stessa formula WCAG di menuTheme.ts) ─────────────────────────
+function rgbOf(c: string): [number, number, number] {
+    const m = c.match(/\d+(\.\d+)?/g);
+    if (c.startsWith('rgb') && m && m.length >= 3) return [Number(m[0]), Number(m[1]), Number(m[2])];
+    let h = c.replace('#', '');
+    if (h.length === 3) h = h.split('').map(x => x + x).join('');
+    return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) || 0) as [number, number, number];
+}
+function luminance(c: string): number {
+    const [r, g, b] = rgbOf(c).map(v => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+export function contrast(a: string, b: string): number {
+    const [x, y] = [luminance(a), luminance(b)];
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+/** Soglia per usare l'accento come colore dei prezzi in stampa (testo normale, WCAG AA). */
+export const PRINT_PRICE_CONTRAST = 4.5;
+
+/**
+ * Ritocchi di stampa sopra ai token del template (tutto il resto resta del template):
+ * colore d'accento, abbinamento di font di un altro template, densità.
+ */
+export function applyPrintOverrides(tokens: MenuTokens, options: Pick<MenuPdfOptions, 'accent' | 'fontPair' | 'density'>): MenuTokens {
+    let t = tokens;
+    if (options.accent && /^#[0-9a-f]{6}$/i.test(options.accent)) {
+        const accent = options.accent;
+        // Testo sui pieni d'accento (bottoni, fasce): il più leggibile tra quelli della palette
+        const accentText = [t.accentText, '#ffffff', t.text, t.bg]
+            .reduce((best, c) => (contrast(c, accent) > contrast(best, accent) ? c : best));
+        const emph = contrast(accent, t.bg) >= PRINT_PRICE_CONTRAST ? accent : t.text;
+        t = { ...t, accent, accentText, emph };
+    }
+    if (options.fontPair && TEMPLATE_BY_KEY[options.fontPair]) {
+        const f = TEMPLATE_BY_KEY[options.fontPair].fonts;
+        t = {
+            ...t,
+            fontDisplay: f.display, fontBody: f.body, fontPrice: f.price || f.body, fontAccent: f.accent || f.display,
+            fontsGoogle: f.google,
+        };
+    }
+    if (options.density) t = { ...t, look: { ...t.look, density: options.density } };
+    return t;
+}
+
 const PRINT_CSS = `
 @page { size: A4; margin: 14mm 13mm 15mm; }
 html, body, * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -107,6 +155,7 @@ p, h1, h2, h3, ol { margin: 0; }
 .pdf-category:first-child { margin-top: 0; }
 .pdf-cols { column-count: 2; column-gap: 11mm; }
 .pdf-cols > .pdf-item { display: flex; }
+.pdf-cols > .pdf-item--block { display: block; }
 .pdf-legend { margin-top: 20pt; break-inside: avoid; page-break-inside: avoid; }
 .pdf-legend-list { list-style: none; padding: 0; columns: 3; column-gap: 8mm; }
 .pdf-legend-list > li { break-inside: avoid; }
@@ -115,7 +164,7 @@ img { max-width: 100%; }
 
 export function buildMenuPrintHtml(input: BuildMenuPrintInput): string {
     const { styles, templateKey, menu, options, venueName, appCss, appCssLinks = [], imageBase, renderMarkup = renderDetached } = input;
-    const tokens = printTokens(styles, templateKey);
+    const tokens = applyPrintOverrides(printTokens(styles, templateKey), options);
     const def = TEMPLATE_BY_KEY[templateKey];
     const vars = tokensToCssVars(tokens);
     const varsCss = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';');
@@ -125,7 +174,7 @@ export function buildMenuPrintHtml(input: BuildMenuPrintInput): string {
         fontLinks.push(`https://fonts.googleapis.com/css2?${tokens.fontsGoogle.map(f => `family=${f}`).join('&')}&display=swap`);
     }
     const userFont = (styles?.font || '').trim();
-    if (tokens.template === parseTemplateValue(styles?.landingTemplate).key && userFont && userFont !== TEMPLATE_FONT_KEY) {
+    if (!options.fontPair && tokens.template === parseTemplateValue(styles?.landingTemplate).key && userFont && userFont !== TEMPLATE_FONT_KEY) {
         const href = buildGoogleFontsHref([userFont]);
         if (href) fontLinks.push(href);
     }
@@ -144,6 +193,8 @@ export function buildMenuPrintHtml(input: BuildMenuPrintInput): string {
             logoUrl={logoUrl}
             heroBg={heroBg}
             allergenStyle={options.allergenStyle}
+            showAllergens={options.showAllergens !== false}
+            columns={options.columns}
             lang={options.lang}
             imageBase={imageBase}
         />,

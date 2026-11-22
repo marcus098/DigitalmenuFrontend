@@ -230,6 +230,22 @@ function hexToRgbTuple(hex: string): string {
     return '23,20,15';
 }
 
+/**
+ * Resa dell'inchiostro (look.ink) come text-shadow su titoli e prezzi (.menu-h, .menu-price).
+ * Solo ombre nette o quasi: niente bagliori.
+ */
+const INK_SHADOW: Record<TemplateLook['ink'], string> = {
+    none: 'none',
+    // carattere mobile: l'inchiostro si allarga appena attorno all'occhio della lettera
+    letterpress: '0 0 0.6px currentColor, 0.35px 0.4px 0 color-mix(in srgb, currentColor 45%, transparent)',
+    // risografia: il secondo passaggio (rosa) esce di registro in basso a destra
+    misregister: '0.055em 0.045em 0 color-mix(in srgb, var(--menu-accent) 88%, transparent)',
+    // macchina da scrivere: battuta un po' carica e doppia
+    typed: '0 0 0.7px currentColor, 0.45px 0 0 color-mix(in srgb, currentColor 30%, transparent)',
+    // gesso: polvere attorno al tratto
+    chalk: '0 0 1.2px color-mix(in srgb, currentColor 55%, transparent), 0.5px 0.5px 0 color-mix(in srgb, currentColor 18%, transparent)',
+};
+
 export function tokensToCssVars(t: MenuTokens): Record<string, string> {
     const l = t.look;
     return {
@@ -256,7 +272,8 @@ export function tokensToCssVars(t: MenuTokens): Record<string, string> {
         '--menu-font-accent':     t.fontAccent || t.fontDisplay,
         '--menu-radius':          t.radius,
         '--menu-hero-gradient':   t.heroGradient,
-        '--menu-h-transform':     l.headingCase === 'uppercase' ? 'uppercase' : 'none',
+        '--menu-h-transform':     l.headingCase === 'uppercase' ? 'uppercase' : l.headingCase === 'lowercase' ? 'lowercase' : 'none',
+        '--menu-ink':             INK_SHADOW[l.ink] || 'none',
         '--menu-h-caps':          l.headingCase === 'smallcaps' ? 'all-small-caps' : 'normal',
         '--menu-h-style':         l.headingStyle,
         '--menu-h-weight':        String(l.headingWeight),

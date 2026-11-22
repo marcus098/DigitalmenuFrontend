@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { FileDown, Loader2, X } from 'lucide-react';
 import type { StyleDto } from '../../../types';
 import { useData } from '../../../Context/DataContext';
-import { MENU_TEMPLATES, MenuTemplateKey, parseTemplateValue, TEMPLATE_BY_KEY } from '../../../Client/menuTemplates';
+import { fontPairLabel, MENU_TEMPLATES, MenuTemplateKey, parseTemplateValue, TEMPLATE_BY_KEY } from '../../../Client/menuTemplates';
 import { getMenuLanguagesApi, getMenuTranslationApi, MenuLanguage, PublicMenuTranslation } from '../../../Utilities/translationApi';
-import { buildMenuPrintHtmlAsync } from './buildMenuPrintHtml';
+import { buildMenuPrintHtmlAsync, contrast, PRINT_PRICE_CONTRAST, printTokens } from './buildMenuPrintHtml';
 import { AllergenStyle, buildPdfMenu, MenuPdfOptions } from './menuPdfModel';
 
 /**
@@ -55,6 +55,13 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
     const [allergenTouched, setAllergenTouched] = useState(false);
     const [includeSoldOut, setIncludeSoldOut] = useState(false);
     const [includeImages, setIncludeImages] = useState(false);
+    const [showDescriptions, setShowDescriptions] = useState(true);
+    const [showAllergens, setShowAllergens] = useState(true);
+    // Ritocchi di stampa: '' = come da template
+    const [accent, setAccent] = useState('');
+    const [fontPair, setFontPair] = useState<MenuTemplateKey | ''>('');
+    const [density, setDensity] = useState<'' | 'airy' | 'compact'>('');
+    const [columns, setColumns] = useState<0 | 1 | 2>(0);
     const [lang, setLang] = useState('it');
     const [languages, setLanguages] = useState<MenuLanguage[]>([]);
     const [translations, setTranslations] = useState<Record<string, PublicMenuTranslation | null>>({});
@@ -93,6 +100,25 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
         if (!allergenTouched) setAllergenStyle(defaultAllergenStyle(templateKey));
     }, [templateKey, allergenTouched]);
 
+    useEffect(() => { setAccent(''); setFontPair(''); }, [templateKey]);
+
+    // Colori proposti: quelli della palette del template (con i ritocchi del locale se è quello in uso)
+    const baseTokens = useMemo(() => printTokens(draftTheme, templateKey), [draftTheme, templateKey]);
+    const swatches = useMemo(() => {
+        const seen = new Set<string>();
+        return [
+            { c: baseTokens.accent, label: 'Accento' },
+            { c: baseTokens.secondary, label: 'Secondario' },
+            { c: baseTokens.text, label: 'Testo' },
+        ].filter(x => /^#[0-9a-f]{6}$/i.test(x.c) && !seen.has(x.c.toLowerCase()) && !!seen.add(x.c.toLowerCase()));
+    }, [baseTokens]);
+    const pairOptions = useMemo(() => {
+        const def = TEMPLATE_BY_KEY[templateKey];
+        return [templateKey, ...(def.pairsWith || [])].filter((k, i, a) => TEMPLATE_BY_KEY[k] && a.indexOf(k) === i);
+    }, [templateKey]);
+    const tplDensity = TEMPLATE_BY_KEY[templateKey].look.density;
+    const accentLowContrast = !!accent && contrast(accent, baseTokens.bg) < PRINT_PRICE_CONTRAST;
+
     // Esc chiude
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -114,15 +140,21 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
     const venueName = (draftTheme.restaurantName || '').trim() || localname;
 
     const menu = useMemo(
-        () => buildPdfMenu(categoriesMap, productsMap, ingredientsMap, { includeSoldOut, includeImages }, translation),
-        [categoriesMap, productsMap, ingredientsMap, includeSoldOut, includeImages, translation],
+        () => buildPdfMenu(categoriesMap, productsMap, ingredientsMap, { includeSoldOut, includeImages, showDescriptions, showAllergens }, translation),
+        [categoriesMap, productsMap, ingredientsMap, includeSoldOut, includeImages, showDescriptions, showAllergens, translation],
     );
     const productCount = menu.categories.reduce((s, c) => s + c.products.length, 0);
 
     // Il documento si genera fuori dal ciclo di render di React (render sincrono in un nodo staccato)
     const [html, setHtml] = useState('');
     useEffect(() => {
-        const options: MenuPdfOptions = { includeSoldOut, includeImages, allergenStyle, lang: translation ? lang : 'it' };
+        const options: MenuPdfOptions = {
+            includeSoldOut, includeImages, allergenStyle, lang: translation ? lang : 'it', showDescriptions, showAllergens,
+            accent: accent || undefined,
+            fontPair: fontPair && fontPair !== templateKey ? fontPair : undefined,
+            density: density || undefined,
+            columns: columns || undefined,
+        };
         setReady(false);
         let alive = true;
         const timer = setTimeout(() => {
@@ -138,7 +170,7 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
             }).then(doc => { if (alive) setHtml(doc); });
         }, 0);
         return () => { alive = false; clearTimeout(timer); };
-    }, [draftTheme, templateKey, menu, includeSoldOut, includeImages, allergenStyle, lang, translation, venueName, appCss]);
+    }, [draftTheme, templateKey, menu, includeSoldOut, includeImages, showDescriptions, showAllergens, allergenStyle, accent, fontPair, density, columns, lang, translation, venueName, appCss]);
 
     // Pronto per la stampa quando font e foto del documento sono caricati
     const onFrameLoad = async () => {
@@ -204,8 +236,97 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
                                 {templateKey === currentKey
                                     ? 'Con i tuoi colori e ritocchi, come nel menu online.'
                                     : 'Con colori e font originali del template.'}
+                                {' '}Colore, caratteri e spaziatura qui sotto valgono solo per il PDF.
                             </p>
                         </div>
+
+
+                        <div>
+                            <p className="label-style">Colore d'accento</p>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setAccent('')}
+                                    aria-pressed={!accent}
+                                    className={`px-2.5 h-8 rounded-lg border text-xs ${!accent ? 'border-gray-900 bg-slate-50 font-semibold text-gray-900' : 'border-gray-200 text-gray-600'}`}
+                                >
+                                    Del template
+                                </button>
+                                {swatches.map(sw => (
+                                    <button
+                                        key={sw.c}
+                                        type="button"
+                                        title={`${sw.label} ${sw.c}`}
+                                        aria-label={`${sw.label} ${sw.c}`}
+                                        aria-pressed={accent.toLowerCase() === sw.c.toLowerCase()}
+                                        onClick={() => setAccent(sw.c)}
+                                        className={`w-8 h-8 rounded-lg border-2 ${accent.toLowerCase() === sw.c.toLowerCase() ? 'border-gray-900' : 'border-gray-200'}`}
+                                        style={{ background: sw.c }}
+                                    />
+                                ))}
+                                <label className="relative w-8 h-8 rounded-lg border-2 border-dashed border-gray-300 cursor-pointer overflow-hidden" title="Colore personalizzato">
+                                    <span className="sr-only">Colore personalizzato</span>
+                                    <input
+                                        type="color"
+                                        value={/^#[0-9a-f]{6}$/i.test(accent) ? accent : baseTokens.accent.startsWith('#') ? baseTokens.accent : '#7a2318'}
+                                        onChange={e => setAccent(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">+</span>
+                                </label>
+                            </div>
+                            {accentLowContrast && (
+                                <p className="text-[11px] text-amber-700 mt-1">Poco leggibile sul fondo: i prezzi restano nel colore del testo, l'accento resta su filetti e fasce.</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label htmlFor="menu-pdf-fonts" className="label-style">Caratteri</label>
+                            <select
+                                id="menu-pdf-fonts"
+                                value={fontPair || templateKey}
+                                onChange={e => setFontPair(e.target.value as MenuTemplateKey)}
+                                className="input-style mt-1 w-full"
+                            >
+                                {pairOptions.map(k => (
+                                    <option key={k} value={k}>{k === templateKey ? 'Del template — ' : ''}{fontPairLabel(TEMPLATE_BY_KEY[k])}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <fieldset>
+                            <legend className="label-style">Spaziatura</legend>
+                            <div className="mt-1 grid grid-cols-3 gap-1.5">
+                                {([["","Template"],["airy","Aerata"],["compact","Compatta"]] as const).map(([k, label]) => (
+                                    <button
+                                        key={String(k)}
+                                        type="button"
+                                        aria-pressed={density === k}
+                                        onClick={() => setDensity(k as any)}
+                                        className={`px-2 py-1.5 rounded-lg border text-xs ${density === k ? 'border-gray-900 bg-slate-50 font-semibold text-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend className="label-style">Colonne</legend>
+                            <div className="mt-1 grid grid-cols-3 gap-1.5">
+                                {([[0,"Template"],[1,"1 colonna"],[2,"2 colonne"]] as const).map(([k, label]) => (
+                                    <button
+                                        key={String(k)}
+                                        type="button"
+                                        aria-pressed={columns === k}
+                                        onClick={() => setColumns(k as any)}
+                                        className={`px-2 py-1.5 rounded-lg border text-xs ${columns === k ? 'border-gray-900 bg-slate-50 font-semibold text-gray-900' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </fieldset>
 
                         {showLangPicker && (
                             <div>
@@ -223,6 +344,7 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
                             </div>
                         )}
 
+                        {showAllergens && (
                         <fieldset>
                             <legend className="label-style">Allergeni</legend>
                             <div className="mt-1 grid grid-cols-2 gap-2">
@@ -240,6 +362,7 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
                                 ))}
                             </div>
                         </fieldset>
+                        )}
 
                         <div className="space-y-2">
                             <label className="flex items-start gap-3 bg-slate-50 p-3 rounded-lg border cursor-pointer">
@@ -254,6 +377,20 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
                                 <span>
                                     <span className="block text-sm font-semibold text-gray-700">Foto dei piatti</span>
                                     <span className="block text-xs text-gray-500 mt-0.5">File più pesante e più pagine.</span>
+                                </span>
+                            </label>
+                            <label className="flex items-start gap-3 bg-slate-50 p-3 rounded-lg border cursor-pointer">
+                                <input type="checkbox" checked={showDescriptions} onChange={e => setShowDescriptions(e.target.checked)} className="mt-0.5 w-4 h-4 accent-primary" />
+                                <span>
+                                    <span className="block text-sm font-semibold text-gray-700">Descrizioni dei piatti</span>
+                                    <span className="block text-xs text-gray-500 mt-0.5">Senza, il menu sta in meno pagine.</span>
+                                </span>
+                            </label>
+                            <label className="flex items-start gap-3 bg-slate-50 p-3 rounded-lg border cursor-pointer">
+                                <input type="checkbox" checked={showAllergens} onChange={e => setShowAllergens(e.target.checked)} className="mt-0.5 w-4 h-4 accent-primary" />
+                                <span>
+                                    <span className="block text-sm font-semibold text-gray-700">Allergeni</span>
+                                    <span className="block text-xs text-gray-500 mt-0.5">Accanto a ogni piatto, con la legenda in fondo.</span>
                                 </span>
                             </label>
                         </div>

@@ -210,15 +210,20 @@ const TemplateLanding: React.FC<LandingProps> = (p) => {
             {p.showWhyUs && p.features.length > 0 && (
                 <section className={`${wrap} py-12`}>
                     {p.sectionWhyTitle && <SectionTitle title={p.sectionWhyTitle} centered={centered} />}
-                    <ul className="grid grid-cols-2 md:grid-cols-4 gap-x-6">
+                    {/* elenco a righe (come nel sito a sezioni), non quattro box con icona */}
+                    <ol className={`lp-facts-list ${centered ? 'max-w-3xl mx-auto' : ''}`}>
                         {p.features.map((f, i) => (
-                            <li key={i} className={`py-5 ${centered ? 'text-center' : ''}`} style={{ borderTop: '1px solid var(--menu-rule)' }}>
-                                <FeatureIcon icon={f.icon} className={`w-5 h-5 ${centered ? 'mx-auto' : ''}`} style={{ color: 'var(--menu-emph)' }} />
-                                <p className="menu-h mt-3" style={{ fontSize: '1.12rem', lineHeight: 1.2, textAlign: centered ? 'center' : 'left' }}>{f.title}</p>
-                                <p className="mt-1" style={{ color: 'var(--menu-muted)', fontSize: '0.86rem', lineHeight: 1.45 }}>{f.sub}</p>
+                            <li key={i}>
+                                <span className="lp-facts-num" aria-hidden="true">
+                                    <FeatureIcon icon={f.icon} className="w-4 h-4" style={{ color: 'var(--menu-emph)' }} />
+                                </span>
+                                <span>
+                                    <span className="menu-h lp-facts-title">{f.title}</span>
+                                    {f.sub && <span className="lp-facts-sub">{f.sub}</span>}
+                                </span>
                             </li>
                         ))}
-                    </ul>
+                    </ol>
                 </section>
             )}
 

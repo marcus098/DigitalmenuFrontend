@@ -2,15 +2,18 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ChevronLeft, ChevronRight, Clock, ExternalLink, Mail, MapPin, MessageCircle, Phone, Star } from 'lucide-react';
 import { useData } from '../../Context/DataContext';
 import { resolveImageUrl } from '../../Utilities/Utilities';
-import { buildGoogleFontsHref, FONT_BY_KEY } from '../../Utilities/fonts';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
+import {
+    AboutEditorial, AboutNote, GalleryCollage, GalleryFilmstrip, HeroBoard, HeroCard, HeroPoster,
+    HighlightsIndex, HighlightsMenu, HighlightsPolaroid,
+} from './PrintSections';
 import { MenuMastheadTitle, MenuPrice, MenuRule } from '../../Components/Client/MenuPrimitives';
 import ClientCategoriesList from '../../Components/Client/ClientCategoriesList';
 import type { MenuTokens } from '../menuTheme';
 import type { ProductDto } from '../../types';
 import { BookingForm, Btn, FbIcon, FeatureIcon, IgIcon, isDarkColor, LandingProps, SectionTitle, TkIcon } from './LandingPrimitives';
 import {
-    AboutSection, AnnouncementSection, CategoriesSection, ContactSection, FeaturesSection, FONT_PAIRINGS, GallerySection,
+    AboutSection, AnnouncementSection, CategoriesSection, ContactSection, FeaturesSection, FONT_PAIRINGS, fontPairingHref, GallerySection,
     HeroSection, HighlightsSection, HoursSection, LandingButton, LandingConfig, LandingGlobal, LandingSection, LocationSection,
     mailHref, mapsEmbedUrl, mapsSearchUrl, ReservationsSection, safeHttpsUrl, safeImageSrc, safeLinkHref, SectionStyle,
     telHref, TestimonialsSection, TextSection, toVideoEmbed, validHex, VideoSection, WEEKDAYS, whatsappHref,
@@ -33,6 +36,15 @@ const imgUrl = (src: string | undefined | null): string => {
     const s = safeImageSrc(src);
     if (!s) return '';
     return s.startsWith('blob:') ? s : resolveImageUrl(s, '');
+};
+
+/** Foto di un piatto: come nel menu (ProductListItem), percorso del bucket + immagine; https lasciati così. */
+const productImg = (src: string | undefined | null): string => {
+    const s = (src || '').trim();
+    if (!s) return '';
+    if (/^https:\/\//i.test(s) || s.startsWith('blob:')) return s;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return '';
+    return `${process.env.REACT_APP_BUCKET_URL ?? ''}${s}`;
 };
 
 const cssUrl = (u: string) => `url("${u.replace(/["\\\n\r]/g, '')}")`;
@@ -92,7 +104,8 @@ function cardStyle(g: LandingGlobal, look: MenuTokens['look']): React.CSSPropert
     switch (g.cardStyle) {
         case 'flat': return base;
         case 'bordered': return { ...base, border: '1px solid var(--menu-border)' };
-        case 'shadow': return { ...base, boxShadow: '0 14px 34px -16px rgba(0,0,0,0.38)' };
+        // "Con ombra": un foglio sollevato di un millimetro dal tavolo, non l'alone sfumato delle app
+        case 'shadow': return { ...base, border: '1px solid var(--menu-border)', boxShadow: '0 2px 0 var(--menu-border)' };
         default: return {
             ...base,
             border: look.cardBorder === 'heavy' ? '2px solid var(--menu-text)' : look.cardBorder === 'none' ? 'none' : '1px solid var(--menu-border)',
@@ -269,7 +282,7 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
                 )}
                 <div data-reveal={reveal} className={`relative ${wrap} flex flex-col justify-end ${centered ? 'text-center items-center' : ''}`} style={{ minHeight, paddingTop: 96, paddingBottom: 56 }}>
                     {facts.length > 0 && <p className="lp-facts" style={{ color: heroText, opacity: 0.85 }}>{facts.join(' · ')}</p>}
-                    <h1 className="menu-h mt-3" style={{ color: heroText, fontSize: 'clamp(3rem, 15vw, 7.5rem)', lineHeight: 0.95, textShadow: shown.length && heroDark ? '0 1px 18px rgba(0,0,0,0.35)' : 'none' }}>
+                    <h1 className="menu-h mt-3" style={{ color: heroText, fontSize: 'clamp(3rem, 15vw, 7.5rem)', lineHeight: 0.95, textShadow: shown.length && heroDark ? '0 1px 2px rgba(0,0,0,0.35)' : 'none' }}>
                         {title}
                     </h1>
                     {subtitle && (
@@ -294,6 +307,15 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
                 </div>
             </section>
         );
+    }
+
+    if (variant === 'poster' || variant === 'card' || variant === 'board') {
+        const im = imgs[0] ? { url: imgs[0].url, alt: imgs[0].alt } : undefined;
+        const onCategory = (id: number) => p.navigate(`/${p.localname}/Products/${id}`);
+        const base = { id: s.id, t, title, subtitle, facts, image: im, ctas: ctas(false), reveal, logo: p.logoImg };
+        if (variant === 'poster') return <HeroPoster {...base} />;
+        if (variant === 'card') return <HeroCard {...base} categories={p.categories} onCategory={onCategory} />;
+        return <HeroBoard {...base} categories={p.categories} onCategory={onCategory} hours={s.showFacts ? p.hours : ''} />;
     }
 
     if (variant === 'split') {
@@ -369,6 +391,9 @@ type ViewProps<S> = { s: S; c: Ctx; centered: boolean };
 const AboutView: React.FC<ViewProps<AboutSection>> = ({ s, c, centered }) => {
     const u = imgUrl(s.image?.src);
     if (!u && !s.text.trim()) return null;
+    const pimg = u ? { url: u, alt: s.image?.alt || '', caption: s.image?.caption } : undefined;
+    if (s.variant === 'editorial') return <AboutEditorial title={s.title.trim()} eyebrow={s.eyebrow} text={s.text} image={pimg} />;
+    if (s.variant === 'note') return <AboutNote title={s.title.trim()} text={s.text} image={pimg} signature={c.p.name} />;
     return (
         <div className={`grid grid-cols-1 ${u ? 'md:grid-cols-2' : ''} gap-8 md:gap-12 items-center`}>
             {u && (
@@ -394,6 +419,10 @@ const GalleryView: React.FC<ViewProps<GallerySection>> = ({ s, centered }) => {
         ? <figcaption className="mt-2 text-sm" style={{ color: 'var(--menu-muted)' }}>{text}</figcaption>
         : null;
     const head = s.title.trim() ? <SectionTitle eyebrow={s.eyebrow} title={s.title} centered={centered} /> : null;
+    const pimgs = items.map(i => ({ url: i.url, alt: i.alt, caption: i.caption }));
+
+    if (s.layout === 'filmstrip') return <>{head}<GalleryFilmstrip items={pimgs} label={s.title || 'Galleria'} /></>;
+    if (s.layout === 'collage') return <>{head}<GalleryCollage items={pimgs} /></>;
 
     if (s.layout === 'carousel') {
         const scroll = (dir: 1 | -1) => {
@@ -467,15 +496,20 @@ const FeaturesView: React.FC<ViewProps<FeaturesSection>> = ({ s, centered }) => 
     return (
         <>
             {s.title.trim() && <SectionTitle eyebrow={s.eyebrow} title={s.title} centered={centered} />}
-            <ul className="grid grid-cols-2 md:grid-cols-4 gap-x-6">
+            {/* Righe di un elenco, non quattro "box con icona": numero, titolo, frase. */}
+            <ol className={`lp-facts-list ${centered ? 'max-w-3xl mx-auto' : ''}`}>
                 {s.items.map((f, i) => (
-                    <li key={i} className={`lp-item py-5 ${centered ? 'text-center' : ''}`} style={{ borderTop: '1px solid var(--menu-rule)', ['--i' as any]: i }}>
-                        <FeatureIcon icon={f.icon} className={`w-5 h-5 ${centered ? 'mx-auto' : ''}`} style={{ color: 'var(--menu-emph)' }} />
-                        <p className="menu-h mt-3" style={{ fontSize: '1.12rem', lineHeight: 1.2, textAlign: centered ? 'center' : 'left' }}>{f.title}</p>
-                        <p className="mt-1" style={{ color: 'var(--menu-muted)', fontSize: '0.86rem', lineHeight: 1.45 }}>{f.sub}</p>
+                    <li key={i} className="lp-item" style={{ ['--i' as any]: i }}>
+                        <span className="lp-facts-num" aria-hidden="true">
+                            <FeatureIcon icon={f.icon} className="w-4 h-4" style={{ color: 'var(--menu-emph)' }} />
+                        </span>
+                        <span>
+                            <span className="menu-h lp-facts-title">{f.title}</span>
+                            {f.sub && <span className="lp-facts-sub">{f.sub}</span>}
+                        </span>
                     </li>
                 ))}
-            </ul>
+            </ol>
         </>
     );
 };
@@ -487,6 +521,10 @@ const HighlightsView: React.FC<ViewProps<HighlightsSection>> = ({ s, c, centered
     if (!list.length) return null;
     const open = (pr: ProductDto) => c.p.navigate(`/${c.p.localname}/Products/${pr.idCategory}`);
     const head = s.title.trim() ? <SectionTitle eyebrow={s.eyebrow} title={s.title} centered={centered} /> : null;
+    const hp = { list, showPrices: s.showPrices, open, img: productImg, t: c.t };
+    if (s.layout === 'menu') return <>{head}<HighlightsMenu {...hp} /></>;
+    if (s.layout === 'polaroid') return <>{head}<HighlightsPolaroid {...hp} /></>;
+    if (s.layout === 'index') return <>{head}<HighlightsIndex {...hp} /></>;
 
     if (s.layout === 'list') {
         return (
@@ -494,7 +532,7 @@ const HighlightsView: React.FC<ViewProps<HighlightsSection>> = ({ s, c, centered
                 {head}
                 <ul className="max-w-3xl mx-auto">
                     {list.map((pr, i) => {
-                        const u = imgUrl(pr.image);
+                        const u = productImg(pr.image);
                         return (
                             <li key={pr.id} className="lp-item" style={{ borderTop: '1px solid var(--menu-border)', ['--i' as any]: i }}>
                                 <button type="button" onClick={() => open(pr)} className="menu-focus menu-row w-full text-left flex items-center gap-4 py-4 px-1">
@@ -520,7 +558,7 @@ const HighlightsView: React.FC<ViewProps<HighlightsSection>> = ({ s, c, centered
             {head}
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {list.map((pr, i) => {
-                    const u = imgUrl(pr.image);
+                    const u = productImg(pr.image);
                     return (
                         <li key={pr.id} className="lp-item" style={{ ['--i' as any]: i }}>
                             <button type="button" onClick={() => open(pr)} className="menu-focus w-full h-full text-left overflow-hidden flex flex-col transition-transform hover:-translate-y-0.5" style={cardStyle(c.g, c.t.look)}>
@@ -544,30 +582,43 @@ const HighlightsView: React.FC<ViewProps<HighlightsSection>> = ({ s, c, centered
 };
 
 const Stars: React.FC<{ n: number }> = ({ n }) => (
-    <span className="inline-flex gap-0.5" role="img" aria-label={`${n} stelle su 5`}>
+    <span className="inline-flex gap-0.5 align-middle" role="img" aria-label={`${n} stelle su 5`}>
         {[1, 2, 3, 4, 5].map(i => (
-            <Star key={i} className="w-4 h-4" aria-hidden="true" style={{ color: 'var(--menu-emph)', fill: i <= n ? 'currentColor' : 'transparent', opacity: i <= n ? 1 : 0.35 }} />
+            <Star key={i} className="w-3.5 h-3.5" aria-hidden="true" style={{ color: 'var(--menu-emph)', fill: i <= n ? 'currentColor' : 'transparent', opacity: i <= n ? 1 : 0.35 }} />
         ))}
     </span>
 );
 
-const TestimonialsView: React.FC<ViewProps<TestimonialsSection>> = ({ s, c, centered }) => {
+/**
+ * Recensioni come citazioni stampate (la prima grande, le altre in colonna), non schede con stelle:
+ * è così che i giornali e le guide riportano un giudizio.
+ */
+const TestimonialsView: React.FC<ViewProps<TestimonialsSection>> = ({ s, centered }) => {
     const items = s.items.filter(t => t.text.trim());
     if (!items.length) return null;
+    const [first, ...rest] = items;
+    const by = (q: typeof first) => (
+        <p className="lp-quote-by">
+            {q.author.trim() && <span>— {q.author}</span>} <Stars n={q.stars} />
+        </p>
+    );
     return (
         <>
             {s.title.trim() && <SectionTitle eyebrow={s.eyebrow} title={s.title} centered={centered} />}
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {items.map((q, i) => (
-                    <li key={i} className="lp-item p-6 flex flex-col" style={{ ...cardStyle(c.g, c.t.look), ['--i' as any]: i }}>
-                        <Stars n={q.stars} />
-                        <blockquote className="mt-3 flex-1" style={{ fontSize: '1.02rem', lineHeight: 1.6 }}>
-                            <p style={{ whiteSpace: 'pre-line' }}>“{q.text}”</p>
-                        </blockquote>
-                        {q.author.trim() && <p className="menu-label mt-4">{q.author}</p>}
-                    </li>
-                ))}
-            </ul>
+            <figure className={`lp-item lp-quote-lead ${centered ? 'text-center mx-auto' : ''}`}>
+                <blockquote><p className="menu-h">“{first.text}”</p></blockquote>
+                <figcaption>{by(first)}</figcaption>
+            </figure>
+            {rest.length > 0 && (
+                <ul className="lp-quotes">
+                    {rest.map((q, i) => (
+                        <li key={i} className="lp-item" style={{ ['--i' as any]: i + 1 }}>
+                            <blockquote><p style={{ whiteSpace: 'pre-line' }}>“{q.text}”</p></blockquote>
+                            {by(q)}
+                        </li>
+                    ))}
+                </ul>
+            )}
         </>
     );
 };
@@ -577,25 +628,21 @@ const HoursView: React.FC<ViewProps<HoursSection>> = ({ s, c, centered }) => {
     if (!hasAny) return null;
     const today = (new Date().getDay() + 6) % 7;
     return (
-        <div className="max-w-2xl mx-auto">
+        // Orario stampato come sulla porta: giorno, puntini, ore. Niente riquadro.
+        <div className={`max-w-xl ${centered ? 'mx-auto' : ''}`}>
             {s.title.trim() && <SectionTitle eyebrow={s.eyebrow} title={s.title} centered={centered} />}
-            <div className="p-5 md:p-7" style={cardStyle(c.g, c.t.look)}>
-                <dl>
-                    {s.days.map((d, i) => (
-                        <div
-                            key={i}
-                            className="lp-item flex items-baseline justify-between gap-4 py-2.5"
-                            style={{ borderTop: i > 0 ? '1px solid var(--menu-border)' : 'none', fontWeight: i === today ? 700 : 400, ['--i' as any]: i }}
-                        >
-                            <dt>{WEEKDAYS[i]}{i === today && <span className="menu-label ml-2" style={{ color: 'var(--menu-emph)' }}>Oggi</span>}</dt>
-                            <dd className="text-right" style={{ color: d.closed ? 'var(--menu-muted)' : undefined }}>
-                                {d.closed ? 'Chiuso' : (d.text.trim() || '—')}
-                            </dd>
-                        </div>
-                    ))}
-                </dl>
-                {s.note.trim() && <p className="mt-4 text-sm" style={{ color: 'var(--menu-muted)' }}>{s.note}</p>}
-            </div>
+            <dl className="lp-timetable">
+                {s.days.map((d, i) => (
+                    <div key={i} className={`lp-item ${i === today ? 'is-today' : ''}`} style={{ ['--i' as any]: i }}>
+                        <dt>{WEEKDAYS[i]}{i === today && <span className="lp-today"> · oggi</span>}</dt>
+                        <span className="menu-leader" aria-hidden="true" />
+                        <dd style={{ color: d.closed ? 'var(--menu-muted)' : undefined, fontStyle: d.closed ? 'italic' : undefined }}>
+                            {d.closed ? 'chiuso' : (d.text.trim() || '—')}
+                        </dd>
+                    </div>
+                ))}
+            </dl>
+            {s.note.trim() && <p className="mt-4" style={{ color: 'var(--menu-muted)', fontSize: '0.95rem' }}>{s.note}</p>}
         </div>
     );
 };
@@ -847,10 +894,9 @@ const SectionsLanding: React.FC<Props> = (p) => {
     const pairing = FONT_PAIRINGS.find(f => f.key === g.fontPairing);
     useEffect(() => {
         if (!pairing) return;
-        const id = `lp-fonts-${pairing.key}`;
+        const id = `lp-fonts2-${pairing.key}`;
         if (document.getElementById(id)) return;
-        const href = buildGoogleFontsHref([pairing.display, pairing.body]);
-        if (!href) return;
+        const href = fontPairingHref(pairing);
         const link = document.createElement('link');
         link.id = id;
         link.rel = 'stylesheet';
@@ -869,10 +915,8 @@ const SectionsLanding: React.FC<Props> = (p) => {
     const rootVars = useMemo(() => {
         const v: Record<string, string> = {};
         if (pairing) {
-            const d = FONT_BY_KEY[pairing.display]?.family;
-            const b = FONT_BY_KEY[pairing.body]?.family;
-            if (d) { v['--menu-font-display'] = d; v['--menu-font-accent'] = d; }
-            if (b) { v['--menu-font-body'] = b; v['--menu-font-price'] = b; }
+            v['--menu-font-display'] = pairing.display; v['--menu-font-accent'] = pairing.display;
+            v['--menu-font-body'] = pairing.body; v['--menu-font-price'] = pairing.body;
         }
         const r = BUTTON_RADIUS[g.buttonShape];
         if (r) v['--lp-btn-radius'] = r;

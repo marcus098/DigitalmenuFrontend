@@ -13,10 +13,15 @@ export const MenuRule: React.FC<{ className?: string; style?: React.CSSPropertie
     const { look } = useMenuLook();
     return (
         <div className={`menu-rule menu-rule--${look.divider} ${className}`} style={style} aria-hidden="true">
-            {(look.divider === 'ornament' || look.divider === 'nouveau') && <i />}
+            {ruleHasGlyph(look.divider) && <i />}
         </div>
     );
 };
+
+/** Divisori con un ornamento centrale (elemento <i> mascherato in index.css). */
+export function ruleHasGlyph(d: TemplateLook['divider']): boolean {
+    return d === 'ornament' || d === 'nouveau' || d === 'fleuron';
+}
 
 export function formatEuro(value: number): string {
     // Sui menu stampati italiani: "12" se intero, "8,50" altrimenti.
@@ -65,6 +70,21 @@ export const MenuPrice: React.FC<{ value: number; from?: boolean; size?: string 
     );
 };
 
+/** Numero del piatto (template con piatti numerati): semplice o nella casella del foglio d'ordine. */
+export const MenuNumber: React.FC<{ n: number; size?: string; className?: string; style?: React.CSSProperties }> = ({ n, size = '0.8rem', className = '', style }) => {
+    const { look } = useMenuLook();
+    const boxed = look.numberStyle === 'boxed';
+    return (
+        <span
+            aria-hidden="true"
+            className={`menu-price ${boxed ? 'menu-num--boxed' : ''} ${className}`}
+            style={{ color: 'var(--menu-emph)', fontSize: size, fontWeight: boxed ? 700 : 600, ...style }}
+        >
+            {String(n).padStart(2, '0')}
+        </span>
+    );
+};
+
 const TAG_LABELS: Record<number, string> = {
     1: 'Vegetariano',
     2: 'Senza glutine',
@@ -80,16 +100,16 @@ export const MenuTags: React.FC<{ tags?: number[]; align?: 'left' | 'center' }> 
         <p
             className="mt-1.5"
             style={{
+                // in tono di testo, non da etichetta: le caratteristiche si leggono, non si "brandizzano"
                 fontFamily: 'var(--menu-font-body)',
-                fontSize: '0.68rem',
+                fontSize: '0.76rem',
                 fontWeight: 600,
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
+                fontStyle: 'italic',
                 color: 'var(--menu-emph)',
                 textAlign: align,
             }}
         >
-            {labels.join('  ·  ')}
+            {labels.join(' · ')}
         </p>
     );
 };
@@ -123,18 +143,23 @@ export const MenuDescription: React.FC<{
         ? { display: '-webkit-box', WebkitLineClamp: clamp, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
         : {};
     if (look.descStyle === 'ingredients') {
-        // "pomodoro, basilico, olio" → POMODORO · BASILICO · OLIO
+        // "pomodoro, basilico, olio" → pomodoro / basilico / olio, come la riga degli ingredienti
+        // sotto un drink o sotto il piatto in un ricettario (minuscolo, barrette in colore d'accento).
         const parts = text.split(/\s*[,;]\s*/).filter(Boolean);
         return (
             <p
                 className={className}
                 style={{
                     ...style, ...clampStyle,
-                    color: 'var(--menu-muted)', fontSize: '0.7rem', lineHeight: 1.7, fontWeight: 500,
-                    letterSpacing: '0.11em', textTransform: 'uppercase',
+                    color: 'var(--menu-muted)', lineHeight: 1.5, fontWeight: 500,
                 }}
             >
-                {parts.join('  ·  ')}
+                {parts.map((part, i) => (
+                    <React.Fragment key={i}>
+                        {i > 0 && <span aria-hidden="true" style={{ color: 'var(--menu-emph)', margin: '0 0.35em', fontWeight: 400 }}>/</span>}
+                        {part.charAt(0).toLowerCase() + part.slice(1)}
+                    </React.Fragment>
+                ))}
             </p>
         );
     }
@@ -238,6 +263,31 @@ const MastheadInner: React.FC<{ name: string; fontSize: string; centered: boolea
                     {sub && <p className="menu-label mt-3">{sub}</p>}
                 </div>
             );
+        case 'cartouche':
+            return (
+                <div className={centered ? 'text-center' : ''} style={{ paddingInline: 12 }}>
+                    <div className="menu-head--cartouche">
+                        <H
+                            style={{
+                                fontFamily: 'var(--menu-font-accent)', fontWeight: 400, fontSize: `calc(${fontSize} * 1.05)`,
+                                lineHeight: 1.05, color: 'var(--menu-text)', textAlign: 'center', padding: '0 0.1em',
+                            }}
+                        >
+                            {name}
+                        </H>
+                        {sub && <p className="mt-2" style={{ color: 'var(--menu-muted)', fontStyle: 'italic', fontSize: '0.92rem', textAlign: 'center' }}>{sub}</p>}
+                    </div>
+                </div>
+            );
+        case 'sticker':
+            return (
+                <div className={centered ? 'text-center' : ''} style={{ padding: '6px 6px 0' }}>
+                    <div className="menu-head--sticker">
+                        <H className="menu-h" style={{ fontSize: `calc(${fontSize} * 0.86)`, lineHeight: 1, textAlign: 'left' }}>{name}</H>
+                    </div>
+                    {sub && <p className="mt-4" style={{ fontWeight: 700, fontSize: '0.95rem', color: 'inherit' }}>{sub}</p>}
+                </div>
+            );
         default:
             return <H className="menu-h" style={{ fontSize, lineHeight: 0.95, textAlign: centered ? 'center' : 'left' }}>{name}</H>;
     }
@@ -305,6 +355,20 @@ export const MenuSectionHeading: React.FC<{
                 </div>
             );
         }
+        case 'sticker':
+            return (
+                <div className={centered ? 'text-center' : ''} style={{ paddingLeft: 4 }}>
+                    {eyebrowEl}
+                    <div className="menu-sh--sticker">{h({ fontSize: `calc(${fontSize} * 0.7)` })}</div>
+                </div>
+            );
+        case 'underscore':
+            return (
+                <div className={`menu-sh--underscore ${centered ? 'text-center' : ''}`}>
+                    {eyebrowEl}
+                    {h({ fontSize: `calc(${fontSize} * 0.82)`, textAlign: centered ? 'center' : 'left' })}
+                </div>
+            );
         case 'arch':
             return (
                 <div className="text-center">

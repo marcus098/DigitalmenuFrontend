@@ -8,6 +8,7 @@ import {
 } from '../../Client/menuTemplates';
 import { getMenuTokens, tokensToCssVars, TEMPLATE_FONT_KEY } from '../../Client/menuTheme';
 import { LandingConfig, SECTION_META } from '../../Client/landing/landingConfig';
+import { ruleHasGlyph } from '../Client/MenuPrimitives';
 import { applyPreset, LANDING_PRESETS, LandingPreset } from '../../Client/landing/landingPresets';
 
 /**
@@ -44,7 +45,7 @@ const TemplateThumb: React.FC<{ def: MenuTemplateDef }> = ({ def }) => {
 
     const rule = (
         <div className={`menu-rule menu-rule--${l.divider}`} style={{ margin: '6px 0', transform: l.divider === 'checker' ? 'scaleY(0.6)' : undefined }}>
-            {(l.divider === 'ornament' || l.divider === 'nouveau') && <i />}
+            {ruleHasGlyph(l.divider) && <i />}
         </div>
     );
 
@@ -67,6 +68,14 @@ const TemplateThumb: React.FC<{ def: MenuTemplateDef }> = ({ def }) => {
             case 'script': return <div style={{ fontFamily: 'var(--menu-font-accent)', fontSize: 22, lineHeight: 1, color: 'var(--menu-emph)', transform: 'rotate(-4deg)', textShadow: '1px 1px 0 var(--menu-text)' }}>Da Mario</div>;
             case 'noren': return <div style={{ background: 'repeating-linear-gradient(90deg, var(--menu-secondary) 0 calc(25% - 2px), transparent calc(25% - 2px) 25%)', padding: '6px 0 9px', textAlign: 'center' }}><div className="menu-h" style={{ fontSize: 16, lineHeight: 1, color: 'var(--menu-secondary-text)' }}>Da Mario</div></div>;
             case 'tape': return box({ background: 'var(--menu-card)', transform: 'rotate(-1.5deg)', boxShadow: '0 4px 8px -6px rgba(0,0,0,.5)' });
+            case 'cartouche': return box(
+                { border: '1px solid var(--menu-secondary)', borderRadius: '50%', outline: '1px solid var(--menu-secondary)', outlineOffset: 2, padding: '5px 16px' },
+                <div style={{ fontFamily: 'var(--menu-font-accent)', fontSize: 19, lineHeight: 1, color: 'var(--menu-text)' }}>Da Mario</div>,
+            );
+            case 'sticker': return box(
+                { background: 'var(--menu-accent)', borderRadius: 7, boxShadow: '0 0 0 2.5px #fff, 0 0 0 3.5px rgba(0,0,0,.15)', transform: 'rotate(-3deg)', marginLeft: 3 },
+                <div className="menu-h" style={{ fontSize: 14, lineHeight: 1, color: 'var(--menu-accent-text)' }}>Da Mario</div>,
+            );
             default: return plainTitle;
         }
     })();
@@ -163,7 +172,7 @@ const TemplateThumb: React.FC<{ def: MenuTemplateDef }> = ({ def }) => {
                 )}
                 <div style={{ padding: '2px 10px 0' }}>
                     {rule}
-                    <div className="menu-label" style={{ fontSize: 7, letterSpacing: '0.18em', textAlign: centered ? 'center' : 'left', color: 'var(--menu-emph)', marginBottom: 3 }}>
+                    <div className="menu-h" style={{ fontSize: 10.5, textAlign: centered ? 'center' : 'left', color: 'var(--menu-emph)', margin: '1px 0 3px' }}>
                         Primi piatti
                     </div>
                     {dishes}
@@ -339,7 +348,12 @@ const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThe
                             <TemplateThumb def={def} />
                             <div className="px-1 pt-2.5 pb-1">
                                 <div className="flex items-center justify-between gap-2">
-                                    <p className="font-bold text-sm text-gray-900">{def.label}</p>
+                                    <p className="font-bold text-sm text-gray-900">
+                                        {def.label}
+                                        {def.isNew && (
+                                            <span className="ml-1.5 align-middle inline-block px-1.5 py-px rounded text-[10px] font-semibold bg-amber-100 text-amber-900">Nuovo</span>
+                                        )}
+                                    </p>
                                     {selected && (
                                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
                                             <Check className="w-3.5 h-3.5" /> In uso
@@ -350,6 +364,7 @@ const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThe
                                     {def.venues.map(v => VENUE_LABEL[v]).join(' · ')}
                                 </p>
                                 <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">{def.description}</p>
+                                <p className="text-[11px] text-gray-500 mt-1.5 leading-snug italic">Ispirato a: {def.inspiration.charAt(0).toLowerCase() + def.inspiration.slice(1)}</p>
                             </div>
                         </button>
                     );

@@ -12,11 +12,18 @@
  *  - look:    scelte di impaginazione ispirate ai menu stampati (filetti,
  *             puntini tra piatto e prezzo, numerazione, texture della carta…).
  *
+ * Questo file è l'unica fonte di verità anche per il menu in PDF (web) e per gli stili PDF
+ * dell'app mobile: `npm run export:pdf-tokens` rigenera
+ * `src/Components/Dashboard/menuPdf/pdfTokens.generated.json` da qui.
+ *
  * Ritocchi del ristoratore (Dashboard → Personalizza aspetto → Layout): sono salvati
  * nella stessa stringa, dopo la chiave del template, es.
  *   "enoteca|pl=grid;im=round;r=4"
  * Il formato è compatto (max ~120 caratteri) e ignorato se non valido: i valori storici
  * ("default", "trattoria"…) restano identici e si vedono esattamente come prima.
+ *
+ * Regola per i font: niente scelte "di default" (Inter, Poppins, Playfair, Montserrat, DM…).
+ * Ogni template usa caratteri che appartengono davvero al suo genere di stampa.
  */
 
 export type MenuTemplateKey =
@@ -41,7 +48,19 @@ export type MenuTemplateKey =
     | 'izakaya'
     | 'agriturismo'
     | 'levante'
-    | 'forno';
+    | 'forno'
+    // dicembre 2026
+    | 'tipografia'
+    | 'riso'
+    | 'dimsum'
+    | 'napoletana'
+    | 'vineria'
+    | 'pasticceria'
+    | 'chiosco'
+    | 'bageri'
+    | 'taqueria'
+    | 'bacheca'
+    | 'birreria';
 
 export type VenueTag =
     | 'ristorante'
@@ -84,10 +103,14 @@ export const VENUE_FILTERS: { key: VenueTag | 'all'; label: string }[] = [
 export type DividerStyle =
     | 'hairline' | 'double' | 'thick' | 'dashed' | 'checker' | 'ornament'
     // aggiunti a novembre 2026 (vedi index.css → .menu-rule--*)
-    | 'tile' | 'girih' | 'nouveau' | 'brush' | 'awning' | 'diner' | 'stitch' | 'none';
+    | 'tile' | 'girih' | 'nouveau' | 'brush' | 'awning' | 'diner' | 'stitch' | 'none'
+    // dicembre 2026
+    | 'fleuron' | 'short' | 'stripes' | 'papel' | 'rauten' | 'lace';
 export type TextureStyle =
     | 'none' | 'paper' | 'chalk' | 'wood' | 'washi'
-    | 'laid' | 'butcher' | 'flecks' | 'sashiko' | 'kraft' | 'flour';
+    | 'laid' | 'butcher' | 'flecks' | 'sashiko' | 'kraft' | 'flour'
+    // dicembre 2026
+    | 'grain' | 'felt';
 
 /** Impaginazione dei piatti in una categoria. */
 export type ProductLayout = 'menu' | 'centered' | 'cards' | 'twocol' | 'grid';
@@ -98,15 +121,24 @@ export type Density = 'compact' | 'normal' | 'airy';
 /** Dove sta il prezzo rispetto al nome. */
 export type PricePosition = 'right' | 'below' | 'inline';
 /** Titolo delle sezioni (categoria nella pagina piatti, titoli del sito vetrina). */
-export type SectionHeaderStyle = 'plain' | 'ruled' | 'band' | 'label' | 'stamp' | 'seal' | 'arch';
+export type SectionHeaderStyle = 'plain' | 'ruled' | 'band' | 'label' | 'stamp' | 'seal' | 'arch' | 'sticker' | 'underscore';
 /** Barra delle categorie nella pagina piatti. */
 export type CategoryNavStyle = 'underline' | 'pill' | 'block';
 /** Testata con il nome del locale (menu + sito vetrina "a testata"). */
-export type HeaderStyle = 'plain' | 'framed' | 'banner' | 'stamp' | 'script' | 'noren' | 'tape' | 'awning';
+export type HeaderStyle = 'plain' | 'framed' | 'banner' | 'stamp' | 'script' | 'noren' | 'tape' | 'awning' | 'cartouche' | 'sticker';
 /** Pulsanti del sito vetrina. */
 export type ButtonStyle = 'solid' | 'outline' | 'underline';
 /** Descrizione dei piatti: 'auto' = corsivo se i titoli sono in corsivo (comportamento storico). */
 export type DescriptionStyle = 'auto' | 'italic' | 'ingredients';
+/**
+ * Resa dell'inchiostro su titoli e prezzi (solo text-shadow, niente filtri):
+ * 'letterpress' = leggera sbavatura dei caratteri mobili, 'misregister' = secondo colore
+ * fuori registro come nella risografia, 'typed' = battuta della macchina da scrivere,
+ * 'chalk' = alone del gesso sulla lavagna.
+ */
+export type InkStyle = 'none' | 'letterpress' | 'misregister' | 'typed' | 'chalk';
+/** Numeri dei piatti: semplici o in una casella (foglio d'ordine del dim sum). */
+export type NumberStyle = 'plain' | 'boxed';
 
 export interface TemplatePalette {
     bg: string;
@@ -124,7 +156,7 @@ export interface TemplatePalette {
 export interface TemplateFonts {
     display: string;
     body: string;
-    /** Font per i prezzi (es. monospazio nel Minimal). Default = body. */
+    /** Font per i prezzi (es. macchina da scrivere nella Vineria). Default = body. */
     price?: string;
     /** Font "insegna" per il nome del locale (es. corsivo del Diner). Default = display. */
     accent?: string;
@@ -136,7 +168,7 @@ export interface TemplateFonts {
 interface BaseLook {
     /** Allineamento di titoli e intestazioni. */
     align: 'left' | 'center';
-    headingCase: 'none' | 'uppercase' | 'smallcaps';
+    headingCase: 'none' | 'uppercase' | 'smallcaps' | 'lowercase';
     headingStyle: 'normal' | 'italic';
     headingWeight: number;
     headingTracking: string;
@@ -168,7 +200,7 @@ interface BaseLook {
     ticker: 'marquee' | 'static';
 }
 
-/** Scelte aggiunte a novembre 2026: facoltative nella definizione, default = aspetto storico. */
+/** Scelte aggiunte da novembre 2026: facoltative nella definizione, default = aspetto storico. */
 interface ExtLook {
     imageShape: ImageShape;
     density: Density;
@@ -178,6 +210,8 @@ interface ExtLook {
     headerStyle: HeaderStyle;
     buttonStyle: ButtonStyle;
     descStyle: DescriptionStyle;
+    ink: InkStyle;
+    numberStyle: NumberStyle;
 }
 
 export type TemplateLook = BaseLook & ExtLook;
@@ -191,6 +225,8 @@ const EXT_DEFAULTS: ExtLook = {
     headerStyle: 'plain',
     buttonStyle: 'solid',
     descStyle: 'auto',
+    ink: 'none',
+    numberStyle: 'plain',
 };
 
 export interface MenuTemplateDef {
@@ -198,6 +234,15 @@ export interface MenuTemplateDef {
     label: string;
     /** Descrizione breve per il ristoratore: per quale locale è pensato. */
     description: string;
+    /** Il riferimento reale da cui nasce il template (una riga, mostrata nella libreria). */
+    inspiration: string;
+    /** Aggiunto di recente: badge "Nuovo" nella libreria. */
+    isNew?: boolean;
+    /**
+     * Due template il cui abbinamento di font sta bene anche su questo: proposti come
+     * alternative nel dialog del PDF e per primi nel selettore "Abbinamento di font".
+     */
+    pairsWith: MenuTemplateKey[];
     venues: VenueTag[];
     palette: TemplatePalette;
     fonts: TemplateFonts;
@@ -209,12 +254,19 @@ interface TemplateSpec extends Omit<MenuTemplateDef, 'look'> {
 }
 
 // ─── Libreria ─────────────────────────────────────────────────────────────────
+// Ogni template parte da un riferimento stampato reale (campo `inspiration`): niente
+// sfumature, vetri o bagliori, solo carta, inchiostro e la tipografia del genere.
+// Contrasto: testo, testo secondario e prezzi rispettano WCAG AA su fondo e schede
+// (verificato da scripts/export-pdf-tokens.mjs, che fallisce se un template scende sotto).
 
 const SPECS: TemplateSpec[] = [
     {
+        // Rivisto a dicembre 2026: il Lato del testo era il classico font "di default".
         key: 'default',
         label: 'Classico',
-        description: 'Carta avorio, titoli serif classici, doppio filetto e prezzi con i puntini. Il menu del ristorante di tradizione.',
+        description: 'Carta avorio, Baskerville per i titoli e Spectral per le descrizioni, doppio filetto e prezzi con i puntini.',
+        inspiration: 'Il menu del ristorante di città stampato dal tipografo sotto casa.',
+        pairsWith: ['enoteca', 'tipografia'],
         venues: ['ristorante', 'trattoria'],
         palette: {
             bg: '#f4eee2', card: '#faf6ee', text: '#1f1a14', muted: '#5b5143',
@@ -223,8 +275,8 @@ const SPECS: TemplateSpec[] = [
         },
         fonts: {
             display: '"Libre Baskerville", Baskerville, Georgia, serif',
-            body: 'Lato, "Segoe UI", Arial, sans-serif',
-            google: ['Libre+Baskerville:wght@400;700', 'Lato:ital,wght@0,400;0,700;1,400'],
+            body: 'Spectral, Georgia, serif',
+            google: ['Libre+Baskerville:wght@400;700', 'Spectral:ital,wght@0,400;0,500;0,600;1,400'],
         },
         look: {
             align: 'center', headingCase: 'none', headingStyle: 'normal', headingWeight: 700, headingTracking: '0',
@@ -234,54 +286,66 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
+        // Rivisto a dicembre 2026: era IBM Plex + prezzi in monospazio, il "minimal" che fanno tutti.
+        // Ora è lo Stile Tipografico Internazionale vero: un solo grottesco, nero pieno, rosso svizzero.
         key: 'minimal',
-        label: 'Minimal',
-        description: 'Bianco, griglia svizzera, numeri in monospazio. Per locali moderni, caffetterie specialty e brunch.',
+        label: 'Minimal · Stile svizzero',
+        description: 'Un solo grottesco in nero pieno, barra rossa, sezioni numerate grandi e tutto a bandiera sinistra. Niente decorazioni.',
+        inspiration: 'I manifesti e i listini della scuola di Zurigo e Basilea (Müller-Brockmann, Ruder), anni \'50-\'60.',
+        pairsWith: ['bageri', 'caffe'],
         venues: ['caffe', 'bar', 'ristorante'],
         palette: {
-            bg: '#fafaf7', card: '#ffffff', text: '#141414', muted: '#5a5a55',
-            accent: '#c8402a', accentText: '#ffffff', secondary: '#141414', secondaryText: '#ffffff',
-            heroBg: '#141414', heroOverlay: 0.25,
+            bg: '#f4f3ef', card: '#ffffff', text: '#111111', muted: '#545450',
+            accent: '#d0281b', accentText: '#ffffff', secondary: '#111111', secondaryText: '#ffffff',
+            heroBg: '#111111', heroOverlay: 0.25,
         },
         fonts: {
-            display: '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif',
-            body: '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif',
-            price: '"IBM Plex Mono", ui-monospace, monospace',
-            google: ['IBM+Plex+Sans:wght@400;500;600', 'IBM+Plex+Mono:wght@400;500'],
+            display: '"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif',
+            body: '"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif',
+            google: ['Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400'],
         },
         look: {
-            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 600, headingTracking: '-0.015em',
-            divider: 'hairline', texture: 'none', radius: 0, leaders: false, price: 'plain',
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 800, headingTracking: '-0.025em',
+            divider: 'thick', texture: 'none', radius: 0, leaders: false, price: 'plain',
             productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'arabic', productNumbers: false,
             hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            categoryNav: 'block',
         },
     },
     {
+        // Rivisto a dicembre 2026: era nero + oro + Cinzel, il "lusso" generico. Ora è il cartoncino
+        // del menu degustazione: carta di cotone, un solo serif, nomi dei piatti in minuscolo.
         key: 'luxury',
-        label: 'Fine dining',
-        description: 'Fondo scuro, titoli lapidari, tanto spazio vuoto e niente foto tra i piatti. Per cucina d\'autore e menu degustazione.',
+        label: 'Fine dining · Degustazione',
+        description: 'Cartoncino di cotone, nomi dei piatti in minuscolo, un filetto corto tra un corso e l\'altro, niente foto. Per menu degustazione.',
+        inspiration: 'Il cartoncino del percorso degustazione che si porta a casa, stampato in un solo colore.',
+        pairsWith: ['brasserie', 'default'],
         venues: ['fine', 'ristorante', 'cocktail'],
         palette: {
-            bg: '#13120f', card: '#1a1916', text: '#ece6da', muted: '#a69d8c',
-            accent: '#c2a26b', accentText: '#13120f', secondary: '#ece6da', secondaryText: '#13120f',
-            heroBg: '#13120f', heroOverlay: 0.55,
+            bg: '#f3f0e8', card: '#f9f7f1', text: '#1a1916', muted: '#57534a',
+            accent: '#6b2b23', accentText: '#f9f7f1', secondary: '#1a1916', secondaryText: '#f3f0e8',
+            heroBg: '#1a1916', heroOverlay: 0.45,
         },
         fonts: {
-            display: 'Cinzel, "Trajan Pro", Georgia, serif',
-            body: 'Jost, "Futura", "Century Gothic", sans-serif',
-            google: ['Cinzel:wght@400;500;600', 'Jost:wght@300;400;500'],
+            display: 'Gloock, "Bodoni 72", Georgia, serif',
+            body: 'Cardo, Georgia, serif',
+            google: ['Gloock', 'Cardo:ital,wght@0,400;0,700;1,400'],
         },
         look: {
-            align: 'center', headingCase: 'none', headingStyle: 'normal', headingWeight: 500, headingTracking: '0.04em',
-            divider: 'ornament', texture: 'none', radius: 0, leaders: false, price: 'accent',
+            align: 'center', headingCase: 'lowercase', headingStyle: 'normal', headingWeight: 400, headingTracking: '0',
+            divider: 'short', texture: 'none', radius: 0, leaders: false, price: 'plain',
             productLayout: 'centered', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
             hero: 'masthead', cardBorder: 'none', offsetShadow: false, width: 'narrow', ticker: 'static',
+            density: 'airy', descStyle: 'italic', buttonStyle: 'underline',
         },
     },
     {
+        // Rivisto a dicembre 2026: via Playfair Display. Slab tondo da insegna di paese + Bitter.
         key: 'trattoria',
         label: 'Trattoria',
-        description: 'Carta paglia, bordo a quadretti, titoli rosso pomodoro. Cucina di casa, osterie, agriturismi.',
+        description: 'Carta paglia, bordo a quadretti come la tovaglia, titoli in uno slab grasso e tondo, rosso pomodoro. Cucina di casa.',
+        inspiration: 'Le trattorie di paese con la tovaglia a quadri e il menu ciclostilato infilato nel portamenu.',
+        pairsWith: ['agriturismo', 'pizzeria'],
         venues: ['trattoria', 'pizzeria', 'ristorante'],
         palette: {
             bg: '#f1e6cf', card: '#f8f0de', text: '#2a1f16', muted: '#5e4e3b',
@@ -289,153 +353,182 @@ const SPECS: TemplateSpec[] = [
             heroBg: '#2a1f16', heroOverlay: 0.35,
         },
         fonts: {
-            display: '"Playfair Display", Georgia, serif',
-            body: '"Source Sans 3", "Segoe UI", Arial, sans-serif',
-            google: ['Playfair+Display:wght@700;800', 'Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400'],
+            display: 'Coustard, Rockwell, Georgia, serif',
+            body: 'Bitter, Georgia, serif',
+            google: ['Coustard:wght@400;900', 'Bitter:ital,wght@0,400;0,500;0,700;1,400'],
         },
         look: {
-            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 700, headingTracking: '0',
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 900, headingTracking: '-0.005em',
             divider: 'checker', texture: 'paper', radius: 3, leaders: true, price: 'plain',
             productLayout: 'menu', categoryLayout: 'rows', categoryNumbers: 'none', productNumbers: false,
             hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
         },
     },
     {
+        // Rivisto a dicembre 2026: Caveat è il "corsivo a mano" che si vede ovunque. Ora gesso a
+        // pennello per i titoli, stampatello da lavagna per il testo, tutto a sinistra come scritto di getto.
         key: 'bistrot',
-        label: 'Bistrot · Lavagna',
-        description: 'Lavagna nera e scritte a gesso, come il menu del giorno appeso al muro. Bistrot, osterie moderne, wine bar.',
+        label: 'Osteria · Lavagna',
+        description: 'Lavagna nera, titoli col gessetto grosso, piatti in stampatello e l\'alone del gesso. Il menu del giorno appeso al muro.',
+        inspiration: 'La lavagna delle osterie e dei bistrot, riscritta ogni mattina con il gessetto.',
+        pairsWith: ['agriturismo', 'vineria'],
         venues: ['bar', 'ristorante', 'trattoria'],
         palette: {
-            bg: '#232825', card: '#2a302c', text: '#f0ede4', muted: '#bdbcb1',
+            bg: '#232825', card: '#2a302c', text: '#f0ede4', muted: '#c4c2b7',
             accent: '#f1d27a', accentText: '#232825', secondary: '#f0ede4', secondaryText: '#232825',
             heroBg: '#232825', heroOverlay: 0.55,
         },
         fonts: {
-            display: 'Caveat, "Segoe Print", cursive',
+            display: '"Caveat Brush", "Segoe Print", cursive',
             body: '"Patrick Hand", "Segoe Print", cursive',
-            google: ['Caveat:wght@600;700', 'Patrick+Hand'],
+            google: ['Caveat+Brush', 'Patrick+Hand'],
         },
         look: {
-            align: 'center', headingCase: 'none', headingStyle: 'normal', headingWeight: 700, headingTracking: '0.01em',
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.01em',
             divider: 'dashed', texture: 'chalk', radius: 0, leaders: true, price: 'accent',
             productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
             hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
+            ink: 'chalk',
         },
     },
     {
+        // Rivisto a dicembre 2026: via Oswald. Caratteri in legno vittoriani come le insegne dipinte dei pub.
         key: 'pub',
         label: 'Pub',
-        description: 'Legno scuro, ottone, condensato tutto maiuscolo. Birre alla spina, burger, fritti e partite.',
+        description: 'Legno scuro, ottone e i caratteri in legno larghi delle insegne vittoriane. Birre alla spina, burger, fritti e partite.',
+        inspiration: 'Le insegne dipinte a mano dei pub inglesi e i manifesti in caratteri di legno dell\'Ottocento.',
+        pairsWith: ['birreria', 'braceria'],
         venues: ['pub', 'bar', 'street'],
         palette: {
-            bg: '#1c140e', card: '#271b12', text: '#f2e6cc', muted: '#c4b291',
+            bg: '#1c140e', card: '#271b12', text: '#f2e6cc', muted: '#c9b897',
             accent: '#d9a441', accentText: '#1c140e', secondary: '#7a2e1c', secondaryText: '#f2e6cc',
             heroBg: '#1c140e', heroOverlay: 0.5,
         },
         fonts: {
-            display: 'Oswald, "Arial Narrow", sans-serif',
+            display: '"Holtwood One SC", Rockwell, Georgia, serif',
             body: '"Barlow Semi Condensed", "Arial Narrow", sans-serif',
-            google: ['Oswald:wght@500;600;700', 'Barlow+Semi+Condensed:wght@400;500;600'],
+            google: ['Holtwood+One+SC', 'Barlow+Semi+Condensed:wght@400;500;600'],
         },
         look: {
-            align: 'left', headingCase: 'uppercase', headingStyle: 'normal', headingWeight: 600, headingTracking: '0.03em',
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0',
             divider: 'thick', texture: 'wood', radius: 2, leaders: true, price: 'accent',
             productLayout: 'menu', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
             hero: 'overlay', cardBorder: 'heavy', offsetShadow: false, width: 'wide', ticker: 'marquee',
         },
     },
     {
+        // Rivisto a dicembre 2026: era nero + oro + Bodoni spaziato (il cocktail bar "da template").
+        // Ora verde bottiglia, ottone e un display da cartellone di Broadway anni '30.
         key: 'cocktail',
         label: 'Cocktail bar',
-        description: 'Nero profondo, oro, Bodoni e linee déco. Per american bar, speakeasy e lounge.',
+        description: 'Verde bottiglia e ottone, titoli da cartellone anni \'30, ingredienti sotto ogni drink. American bar e speakeasy.',
+        inspiration: 'Le carte degli american bar degli anni \'30 e i cartelloni dei teatri di Broadway.',
+        pairsWith: ['brasserie', 'luxury'],
         venues: ['cocktail', 'bar', 'fine'],
         palette: {
-            bg: '#0e1013', card: '#15181c', text: '#ebe5d6', muted: '#a9a395',
-            accent: '#c9a85c', accentText: '#0e1013', secondary: '#1d3b3a', secondaryText: '#ebe5d6',
-            heroBg: '#0e1013', heroOverlay: 0.6,
+            bg: '#10211c', card: '#162a24', text: '#ece4d2', muted: '#b5ad98',
+            accent: '#d2ab62', accentText: '#10211c', secondary: '#7c2c24', secondaryText: '#ece4d2',
+            heroBg: '#10211c', heroOverlay: 0.6,
         },
         fonts: {
-            display: '"Bodoni Moda", "Didot", "Bodoni 72", serif',
+            display: 'Limelight, "Bodoni 72", Georgia, serif',
             body: '"Josefin Sans", "Futura", sans-serif',
-            google: ['Bodoni+Moda:ital,opsz,wght@0,6..96,500;0,6..96,600;1,6..96,500', 'Josefin+Sans:wght@300;400;600'],
+            google: ['Limelight', 'Josefin+Sans:ital,wght@0,400;0,600;1,400'],
         },
         look: {
-            align: 'center', headingCase: 'uppercase', headingStyle: 'normal', headingWeight: 500, headingTracking: '0.16em',
+            align: 'center', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.02em',
             divider: 'double', texture: 'none', radius: 0, leaders: true, price: 'accent',
             productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
             hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
+            descStyle: 'ingredients',
         },
     },
     {
+        // Rivisto a dicembre 2026: era Poppins + Nunito con schede arrotondate (l'aspetto da app).
+        // Ora è il listino del bar italiano: grottesco robusto, fascia marrone caffè, puntini fino al prezzo.
         key: 'caffe',
-        label: 'Caffè & Pasticceria',
-        description: 'Chiaro e arioso, titoli tondi e foto della vetrina in primo piano. Colazioni, brunch, gelaterie, pasticcerie.',
+        label: 'Caffè · Bar',
+        description: 'Il listino del banco: grottesco robusto, fasce color caffè sulle sezioni, puntini fino al prezzo e foto piccole a lato.',
+        inspiration: 'I listini prezzi appesi dietro al banco dei bar italiani, con le piastrelle verdi della parete.',
+        pairsWith: ['minimal', 'forno'],
         venues: ['caffe', 'bar'],
         palette: {
-            bg: '#fbf7f1', card: '#ffffff', text: '#3a2a20', muted: '#6c5a4c',
-            accent: '#a94f2b', accentText: '#ffffff', secondary: '#eadfd2', secondaryText: '#3a2a20',
-            heroBg: '#3a2a20', heroOverlay: 0.2,
+            bg: '#f6f1e7', card: '#fffdf8', text: '#2a1d15', muted: '#66564a',
+            accent: '#7f3612', accentText: '#fffdf8', secondary: '#2f5e4e', secondaryText: '#ffffff',
+            heroBg: '#2a1d15', heroOverlay: 0.3,
         },
         fonts: {
-            display: 'Poppins, "Segoe UI", Arial, sans-serif',
-            body: '"Nunito Sans", "Segoe UI", sans-serif',
-            google: ['Poppins:wght@500;600;700', 'Nunito+Sans:wght@400;600;700'],
+            display: 'Chivo, "Helvetica Neue", Arial, sans-serif',
+            body: 'Chivo, "Helvetica Neue", Arial, sans-serif',
+            google: ['Chivo:ital,wght@0,400;0,500;0,700;0,800;1,400'],
         },
         look: {
-            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 600, headingTracking: '-0.01em',
-            divider: 'hairline', texture: 'none', radius: 10, leaders: false, price: 'accent',
-            productLayout: 'cards', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 800, headingTracking: '-0.01em',
+            divider: 'hairline', texture: 'none', radius: 3, leaders: true, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
             hero: 'overlay', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            sectionHeader: 'band', categoryNav: 'block',
         },
     },
     {
+        // Rivisto a dicembre 2026: via Rubik (testo "da app"), ora Barlow, più vicino ai cartelli del forno.
         key: 'pizzeria',
         label: 'Pizzeria',
-        description: 'Caldo e deciso: slab spesso, rosso pomodoro e verde basilico. Si legge bene anche in sala piena.',
+        description: 'Caldo e deciso: slab spesso, rosso pomodoro e verde basilico, prezzi in colonna. Si legge bene anche in sala piena.',
+        inspiration: 'I cartelli dipinti sopra il forno delle pizzerie di quartiere.',
+        pairsWith: ['napoletana', 'trattoria'],
         venues: ['pizzeria', 'trattoria', 'street'],
         palette: {
             bg: '#fff6ea', card: '#fffdf8', text: '#24170f', muted: '#5f4c3a',
-            accent: '#c3341b', accentText: '#ffffff', secondary: '#2e6b3b', secondaryText: '#ffffff',
+            accent: '#b8301a', accentText: '#ffffff', secondary: '#2e6b3b', secondaryText: '#ffffff',
             heroBg: '#24170f', heroOverlay: 0.45,
         },
         fonts: {
             display: '"Alfa Slab One", "Rockwell", serif',
-            body: 'Rubik, "Segoe UI", sans-serif',
-            google: ['Alfa+Slab+One', 'Rubik:wght@400;500;600'],
+            body: 'Barlow, "Segoe UI", sans-serif',
+            google: ['Alfa+Slab+One', 'Barlow:ital,wght@0,400;0,500;0,600;1,400'],
         },
         look: {
             align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.005em',
-            divider: 'thick', texture: 'none', radius: 6, leaders: true, price: 'accent',
-            productLayout: 'menu', categoryLayout: 'rows', categoryNumbers: 'none', productNumbers: false,
+            divider: 'thick', texture: 'none', radius: 4, leaders: true, price: 'accent',
+            productLayout: 'menu', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
             hero: 'overlay', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'marquee',
+            sectionHeader: 'band', categoryNav: 'block',
         },
     },
     {
+        // Rivisto a dicembre 2026: giallo/nero con ombre piene sfalsate è il "neo-brutalismo" da template.
+        // Ora è il furgone pieno di adesivi: nome e sezioni su sticker fustellati e storti.
         key: 'street',
-        label: 'Street food',
-        description: 'Alto contrasto, bordi neri spessi, ombre piene, prezzi in evidenza. Panini, burger, kebab, friggitorie.',
+        label: 'Street food · Adesivi',
+        description: 'Il nome e le sezioni su adesivi fustellati e un po\' storti, lettere da insegna, prezzi in etichetta. Panini, burger, fritti.',
+        inspiration: 'Le fiancate dei food truck e i banconi coperti di adesivi delle friggitorie.',
+        pairsWith: ['diner', 'chiosco'],
         venues: ['street', 'pub', 'pizzeria'],
         palette: {
-            bg: '#f3f0e6', card: '#ffffff', text: '#0b0b0b', muted: '#45453f',
-            accent: '#ffcc00', accentText: '#0b0b0b', secondary: '#0b0b0b', secondaryText: '#ffffff',
+            bg: '#f1efe8', card: '#ffffff', text: '#0b0b0b', muted: '#45453f',
+            accent: '#ffcc00', accentText: '#0b0b0b', secondary: '#d42e12', secondaryText: '#ffffff',
             heroBg: '#0b0b0b', heroOverlay: 0.5,
         },
         fonts: {
-            display: 'Anton, Impact, "Arial Narrow", sans-serif',
+            display: 'Bungee, Impact, "Arial Narrow", sans-serif',
             body: 'Archivo, "Segoe UI", sans-serif',
-            google: ['Anton', 'Archivo:wght@400;500;700'],
+            google: ['Bungee', 'Archivo:wght@400;500;700'],
         },
         look: {
-            align: 'left', headingCase: 'uppercase', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.01em',
-            divider: 'thick', texture: 'none', radius: 0, leaders: false, price: 'badge',
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0',
+            divider: 'thick', texture: 'none', radius: 12, leaders: false, price: 'badge',
             productLayout: 'cards', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
-            hero: 'overlay', cardBorder: 'heavy', offsetShadow: true, width: 'wide', ticker: 'marquee',
+            hero: 'overlay', cardBorder: 'heavy', offsetShadow: false, width: 'wide', ticker: 'marquee',
+            headerStyle: 'sticker', sectionHeader: 'sticker', categoryNav: 'pill',
         },
     },
     {
         key: 'sushi',
         label: 'Sushi & Etnico',
         description: 'Carta washi, filetti sottili, piatti numerati e timbro vermiglio. Sushi, ramen, poke, cucine dal mondo.',
+        inspiration: 'I menu dei sushi-ya di Tokyo stampati in mincho su carta washi.',
+        pairsWith: ['izakaya', 'dimsum'],
         venues: ['etnico', 'ristorante'],
         palette: {
             bg: '#f3efe6', card: '#faf8f3', text: '#1b1b1b', muted: '#57544c',
@@ -456,15 +549,13 @@ const SPECS: TemplateSpec[] = [
     },
 
     // ── Template aggiunti a novembre 2026 ────────────────────────────────────
-    // Ognuno parte da un riferimento stampato reale (descritto nel commento): niente
-    // sfumature, vetri o bagliori, solo carta, inchiostro e la tipografia del genere.
 
     {
-        // Riferimento: la carta dei vini delle osterie veronesi e piemontesi stampata in tipografia
-        // (carta vergata, maiuscoletto, numeri romani per le sezioni, due colonne come un listino).
         key: 'enoteca',
         label: 'Osteria · Enoteca',
         description: 'Carta vergata, maiuscoletto da caratteri mobili, sezioni in numeri romani e due colonne come un listino dei vini.',
+        inspiration: 'La carta dei vini delle osterie veronesi e piemontesi stampata in tipografia.',
+        pairsWith: ['default', 'vineria'],
         venues: ['enoteca', 'trattoria', 'ristorante'],
         palette: {
             bg: '#efe7d6', card: '#f6f0e3', text: '#2a1b17', muted: '#5e4b42',
@@ -485,15 +576,15 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: insegne e banconi delle gelaterie e pasticcerie storiche (anni '50-'60):
-        // tenda a righe con il bordo smerlato, carta da vassoio color panna, pistacchio e lampone smorzati.
         key: 'gelateria',
-        label: 'Gelateria · Pasticceria',
+        label: 'Gelateria',
         description: 'Tenda a righe smerlata, panna, pistacchio e lampone smorzati, foto ad arco come le vetrine. Gusti in griglia.',
+        inspiration: 'Le insegne e i banconi delle gelaterie storiche degli anni \'50-\'60.',
+        pairsWith: ['pasticceria', 'forno'],
         venues: ['gelateria', 'caffe'],
         palette: {
             bg: '#f7f0e6', card: '#fffaf3', text: '#3a2626', muted: '#6e5752',
-            accent: '#b5455b', accentText: '#fffaf3', secondary: '#a9c3a0', secondaryText: '#233022',
+            accent: '#b03f56', accentText: '#fffaf3', secondary: '#a9c3a0', secondaryText: '#233022',
             heroBg: '#3a2626', heroOverlay: 0.25,
         },
         fonts: {
@@ -510,11 +601,11 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: le brasserie parigine Belle Époque (Bouillon Julien, Brasserie Lipp, Chartier):
-        // cornice Art Nouveau a colpo di frusta, Didone maiuscolo spaziato, rosso e verde bottiglia.
         key: 'brasserie',
         label: 'Brasserie',
         description: 'Cornice Art Nouveau, Didone maiuscolo spaziato, puntini fino al prezzo. Rosso brasserie e verde bottiglia.',
+        inspiration: 'Le brasserie parigine Belle Époque: Bouillon Julien, Lipp, Chartier.',
+        pairsWith: ['pasticceria', 'default'],
         venues: ['ristorante', 'bar', 'fine'],
         palette: {
             bg: '#f2e9d6', card: '#f8f2e4', text: '#1c2620', muted: '#55594e',
@@ -535,14 +626,14 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: macellerie e steakhouse (le lavagne di Hawksmoor, le etichette dei tagli del banco):
-        // fondo carbone come carta da macelleria scura, slab robusto maiuscolo, etichette color carta, prezzi a macchina.
         key: 'braceria',
         label: 'Braceria · Steakhouse',
         description: 'Fondo carbone, slab robusto maiuscolo, tagli numerati su etichette di carta da macelleria e prezzi a macchina.',
+        inspiration: 'Le lavagne delle macellerie e le etichette dei tagli sul banco frigo.',
+        pairsWith: ['pub', 'bacheca'],
         venues: ['braceria', 'ristorante', 'pub'],
         palette: {
-            bg: '#1a1613', card: '#231e1a', text: '#efe5d4', muted: '#b7a891',
+            bg: '#1a1613', card: '#231e1a', text: '#efe5d4', muted: '#bcae97',
             accent: '#d4583c', accentText: '#1a1613', secondary: '#e6d6bc', secondaryText: '#1f1915',
             heroBg: '#1a1613', heroOverlay: 0.55,
         },
@@ -561,36 +652,38 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: i menu dei locali vegetali nordeuropei e di Ottolenghi stampati su carta riciclata:
-        // ingredienti in evidenza in maiuscoletto spaziato, serif editoriale, tanta aria, verde salvia e curcuma.
+        // Rivisto a dicembre 2026: Raleway + Lato su salvia, con gli ingredienti in maiuscoletto spaziato,
+        // era il "healthy" di qualunque generatore. Ora è la bottega naturale degli anni '70.
         key: 'vegetale',
-        label: 'Vegetale · Healthy',
-        description: 'Carta riciclata salvia, titoli puliti, gli ingredienti in evidenza sotto ogni piatto, foto tonde e tanta aria.',
+        label: 'Vegetale · Bottega naturale',
+        description: 'Serif morbido anni \'70, avena, verde avocado e senape, angoli tondi e gli ingredienti elencati sotto ogni piatto.',
+        inspiration: 'I ricettari vegetariani anni \'70 scritti a mano (Moosewood) e le botteghe del biologico.',
+        pairsWith: ['chiosco', 'agriturismo'],
         venues: ['vegano', 'caffe', 'ristorante'],
         palette: {
-            bg: '#eceee3', card: '#f6f7f0', text: '#1f2b1c', muted: '#525d49',
-            accent: '#4c6a35', accentText: '#f6f7f0', secondary: '#d6a543', secondaryText: '#1f2b1c',
-            heroBg: '#1f2b1c', heroOverlay: 0.3,
+            bg: '#efe6cf', card: '#f7f0de', text: '#2e2a17', muted: '#5a5336',
+            accent: '#5b6a17', accentText: '#f7f0de', secondary: '#d08a2c', secondaryText: '#2e2a17',
+            heroBg: '#2e2a17', heroOverlay: 0.3,
         },
         fonts: {
-            display: 'Raleway, "Segoe UI", sans-serif',
-            body: 'Lato, "Segoe UI", sans-serif',
-            google: ['Raleway:wght@500;600;700', 'Lato:ital,wght@0,400;0,700;1,400'],
+            display: 'Corben, "Cooper Black", Georgia, serif',
+            body: '"Alegreya Sans", "Segoe UI", sans-serif',
+            google: ['Corben:wght@400;700', 'Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400'],
         },
         look: {
-            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 500, headingTracking: '-0.01em',
-            divider: 'hairline', texture: 'flecks', radius: 2, leaders: false, price: 'plain',
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 700, headingTracking: '-0.01em',
+            divider: 'dashed', texture: 'flecks', radius: 14, leaders: false, price: 'accent',
             productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
             hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
-            density: 'airy', categoryNav: 'pill', imageShape: 'round', buttonStyle: 'outline', descStyle: 'ingredients',
+            categoryNav: 'pill', imageShape: 'round', buttonStyle: 'solid', descStyle: 'ingredients',
         },
     },
     {
-        // Riferimento: le maioliche di Vietri e le trattorie di pesce liguri (Camogli, Boccadasse):
-        // fascia di piastrelle blu cobalto, muro a calce, lettere lapidarie, il giallo limone solo come tocco.
         key: 'mediterraneo',
         label: 'Mediterraneo · Pesce',
         description: 'Muro a calce e fascia di maioliche blu cobalto, lettere lapidarie, un tocco di giallo limone. Pesce e cucina di mare.',
+        inspiration: 'Le maioliche di Vietri e le trattorie di pesce liguri (Camogli, Boccadasse).',
+        pairsWith: ['napoletana', 'default'],
         venues: ['pesce', 'ristorante', 'trattoria'],
         palette: {
             bg: '#f6f4ee', card: '#ffffff', text: '#14284a', muted: '#4b5872',
@@ -611,11 +704,11 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: i diner americani anni '50 (Mel's Drive-In, le tovagliette di carta dei luncheonette):
-        // logotipo in corsivo da insegna al neon spenta, maiuscolo condensato, pavimento a scacchi, rosso e verde acqua.
         key: 'diner',
         label: 'Diner anni \'50',
         description: 'Nome in corsivo da insegna, maiuscolo condensato, fasce rosse e pavimento a scacchi. Burger, hot dog, milkshake.',
+        inspiration: 'I diner americani anni \'50 e le tovagliette di carta dei luncheonette.',
+        pairsWith: ['street', 'bacheca'],
         venues: ['street', 'pub', 'bar'],
         palette: {
             bg: '#fbf5ea', card: '#ffffff', text: '#171717', muted: '#4a4743',
@@ -637,15 +730,15 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: le izakaya di Tokyo, con le strisce del menu scritte a mano appese al muro (o-shinagaki),
-        // il noren all'ingresso, il timbro hanko vermiglio e i punti sashiko sul cotone indaco.
         key: 'izakaya',
         label: 'Izakaya · Ramen',
         description: 'Indaco con punti sashiko, noren in testata, sezioni col timbro vermiglio e piatti piccoli in due colonne.',
+        inspiration: 'Le izakaya di Tokyo con le strisce del menu scritte a mano appese al muro.',
+        pairsWith: ['sushi', 'dimsum'],
         venues: ['etnico', 'street'],
         palette: {
-            bg: '#1b2231', card: '#222b3c', text: '#f1e8d6', muted: '#b6b0a1',
-            accent: '#e2482f', accentText: '#fff7ea', secondary: '#efe5d0', secondaryText: '#1b2231',
+            bg: '#1b2231', card: '#222b3c', text: '#f1e8d6', muted: '#bcb6a7',
+            accent: '#f26a4f', accentText: '#1b2231', secondary: '#efe5d0', secondaryText: '#1b2231',
             heroBg: '#1b2231', heroOverlay: 0.55,
         },
         fonts: {
@@ -662,14 +755,14 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: il menu del giorno degli agriturismi toscani e delle Langhe, scritto a mano su carta
-        // da pacchi, con il nome del podere su un cartoncino fermato con il nastro adesivo.
         key: 'agriturismo',
         label: 'Agriturismo · Cucina di casa',
         description: 'Carta da pacchi, piatti scritti a mano, nome del podere su un cartoncino col nastro adesivo e cuciture tra le sezioni.',
+        inspiration: 'Il menu del giorno degli agriturismi toscani e delle Langhe, scritto a mano su carta da pacchi.',
+        pairsWith: ['trattoria', 'bistrot'],
         venues: ['trattoria', 'ristorante'],
         palette: {
-            bg: '#d9c4a1', card: '#e8d9bd', text: '#2a1f15', muted: '#4b3c2a',
+            bg: '#d9c4a1', card: '#e8d9bd', text: '#2a1f15', muted: '#46382a',
             accent: '#8b2c1c', accentText: '#f3e8d4', secondary: '#3e5232', secondaryText: '#efe4cd',
             heroBg: '#2a1f15', heroOverlay: 0.4,
         },
@@ -687,11 +780,11 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: le lokanta di Istanbul e le insegne delle rosticcerie libanesi: fregio geometrico a
-        // stelle a otto punte (girih), archi a sesto acuto sulle sezioni, Kufi geometrico, sommacco e turchese Iznik.
         key: 'levante',
         label: 'Levante · Kebab',
         description: 'Fregio a stelle geometriche, archi a sesto acuto sulle sezioni, Kufi geometrico, sommacco e turchese Iznik. Piatti numerati.',
+        inspiration: 'Le lokanta di Istanbul e le insegne delle rosticcerie libanesi.',
+        pairsWith: ['taqueria', 'mediterraneo'],
         venues: ['etnico', 'street'],
         palette: {
             bg: '#f3eadb', card: '#fbf5ea', text: '#1d2629', muted: '#585750',
@@ -712,15 +805,15 @@ const SPECS: TemplateSpec[] = [
         },
     },
     {
-        // Riferimento: i sacchetti di carta dei forni (Antico Forno Roscioli, le boulangerie di quartiere):
-        // timbri a inchiostro blu su carta infarinata, maiuscoletto da insegna, prezzi sotto il pane.
         key: 'forno',
         label: 'Panificio · Forno',
         description: 'Carta infarinata e timbri a inchiostro blu, maiuscoletto da bottega, pani e dolci in griglia col prezzo sotto.',
+        inspiration: 'I sacchetti di carta dei forni di quartiere, timbrati a mano.',
+        pairsWith: ['bageri', 'default'],
         venues: ['forno', 'caffe', 'gelateria'],
         palette: {
             bg: '#eee5d3', card: '#f7f1e5', text: '#2a2420', muted: '#5d544b',
-            accent: '#2c4a87', accentText: '#f7f1e5', secondary: '#b97a35', secondaryText: '#2a2420',
+            accent: '#2c4a87', accentText: '#f7f1e5', secondary: '#c4894a', secondaryText: '#1f1a16',
             heroBg: '#2a2420', heroOverlay: 0.35,
         },
         fonts: {
@@ -734,6 +827,298 @@ const SPECS: TemplateSpec[] = [
             productLayout: 'grid', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
             hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
             headerStyle: 'stamp', sectionHeader: 'stamp', pricePosition: 'below', buttonStyle: 'outline', descStyle: 'italic',
+        },
+    },
+
+    // ── Template aggiunti a dicembre 2026 ────────────────────────────────────
+    // Undici tradizioni di stampa in più, ognuna con un suo carattere e una sua logica di pagina.
+
+    {
+        key: 'tipografia',
+        label: 'Trattoria · Stampa anni \'60',
+        description: 'Due inchiostri, nero e rosso, Bodoni maiuscolo, fregi a foglia d\'edera tra le sezioni e la leggera sbavatura dei caratteri mobili.',
+        inspiration: 'I menu delle trattorie stampati in tipografia negli anni \'60, con i caratteri Nebiolo e i fregi di cassa.',
+        isNew: true,
+        pairsWith: ['default', 'enoteca'],
+        venues: ['trattoria', 'ristorante', 'enoteca'],
+        palette: {
+            bg: '#f3ecdc', card: '#f8f3e7', text: '#1d1a17', muted: '#514a40',
+            accent: '#ad2219', accentText: '#f8f3e7', secondary: '#1d1a17', secondaryText: '#f3ecdc',
+            heroBg: '#1d1a17', heroOverlay: 0.35,
+        },
+        fonts: {
+            display: '"Libre Bodoni", "Bodoni 72", Didot, Georgia, serif',
+            body: '"Old Standard TT", Georgia, serif',
+            google: ['Libre+Bodoni:ital,wght@0,500;0,700;1,500', 'Old+Standard+TT:ital,wght@0,400;0,700;1,400'],
+        },
+        look: {
+            align: 'center', headingCase: 'uppercase', headingStyle: 'normal', headingWeight: 700, headingTracking: '0.07em',
+            divider: 'fleuron', texture: 'paper', radius: 0, leaders: true, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
+            sectionHeader: 'ruled', descStyle: 'italic', ink: 'letterpress', buttonStyle: 'outline',
+        },
+    },
+    {
+        key: 'riso',
+        label: 'Caffè · Fanzine risograph',
+        description: 'Due inchiostri spot, blu e rosa fluo, fuori registro come nella risografia, grana della carta e titoli grassi da fanzine.',
+        inspiration: 'Le fanzine e i menu dei caffè di quartiere stampati in risografia, due passaggi di colore.',
+        isNew: true,
+        pairsWith: ['chiosco', 'street'],
+        venues: ['caffe', 'bar', 'vegano'],
+        palette: {
+            bg: '#f3efe4', card: '#faf7ef', text: '#22347a', muted: '#4a5487',
+            accent: '#ff4fa3', accentText: '#141f52', secondary: '#22347a', secondaryText: '#faf7ef',
+            heroBg: '#22347a', heroOverlay: 0.3,
+        },
+        fonts: {
+            display: '"Bowlby One", Impact, sans-serif',
+            body: '"Atkinson Hyperlegible", "Segoe UI", sans-serif',
+            google: ['Bowlby+One', 'Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.005em',
+            divider: 'thick', texture: 'grain', radius: 0, leaders: false, price: 'plain',
+            productLayout: 'grid', categoryLayout: 'tiles', categoryNumbers: 'arabic', productNumbers: false,
+            hero: 'masthead', cardBorder: 'heavy', offsetShadow: false, width: 'wide', ticker: 'static',
+            sectionHeader: 'band', categoryNav: 'block', pricePosition: 'below', ink: 'misregister',
+        },
+    },
+    {
+        key: 'dimsum',
+        label: 'Dim sum · Foglio d\'ordine',
+        description: 'Il foglietto rosa del dim sum: piatti numerati nelle caselle rosse, sezioni su fascia vermiglia, tutto fitto e ordinato.',
+        inspiration: 'I fogli d\'ordine dei ristoranti dim sum di Hong Kong, dove si spunta la casella di ogni cestino.',
+        isNew: true,
+        pairsWith: ['sushi', 'izakaya'],
+        venues: ['etnico', 'ristorante'],
+        palette: {
+            bg: '#fbf1ec', card: '#fffaf6', text: '#2a1616', muted: '#6a4843',
+            accent: '#c2102c', accentText: '#ffffff', secondary: '#0f5c4d', secondaryText: '#ffffff',
+            heroBg: '#2a1616', heroOverlay: 0.4,
+        },
+        fonts: {
+            display: '"Zen Old Mincho", "Songti SC", Georgia, serif',
+            body: '"Zen Kaku Gothic Antique", "PingFang SC", "Segoe UI", sans-serif',
+            google: ['Zen+Old+Mincho:wght@600;900', 'Zen+Kaku+Gothic+Antique:wght@400;500;700'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 900, headingTracking: '0.02em',
+            divider: 'double', texture: 'none', radius: 0, leaders: false, price: 'plain',
+            productLayout: 'twocol', categoryLayout: 'index', categoryNumbers: 'arabic', productNumbers: true,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            sectionHeader: 'band', categoryNav: 'block', density: 'compact', numberStyle: 'boxed',
+        },
+    },
+    {
+        key: 'napoletana',
+        label: 'Pizzeria napoletana · Maioliche',
+        description: 'Smalto bianco e fascia di maioliche verde e gialla, slab grasso da insegna, etichette gialle sulle sezioni.',
+        inspiration: 'Le maioliche del chiostro di Santa Chiara e i banconi piastrellati delle pizzerie storiche di Napoli.',
+        isNew: true,
+        pairsWith: ['pizzeria', 'mediterraneo'],
+        venues: ['pizzeria', 'trattoria'],
+        palette: {
+            bg: '#fbf7ec', card: '#ffffff', text: '#22201a', muted: '#565145',
+            accent: '#1f6a39', accentText: '#ffffff', secondary: '#e9b425', secondaryText: '#22201a',
+            heroBg: '#22201a', heroOverlay: 0.4,
+        },
+        fonts: {
+            display: 'Ultra, "Rockwell Extra Bold", Georgia, serif',
+            body: '"Zilla Slab", Rockwell, Georgia, serif',
+            google: ['Ultra', 'Zilla+Slab:ital,wght@0,400;0,500;0,700;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0',
+            divider: 'tile', texture: 'none', radius: 4, leaders: true, price: 'accent',
+            productLayout: 'menu', categoryLayout: 'rows', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            sectionHeader: 'label', categoryNav: 'pill',
+        },
+    },
+    {
+        key: 'vineria',
+        label: 'Vineria · Lista a macchina',
+        description: 'La lista battuta a macchina su carta velina: nastro nero e rosso, titoli sottolineati, prezzi incolonnati coi puntini.',
+        inspiration: 'Le liste dei vini e del giorno battute a macchina nelle vinerie veneziane (i bàcari) e nei wine bar.',
+        isNew: true,
+        pairsWith: ['enoteca', 'braceria'],
+        venues: ['enoteca', 'bar', 'trattoria'],
+        palette: {
+            bg: '#f2efe6', card: '#f8f6ef', text: '#1e1d1b', muted: '#4c4943',
+            accent: '#ab271f', accentText: '#ffffff', secondary: '#1e1d1b', secondaryText: '#f2efe6',
+            heroBg: '#1e1d1b', heroOverlay: 0.35,
+        },
+        fonts: {
+            display: '"Special Elite", "Courier New", monospace',
+            body: '"Courier Prime", "Courier New", monospace',
+            price: '"Courier Prime", "Courier New", monospace',
+            google: ['Special+Elite', 'Courier+Prime:ital,wght@0,400;0,700;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'uppercase', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.04em',
+            divider: 'dashed', texture: 'paper', radius: 0, leaders: true, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'arabic', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
+            sectionHeader: 'underscore', ink: 'typed', buttonStyle: 'underline', categoryNav: 'underline',
+        },
+    },
+    {
+        key: 'pasticceria',
+        label: 'Pasticceria storica',
+        description: 'Cartiglio con il nome in corsivo inglese, titoli ornati, pizzo di carta tra le sezioni, verde salotto e oro. Per pasticcerie e sale da tè.',
+        inspiration: 'Le confezioni e i listini delle pasticcerie storiche torinesi e palermitane, fine Ottocento.',
+        isNew: true,
+        pairsWith: ['brasserie', 'gelateria'],
+        venues: ['caffe', 'gelateria', 'forno'],
+        palette: {
+            bg: '#f4ece2', card: '#fbf6ef', text: '#33201a', muted: '#694f45',
+            accent: '#2d5a4c', accentText: '#fbf6ef', secondary: '#c8a66a', secondaryText: '#2b1a12',
+            heroBg: '#33201a', heroOverlay: 0.35,
+        },
+        fonts: {
+            display: 'Elsie, Didot, Georgia, serif',
+            body: '"Sorts Mill Goudy", Georgia, serif',
+            accent: '"Pinyon Script", "Snell Roundhand", cursive',
+            google: ['Elsie:wght@400;900', 'Sorts+Mill+Goudy:ital@0;1', 'Pinyon+Script'],
+        },
+        look: {
+            align: 'center', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.01em',
+            divider: 'lace', texture: 'paper', radius: 0, leaders: true, price: 'accent',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
+            headerStyle: 'cartouche', sectionHeader: 'ruled', descStyle: 'italic', imageShape: 'round', buttonStyle: 'outline',
+        },
+    },
+    {
+        key: 'chiosco',
+        label: 'Chiosco · Spiaggia anni \'70',
+        description: 'Righe arancio, senape e marrone come le cabine, corsivo grasso da insegna, schede tonde. Piadine, granite, panini e spritz.',
+        inspiration: 'I chioschi della riviera romagnola negli anni \'70: tende a righe, insegne dipinte, ghiaccioli.',
+        isNew: true,
+        pairsWith: ['riso', 'vegetale'],
+        venues: ['bar', 'street', 'gelateria'],
+        palette: {
+            bg: '#f6ead4', card: '#fcf4e6', text: '#3b2314', muted: '#674a35',
+            accent: '#b8431a', accentText: '#ffffff', secondary: '#e0a02a', secondaryText: '#3b2314',
+            heroBg: '#3b2314', heroOverlay: 0.35,
+        },
+        fonts: {
+            display: 'Shrikhand, "Cooper Black", Georgia, serif',
+            body: 'Rubik, "Segoe UI", sans-serif',
+            google: ['Shrikhand', 'Rubik:ital,wght@0,400;0,500;0,700;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.005em',
+            divider: 'stripes', texture: 'none', radius: 18, leaders: false, price: 'accent',
+            productLayout: 'cards', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
+            hero: 'overlay', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'marquee',
+            sectionHeader: 'band', categoryNav: 'pill', imageShape: 'round',
+        },
+    },
+    {
+        key: 'bageri',
+        label: 'Bageri · Forno nordico',
+        description: 'Avena e segale, un grottesco nero tutto in minuscolo, il prezzo subito dopo il nome, tanta aria e nessun ornamento.',
+        inspiration: 'Le lavagnette e i listini delle panetterie di Copenaghen e Stoccolma.',
+        isNew: true,
+        pairsWith: ['minimal', 'forno'],
+        venues: ['forno', 'caffe'],
+        palette: {
+            bg: '#eee7da', card: '#f7f2e9', text: '#2b2118', muted: '#5c5145',
+            accent: '#a3263a', accentText: '#ffffff', secondary: '#2b2118', secondaryText: '#eee7da',
+            heroBg: '#2b2118', heroOverlay: 0.3,
+        },
+        fonts: {
+            display: '"Albert Sans", "Helvetica Neue", Arial, sans-serif',
+            body: '"Albert Sans", "Helvetica Neue", Arial, sans-serif',
+            google: ['Albert+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'lowercase', headingStyle: 'normal', headingWeight: 800, headingTracking: '-0.03em',
+            divider: 'none', texture: 'none', radius: 0, leaders: false, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'none', offsetShadow: false, width: 'wide', ticker: 'static',
+            density: 'airy', pricePosition: 'inline', buttonStyle: 'underline',
+        },
+    },
+    {
+        key: 'taqueria',
+        label: 'Taquería · Papel picado',
+        description: 'Festoni di papel picado rosa, arancio e verde, lettere da insegna dipinta, etichette verdi sulle sezioni. Tacos, burritos, mezcal.',
+        inspiration: 'Le taquerías di Città del Messico, con i rótulos dipinti a mano e i festoni di carta traforata.',
+        isNew: true,
+        pairsWith: ['levante', 'street'],
+        venues: ['etnico', 'street', 'bar'],
+        palette: {
+            bg: '#fbf1e1', card: '#fff8ec', text: '#2b1a12', muted: '#62483a',
+            accent: '#b8005f', accentText: '#ffffff', secondary: '#00704a', secondaryText: '#ffffff',
+            heroBg: '#2b1a12', heroOverlay: 0.4,
+        },
+        fonts: {
+            display: 'Rakkas, "Rockwell Extra Bold", Georgia, serif',
+            body: 'Asap, "Segoe UI", sans-serif',
+            google: ['Rakkas', 'Asap:ital,wght@0,400;0,500;0,700;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.01em',
+            divider: 'papel', texture: 'none', radius: 4, leaders: false, price: 'accent',
+            productLayout: 'menu', categoryLayout: 'tiles', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            sectionHeader: 'label', categoryNav: 'block',
+        },
+    },
+    {
+        key: 'bacheca',
+        label: 'Tavola calda · Bacheca a lettere',
+        description: 'Feltro nero a righe e lettere bianche infilate a mano, tutto maiuscolo condensato e centrato come sulla bacheca. Rosticcerie e tavole calde.',
+        inspiration: 'Le bacheche di feltro con le lettere di plastica a incastro delle rosticcerie e delle mense.',
+        isNew: true,
+        pairsWith: ['diner', 'braceria'],
+        venues: ['street', 'trattoria', 'bar'],
+        palette: {
+            bg: '#1c1c1a', card: '#252523', text: '#f4f1ea', muted: '#c2bdb2',
+            accent: '#ef5b47', accentText: '#1c1c1a', secondary: '#f4f1ea', secondaryText: '#1c1c1a',
+            heroBg: '#1c1c1a', heroOverlay: 0.55,
+        },
+        fonts: {
+            display: '"Big Shoulders Display", "Arial Narrow", sans-serif',
+            body: '"Big Shoulders Text", "Arial Narrow", sans-serif',
+            google: ['Big+Shoulders+Display:wght@600;700;800', 'Big+Shoulders+Text:wght@400;500;600;700'],
+        },
+        look: {
+            align: 'center', headingCase: 'uppercase', headingStyle: 'normal', headingWeight: 700, headingTracking: '0.06em',
+            divider: 'none', texture: 'felt', radius: 0, leaders: false, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
+            density: 'compact', categoryNav: 'block', buttonStyle: 'outline',
+        },
+    },
+    {
+        key: 'birreria',
+        label: 'Birreria · Bierstube',
+        description: 'Gotico leggibile per i titoli, fregio a losanghe bianche e blu, fascia di legno col nome. Würstel, stinco, birre alla spina.',
+        inspiration: 'Le birrerie bavaresi e altoatesine: le insegne in Fraktur e la bandiera a losanghe.',
+        isNew: true,
+        pairsWith: ['pub', 'agriturismo'],
+        venues: ['pub', 'braceria', 'trattoria'],
+        palette: {
+            bg: '#f1ead9', card: '#f8f3e7', text: '#1f1a14', muted: '#55493a',
+            accent: '#1a5aa6', accentText: '#ffffff', secondary: '#5e331b', secondaryText: '#f8f3e7',
+            heroBg: '#1f1a14', heroOverlay: 0.4,
+        },
+        fonts: {
+            display: '"Grenze Gotisch", "Old English Text MT", Georgia, serif',
+            body: '"Source Sans 3", "Segoe UI", sans-serif',
+            google: ['Grenze+Gotisch:wght@500;600;700', 'Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 600, headingTracking: '0.01em',
+            divider: 'rauten', texture: 'paper', radius: 2, leaders: true, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'rows', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            headerStyle: 'banner', sectionHeader: 'label', categoryNav: 'underline',
         },
     },
 ];
@@ -796,6 +1181,9 @@ export const DIVIDERS: { key: DividerStyle; label: string }[] = [
     { key: 'dashed',   label: 'Tratteggio' },
     { key: 'stitch',   label: 'Cucitura' },
     { key: 'ornament', label: 'Ornamento centrale' },
+    { key: 'fleuron',  label: 'Fregio a foglia (tipografia)' },
+    { key: 'short',    label: 'Filetto corto centrato' },
+    { key: 'lace',     label: 'Pizzo di carta' },
     { key: 'nouveau',  label: 'Fregio Art Nouveau' },
     { key: 'checker',  label: 'Quadretti tovaglia' },
     { key: 'diner',    label: 'Scacchi bianco e nero' },
@@ -803,6 +1191,9 @@ export const DIVIDERS: { key: DividerStyle; label: string }[] = [
     { key: 'girih',    label: 'Fregio geometrico' },
     { key: 'brush',    label: 'Pennellata' },
     { key: 'awning',   label: 'Tenda a righe' },
+    { key: 'stripes',  label: 'Righe anni \'70' },
+    { key: 'papel',    label: 'Papel picado' },
+    { key: 'rauten',   label: 'Losanghe bavaresi' },
     { key: 'none',     label: 'Nessuno' },
 ];
 export const TEXTURES: { key: TextureStyle; label: string }[] = [
@@ -812,11 +1203,13 @@ export const TEXTURES: { key: TextureStyle; label: string }[] = [
     { key: 'kraft',   label: 'Carta da pacchi' },
     { key: 'flour',   label: 'Carta infarinata' },
     { key: 'flecks',  label: 'Carta riciclata' },
+    { key: 'grain',   label: 'Grana risograph' },
     { key: 'washi',   label: 'Washi' },
     { key: 'sashiko', label: 'Punti sashiko (fondi scuri)' },
     { key: 'chalk',   label: 'Lavagna (fondi scuri)' },
     { key: 'wood',    label: 'Legno (fondi scuri)' },
     { key: 'butcher', label: 'Carta da macelleria (fondi scuri)' },
+    { key: 'felt',    label: 'Feltro della bacheca (fondi scuri)' },
 ];
 export const BUTTON_STYLES: { key: ButtonStyle; label: string }[] = [
     { key: 'solid',     label: 'Pieni' },
@@ -836,6 +1229,8 @@ export const SECTION_HEADERS: { key: SectionHeaderStyle; label: string }[] = [
     { key: 'stamp', label: 'Timbro' },
     { key: 'seal',  label: 'Sigillo quadrato' },
     { key: 'arch',  label: 'Sotto un arco' },
+    { key: 'sticker', label: 'Adesivo' },
+    { key: 'underscore', label: 'Sottolineato a macchina' },
 ];
 export const CATEGORY_NAVS: { key: CategoryNavStyle; label: string }[] = [
     { key: 'underline', label: 'Sottolineata' },
@@ -851,6 +1246,8 @@ export const HEADER_STYLES: { key: HeaderStyle; label: string }[] = [
     { key: 'noren',  label: 'Tenda noren' },
     { key: 'tape',   label: 'Cartoncino con nastro' },
     { key: 'awning', label: 'Tenda a righe' },
+    { key: 'cartouche', label: 'Cartiglio ornato' },
+    { key: 'sticker', label: 'Adesivo fustellato' },
 ];
 
 const OV_ENUMS: Record<Exclude<keyof LookOverrides, 'r'>, readonly string[]> = {

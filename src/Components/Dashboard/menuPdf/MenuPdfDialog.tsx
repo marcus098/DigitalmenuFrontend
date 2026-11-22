@@ -5,7 +5,7 @@ import type { StyleDto } from '../../../types';
 import { useData } from '../../../Context/DataContext';
 import { MENU_TEMPLATES, MenuTemplateKey, parseTemplateValue, TEMPLATE_BY_KEY } from '../../../Client/menuTemplates';
 import { getMenuLanguagesApi, getMenuTranslationApi, MenuLanguage, PublicMenuTranslation } from '../../../Utilities/translationApi';
-import { buildMenuPrintHtml } from './buildMenuPrintHtml';
+import { buildMenuPrintHtmlAsync } from './buildMenuPrintHtml';
 import { AllergenStyle, buildPdfMenu, MenuPdfOptions } from './menuPdfModel';
 
 /**
@@ -124,17 +124,20 @@ const MenuPdfDialog: React.FC<MenuPdfDialogProps> = ({ draftTheme, localname, on
     useEffect(() => {
         const options: MenuPdfOptions = { includeSoldOut, includeImages, allergenStyle, lang: translation ? lang : 'it' };
         setReady(false);
-        const timer = setTimeout(() => setHtml(buildMenuPrintHtml({
-            styles: draftTheme,
-            templateKey,
-            menu,
-            options,
-            venueName,
-            appCss: appCss.css,
-            appCssLinks: appCss.links,
-            imageBase: process.env.REACT_APP_BUCKET_URL || '',
-        })), 0);
-        return () => clearTimeout(timer);
+        let alive = true;
+        const timer = setTimeout(() => {
+            buildMenuPrintHtmlAsync({
+                styles: draftTheme,
+                templateKey,
+                menu,
+                options,
+                venueName,
+                appCss: appCss.css,
+                appCssLinks: appCss.links,
+                imageBase: process.env.REACT_APP_BUCKET_URL || '',
+            }).then(doc => { if (alive) setHtml(doc); });
+        }, 0);
+        return () => { alive = false; clearTimeout(timer); };
     }, [draftTheme, templateKey, menu, includeSoldOut, includeImages, allergenStyle, lang, translation, venueName, appCss]);
 
     // Pronto per la stampa quando font e foto del documento sono caricati

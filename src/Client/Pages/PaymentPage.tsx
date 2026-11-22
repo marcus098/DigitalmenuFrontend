@@ -474,7 +474,7 @@ const PaymentPage: React.FC = () => {
                                 )}
                             </span>
                             <span className="tabular-nums flex-shrink-0" style={{ color: 'var(--menu-muted)' }}>
-                                €{(comandProductUnitPrice(p) * p.quantity).toFixed(2)}
+                                €{(comandProductUnitPrice(p) * p.quantity).toFixed(2).replace(".", ",")}
                             </span>
                         </div>
                         <VariantSummary variants={p.selectedVariants} className="mt-0.5" />

@@ -4,6 +4,7 @@ import {formatDateTime} from "../Utilities/Utilities";
 import {tableLabel} from "../Dashboard/tableLabel";
 import SelectedVariantChips from "./Dashboard/SelectedVariantChips";
 import DeliveryInfo, {DeliveryBadge} from "./Dashboard/delivery/DeliveryInfo";
+import {slotTimeLabel} from "./Dashboard/delivery/deliveryUtils";
 
 /** Il formato unico ("default"/"Standard") non va mostrato. */
 const showOption = (name?: string) => !!name && !["default", "standard"].includes(name.trim().toLowerCase());
@@ -101,7 +102,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                 <>
                     {order.address && <p className="text-sm text-gray-500">Indirizzo: {order.address}</p>}
                     {order.phone && <p className="text-sm text-gray-500">Tel: {order.phone}</p>}
-                    {order.time && <p className="text-sm text-gray-500">Ora: {order.time}</p>}
+                    {order.time && <p className="text-sm text-gray-500">Ora: {slotTimeLabel(order.time)}</p>}
                 </>
             )}
             {/* Comande precedenti a takenBy: solo l'id dell'operatore (0 = ordine del cliente, non si mostra) */}

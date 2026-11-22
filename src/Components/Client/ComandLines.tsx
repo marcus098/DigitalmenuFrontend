@@ -30,7 +30,7 @@ const ComandLines: React.FC<{ comand: Comand; compact?: boolean }> = ({ comand, 
                                 {p.quantity}× {p.productName}
                             </p>
                             <p className="font-semibold tabular-nums flex-shrink-0" style={{ color: 'var(--menu-text)', fontSize: compact ? '0.85rem' : undefined }}>
-                                €{(comandProductUnitPrice(p) * p.quantity).toFixed(2)}
+                                €{(comandProductUnitPrice(p) * p.quantity).toFixed(2).replace(".", ",")}
                             </p>
                         </div>
                         {showOption && (

@@ -11,12 +11,15 @@ const NotificationDisplay: React.FC = () => {
         });
     }, [notifications, removeNotification]);
 
+    // Contenitore vuoto: niente nodo, altrimenti il riquadro fisso (p-6) blocca i tocchi in alto a destra.
+    if (notifications.length === 0) return null;
+
     return (
-        <div className="fixed top-10     right-0 p-6 space-y-4 z-50">
+        <div className="fixed top-10 right-0 p-6 space-y-4 z-50 pointer-events-none">
             {notifications.map((notification, index) => (
                 <div
                     key={index}
-                    className={`transition-transform transform p-4 rounded-md shadow-lg text-white max-w-xs w-full ${
+                    className={`pointer-events-auto transition-transform transform p-4 rounded-md shadow-lg text-white max-w-xs w-full ${
                         notification.type === 'success'
                             ? 'bg-green-500'
                             : notification.type === 'error'

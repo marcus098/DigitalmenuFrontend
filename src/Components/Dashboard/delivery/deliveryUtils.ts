@@ -75,6 +75,21 @@ export const deliveryTimeLabel = (time?: string): string => {
     return m ? `${m[1]}:${m[2]}` : time
 }
 
+/**
+ * Orario di ritiro/consegna leggibile: "19:30" se è oggi, altrimenti "mar 24/11 19:30".
+ * Accetta sia "HH:mm" sia "yyyy-MM-ddTHH:mm" (orari scelti dagli slot).
+ */
+export const slotTimeLabel = (time?: string): string => {
+    if (!time) return ''
+    const m = time.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+    if (!m) return deliveryTimeLabel(time)
+    const d = new Date(+m[1], +m[2] - 1, +m[3])
+    const today = new Date()
+    if (d.toDateString() === today.toDateString()) return `${m[4]}:${m[5]}`
+    const wd = d.toLocaleDateString('it-IT', { weekday: 'short' })
+    return `${wd} ${m[3]}/${m[2]} ${m[4]}:${m[5]}`
+}
+
 /** Data/ora di consegna in ms (per ordinare), Infinity se mancante. */
 export const deliveryTimeValue = (c: Comand): number => {
     const t = c.time

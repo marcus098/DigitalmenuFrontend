@@ -217,7 +217,7 @@ const ClientProductPage: React.FC = () => {
                                         fontSize: 'clamp(1.8rem, 5vw, 2.4rem)',
                                     }}
                                 >
-                                    €{displayPrice.toFixed(2)}
+                                    €{displayPrice.toFixed(2).replace(".", ",")}
                                 </span>
                                 {dish.options && dish.options.length > 1 && (
                                     <p

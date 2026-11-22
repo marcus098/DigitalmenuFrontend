@@ -77,8 +77,8 @@ const ClientProductsPage: React.FC = () => {
                     categories={Array.from(categoriesMap.values())}
                     activeCategoryId={currentCategoryId}
                     onSelectCategory={newId => {
-                        const base = waiters ? `/${localname}/waiters` : ``;
-                        navigate(`${base}/${localname}/products/${newId}`);
+                        // Area camerieri: /Waiters/:localname/... (prima finiva su /:localname/waiters/..., pagina vuota)
+                        navigate(waiters ? `/Waiters/${localname}/Products/${newId}` : `/${localname}/Products/${newId}`);
                     }}
                     primaryColor={primaryColor}
                 />

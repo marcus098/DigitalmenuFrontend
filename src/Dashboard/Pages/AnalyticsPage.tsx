@@ -89,8 +89,16 @@ const AnalyticsPage: React.FC = () => {
             const d = c.updatedAt ? c.updatedAt.split('T')[0] : null;
             if (d && map[d] !== undefined) map[d]++;
         });
-        return days.map(d => ({ ...d, count: map[d.iso] }));
-    }, [comands, days]);
+        // Le comande in memoria sono solo quelle attive (di oggi): per i giorni passati si contano
+        // i conti chiusi in cassa e i pagamenti online, altrimenti il grafico era vuoto tranne oggi.
+        const closed: Record<string, number> = {};
+        cassa.forEach(c => { if (map[c.date] !== undefined) closed[c.date] = (closed[c.date] ?? 0) + ((c as any).count ?? 0); });
+        payments.forEach(p => {
+            const d = p.createdAt ? isoDate(new Date(p.createdAt)) : null;
+            if (d && map[d] !== undefined) closed[d] = (closed[d] ?? 0) + 1;
+        });
+        return days.map(d => ({ ...d, count: Math.max(map[d.iso], closed[d.iso] ?? 0) }));
+    }, [comands, days, cassa, payments]);
 
     // Top categories by product count
     const topCategories = useMemo(() => {
@@ -154,12 +162,12 @@ const AnalyticsPage: React.FC = () => {
                         {revenueByDay.map(d => {
                             const pct = maxRevenue > 0 ? (d.cents / maxRevenue) * 100 : 0;
                             return (
-                                <div key={d.iso} className="flex-1 flex flex-col items-center gap-1 group">
+                                <div key={d.iso} className="flex-1 h-full flex flex-col justify-end items-center gap-1 group min-w-0">
                                     <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
                                           title={`Online ${formatEur(d.online)} · Cassa ${formatEur(d.cassa)}${d.discount ? ` · Sconti ${formatEur(d.discount)}` : ''}`}>
                                         {formatEur(d.cents)}
                                     </span>
-                                    <div className="w-full rounded-t-lg bg-emerald-500 transition-all" style={{ height: `${Math.max(pct, 4)}%` }} />
+                                    <div className="w-full flex-1 min-h-0 flex items-end"><div className="w-full rounded-t-lg bg-emerald-500 transition-all" style={{ height: `${Math.max(pct, 4)}%` }} /></div>
                                     <span className="text-[10px] text-gray-400 text-center leading-tight">{d.label}</span>
                                 </div>
                             );
@@ -174,11 +182,11 @@ const AnalyticsPage: React.FC = () => {
                         {ordersByDay.map(d => {
                             const pct = maxOrders > 0 ? (d.count / maxOrders) * 100 : 0;
                             return (
-                                <div key={d.iso} className="flex-1 flex flex-col items-center gap-1 group">
+                                <div key={d.iso} className="flex-1 h-full flex flex-col justify-end items-center gap-1 group min-w-0">
                                     <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
                                         {d.count}
                                     </span>
-                                    <div className="w-full rounded-t-lg bg-amber-400 transition-all" style={{ height: `${Math.max(pct, 4)}%` }} />
+                                    <div className="w-full flex-1 min-h-0 flex items-end"><div className="w-full rounded-t-lg bg-amber-400 transition-all" style={{ height: `${Math.max(pct, 4)}%` }} /></div>
                                     <span className="text-[10px] text-gray-400 text-center leading-tight">{d.label}</span>
                                 </div>
                             );

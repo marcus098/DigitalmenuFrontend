@@ -49,7 +49,7 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
                     </span>
                     <div className="flex items-center gap-1 text-lg font-bold" style={{ color: 'var(--menu-text)' }}>
                         <Wallet className="w-4 h-4" style={{ color: 'var(--menu-muted)' }} />
-                        <span>€{total.toFixed(2)}</span>
+                        <span>€{total.toFixed(2).replace(".", ",")}</span>
                     </div>
                 </div>
             </div>
@@ -66,7 +66,7 @@ const ComandaCard: React.FC<{ comanda: Comand }> = ({ comanda }) => {
                                 <p className="font-bold" style={{ color: 'var(--menu-text)' }}>
                                     <span className="font-semibold">{prod.quantity}x</span> {prod.productName}
                                 </p>
-                                <p className="font-bold" style={{ color: 'var(--menu-text)' }}>€{(comandProductUnitPrice(prod) * prod.quantity).toFixed(2)}</p>
+                                <p className="font-bold" style={{ color: 'var(--menu-text)' }}>€{(comandProductUnitPrice(prod) * prod.quantity).toFixed(2).replace(".", ",")}</p>
                             </div>
                             {prod.productOption?.name && !['default', 'standard'].includes(prod.productOption.name.toLowerCase()) && (
                                 <p className="text-xs mt-1" style={{ color: 'var(--menu-muted)' }}>{prod.productOption.name}</p>

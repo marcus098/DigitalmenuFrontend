@@ -42,6 +42,41 @@ function renderDetached(element: React.ReactElement): string {
     return html;
 }
 
+/**
+ * Render in un nodo staccato aspettando il commit di React. flushSync su una root nuova non è affidabile
+ * quando l'app ha già una root concorrente attiva (in sviluppo restituiva una stringa vuota → anteprima
+ * e PDF bianchi): si attende il layout effect di un wrapper, con un limite di sicurezza.
+ */
+function renderDetachedAsync(element: React.ReactElement): Promise<string> {
+    return new Promise(resolve => {
+        const host = document.createElement('div');
+        const root = createRoot(host);
+        let done = false;
+        const finish = () => {
+            if (done) return;
+            done = true;
+            const html = host.innerHTML;
+            setTimeout(() => root.unmount(), 0);
+            resolve(html);
+        };
+        const Committed: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+            React.useLayoutEffect(() => { finish(); }, []);
+            return <>{children}</>;
+        };
+        root.render(<Committed>{element}</Committed>);
+        setTimeout(finish, 5000);
+    });
+}
+
+/** Come buildMenuPrintHtml, ma con il render asincrono (da usare nel browser). */
+export async function buildMenuPrintHtmlAsync(input: BuildMenuPrintInput): Promise<string> {
+    const PLACEHOLDER = '<!--rf-menu-body-->';
+    let captured: React.ReactElement | null = null;
+    const shell = buildMenuPrintHtml({ ...input, renderMarkup: el => { captured = el; return PLACEHOLDER; } });
+    const body = captured ? await renderDetachedAsync(captured) : '';
+    return shell.replace(PLACEHOLDER, () => body);
+}
+
 /** Token del template scelto: quello in uso con i colori del locale, gli altri con la loro palette. */
 export function printTokens(styles: StyleDto | null | undefined, templateKey: MenuTemplateKey) {
     const current = parseTemplateValue(styles?.landingTemplate).key;

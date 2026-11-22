@@ -19,7 +19,7 @@ import SelectedVariantChips from '../../Components/Dashboard/SelectedVariantChip
 import { defaultVariantsDelta, lineUnitPrice } from '../../Components/Dashboard/variantUtils';
 import DeliveryInfo, { PaymentChip } from '../../Components/Dashboard/delivery/DeliveryInfo';
 import PaymentActionDialog, { isRefundablePayment, isVoidable } from '../../Components/Dashboard/PaymentActionDialog';
-import { deliveryFeeCents, deliveryTimeLabel, getDelivery, isDeliveryComand } from '../../Components/Dashboard/delivery/deliveryUtils';
+import { deliveryFeeCents, deliveryTimeLabel, getDelivery, isDeliveryComand, slotTimeLabel } from '../../Components/Dashboard/delivery/deliveryUtils';
 
 // Caricato solo quando si apre lo scanner della tessera
 const QrScanner = React.lazy(() => import('react-qr-scanner'));
@@ -1064,7 +1064,7 @@ const CassaPage: React.FC = () => {
                                                     {c.name  && <p className="text-xs text-gray-500 truncate">{c.name}</p>}
                                                     {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
                                                     {(getDelivery(c)?.label || c.address) && <p className="text-xs text-gray-400 truncate">{getDelivery(c)?.label || c.address}</p>}
-                                                    {c.time  && <p className="text-xs text-gray-400">⏱ {getDelivery(c) ? deliveryTimeLabel(c.time) : c.time}</p>}
+                                                    {c.time  && <p className="text-xs text-gray-400">⏱ {getDelivery(c) ? deliveryTimeLabel(c.time) : slotTimeLabel(c.time)}</p>}
                                                     {getDelivery(c) && (
                                                         <div className="pt-1">
                                                             <PaymentChip delivery={getDelivery(c)!} paid={c.paid} totalCents={Math.round(total * 100)} />

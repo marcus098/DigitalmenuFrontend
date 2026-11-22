@@ -1,3 +1,4 @@
+import { useData } from '../Context/DataContext';
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { useLoginContext } from '../Context/LoginContext';
@@ -41,6 +42,9 @@ const Header: React.FC = () => {
     const logoutLabel = impersonation ? 'Esci dal supporto' : 'Logout';
     const { localname } = useParams();
     const navigate = useNavigate();
+    // Nome del locale impostato in Personalizza Aspetto; lo slug resta solo come ripiego.
+    const { styles } = useData();
+    const venueName = styles?.restaurantName?.trim() || user?.localname;
 
     const [isMobileOpen,  setIsMobileOpen]  = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -113,7 +117,7 @@ const Header: React.FC = () => {
                             className="flex-shrink-0 flex items-center gap-2"
                         >
                             <span className="text-base font-extrabold text-primary-600 tracking-tight leading-none">
-                                {user?.localname}
+                                {venueName}
                             </span>
                         </NavLink>
 
@@ -261,7 +265,7 @@ const Header: React.FC = () => {
                     >
                         {/* Drawer header */}
                         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <span className="text-base font-extrabold text-primary-600">{user?.localname}</span>
+                            <span className="text-base font-extrabold text-primary-600">{venueName}</span>
                             <button
                                 onClick={() => setIsMobileOpen(false)}
                                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"

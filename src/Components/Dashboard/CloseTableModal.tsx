@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {X, AlertTriangle, LogOut, Receipt, Users} from 'lucide-react';
 import {tableLabel} from '../../Dashboard/tableLabel';
-import {useTableOrders} from '../../Hooks/useTableOrders';
+import {orderTotal, useTableOrders} from '../../Hooks/useTableOrders';
 
 interface CloseTableModalProps {
     table: { id: string; name: string; seats?: number };
@@ -17,11 +17,15 @@ const eur = (n: number) => new Intl.NumberFormat('it-IT', {style: 'currency', cu
  * non incassato non nascondono l'azione, compaiono come avviso qui prima di confermare.
  */
 const CloseTableModal: React.FC<CloseTableModalProps> = ({table, onCancel, onConfirm}) => {
-    const {orders, total, toCollect, unfinished, loading, error} = useTableOrders(Number(table.id), true);
+    const {orders, comands, total, toCollect: collectAll, unfinished, loading, error} = useTableOrders(Number(table.id), true);
     const [submitting, setSubmitting] = useState(false);
     // Ordini da QR mai accettati (AWAIT): alla chiusura vengono annullati, gli altri segnati come completati
     const toCancel = orders.filter(o => o.status === 'AWAIT').length;
     const toComplete = unfinished - toCancel;
+    // Gli ordini QR mai accettati vengono annullati: non restano da incassare in Cassa
+    const paidOrCheckout = new Set(comands.filter(c => c.paid || c.checkout).map(c => c.id));
+    const cancelledAmount = orders.filter(o => o.status === 'AWAIT' && !paidOrCheckout.has(o.id)).reduce((s, o) => s + orderTotal(o), 0);
+    const toCollect = Math.max(0, collectAll - cancelledAmount);
 
     const confirm = async () => {
         if (submitting) return;

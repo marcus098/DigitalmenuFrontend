@@ -7,14 +7,14 @@ import { useData } from "../Context/DataContext";
 const AllergenGridItem: React.FC<{ allergen: { id: number, name: string; icon: string }, onToggle: () => void, isSelected: boolean }> = ({ allergen, onToggle, isSelected }) => {
     return (
         // Usiamo un <label> per una migliore accessibilità. Cliccando ovunque si attiverà il checkbox.
-        <label className={`flex items-center justify-between w-full p-3 rounded-xl transition-all border-2 cursor-pointer ${
+        <label className={`flex items-center justify-between gap-2 w-full p-3 rounded-xl transition-all border-2 cursor-pointer ${
             isSelected
                 ? 'bg-amber-50 border-amber-500 shadow-sm'
                 : 'bg-zinc-50 border-zinc-200 hover:border-zinc-300'
         }`}>
-            <div className="flex items-center gap-2">
-                <img src={allergen.icon} alt={allergen.name} className="w-6 h-6"/>
-                <span className="font-bold text-zinc-800">{allergen.name}</span>
+            <div className="flex items-center gap-2 min-w-0">
+                <img src={allergen.icon} alt={allergen.name} className="w-6 h-6 flex-shrink-0"/>
+                <span className="font-bold text-zinc-800 leading-tight break-words min-w-0">{allergen.name}</span>
             </div>
             {/* Checkbox nascosto che gestisce lo stato, ma visivamente usiamo un div stilizzato */}
             <input

@@ -81,7 +81,7 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                     className="font-semibold mt-0.5"
                     style={{ color: 'var(--menu-accent)', fontFamily: 'var(--menu-font-body)', fontSize: '0.82rem' }}
                 >
-                    €{item.price.toFixed(2)} cad.
+                    €{item.price.toFixed(2).replace(".", ",")} cad.
                 </p>
 
                 <div className="mt-1 space-y-0.5">
@@ -155,7 +155,7 @@ const ModernCartItem: React.FC<ModernCartItemProps> = ({
                     className="font-bold"
                     style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.15rem' }}
                 >
-                    €{totalItemPrice.toFixed(2)}
+                    €{totalItemPrice.toFixed(2).replace(".", ",")}
                 </span>
 
                 <motion.button

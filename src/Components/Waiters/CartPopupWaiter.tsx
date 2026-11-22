@@ -6,6 +6,7 @@ import {convertCartToAddComandWaiterOrder, saveCart} from "../../Utilities/Utili
 import {useNotification} from "../../Context/NotificationContext";
 import {useParams} from "react-router-dom";
 import {useData} from "../../Context/DataContext";
+import {Bike, ShoppingBag, UtensilsCrossed} from "lucide-react";
 
 interface CartPopupWaiter {
     cart: CartLine[]
@@ -14,9 +15,9 @@ interface CartPopupWaiter {
 
 const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
     const options = [
-        { id: 1, label: "Da Tavolo", value: "table" },
-        { id: 2, label: "Asporto", value: "takeaway" },
-        { id: 3, label: "Domicilio", value: "delivery" },
+        { id: 1, label: "Da Tavolo", value: "table", Icon: UtensilsCrossed },
+        { id: 2, label: "Asporto", value: "takeaway", Icon: ShoppingBag },
+        { id: 3, label: "Domicilio", value: "delivery", Icon: Bike },
     ];
 
     const [selected, setSelected] = useState<number>(0);
@@ -136,7 +137,9 @@ const CartPopupWaiter: React.FC<CartPopupWaiter> = ({cart, close}) => {
                                 className="menu-clickable-row flex items-center justify-center rounded-xl p-4 cursor-pointer transition"
                                 style={{ border: '1px solid var(--menu-border)' }}
                             >
-                                <div className="w-12 h-12 rounded-full mr-4" style={{ background: 'var(--menu-surface)' }} />
+                                <div className="w-12 h-12 rounded-full mr-4 flex items-center justify-center" style={{ background: 'var(--menu-surface)', color: 'var(--menu-accent)' }}>
+                                    <option.Icon className="w-6 h-6" aria-hidden="true" />
+                                </div>
                                 <span className="text-lg font-medium" style={{ color: 'var(--menu-text)' }}>{option.label}</span>
                             </div>
                         ))}

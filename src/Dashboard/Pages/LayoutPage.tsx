@@ -418,7 +418,7 @@ const PreviewPanel: React.FC<{ draftTheme: StyleDto; localname: string }> = ({ d
         : 'w-full max-w-[1200px] h-[760px] rounded-lg shadow-2xl ring-1 ring-gray-300';
 
     return (
-        <div className="lg:col-span-2 bg-slate-100 rounded-xl p-3 md:p-5 flex flex-col h-full min-h-[600px]">
+        <div className="lg:col-span-2 bg-slate-100 rounded-xl p-3 md:p-5 flex flex-col h-full min-h-[600px] lg:sticky lg:top-20 lg:self-start lg:h-[calc(100vh-6rem)]">
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">

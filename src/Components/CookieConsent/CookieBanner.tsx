@@ -24,10 +24,12 @@ const isClientRoute = (pathname: string): boolean => {
 
 const CookieBanner: React.FC = () => {
     const { bannerVisible, preferencesOpen, acceptAll, rejectAll, openPreferences } = useCookieConsent();
-    const { pathname } = useLocation();
+    const { pathname, search } = useLocation();
     const dark = isClientRoute(pathname);
+    // Anteprima del sito dentro "Personalizza Aspetto" (iframe ?preview=1): il banner coprirebbe la pagina
+    const isPreview = new URLSearchParams(search).get('preview') === '1';
 
-    if (!bannerVisible && !preferencesOpen) return null;
+    if (isPreview || (!bannerVisible && !preferencesOpen)) return null;
 
     return (
         <>

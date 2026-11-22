@@ -31,7 +31,7 @@ const IngredientRow: React.FC<{ name: string; price?: number; isSelected: boolea
     >
         <span className="font-medium" style={{ color: 'var(--menu-text)' }}>{name}</span>
         <div className="flex items-center">
-            {price !== undefined && price > 0 && <span className="text-sm mr-3" style={{ color: 'var(--menu-muted)' }}>+ €{price.toFixed(2)}</span>}
+            {price !== undefined && price > 0 && <span className="text-sm mr-3" style={{ color: 'var(--menu-muted)' }}>+ €{price.toFixed(2).replace(".", ",")}</span>}
             <input type="checkbox" checked={isSelected} onChange={onToggle} className="sr-only" />
             <div
                 className="w-5 h-5 flex-shrink-0 rounded-md border-2 flex items-center justify-center"
@@ -268,7 +268,7 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
                             >
                                 {blockedBySoldOut
                                     ? t('choiceSoldOut')
-                                    : <>Aggiungi {quantity > 1 ? `${quantity} pz.` : ''} - €{totalPrice.toFixed(2)}</>}
+                                    : <>Aggiungi {quantity > 1 ? `${quantity} pz.` : ''} - €{totalPrice.toFixed(2).replace(".", ",")}</>}
                             </button>
                         </div>
                     </motion.div>

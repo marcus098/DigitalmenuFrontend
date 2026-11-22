@@ -462,14 +462,14 @@ const CartPage: React.FC<CartPageProps> = ({ waiter }) => {
                                 <div className="space-y-3 mb-6">
                                     <div className="flex justify-between" style={{ color: 'var(--menu-muted)', fontFamily: 'var(--menu-font-body)' }}>
                                         <span>Subtotale</span>
-                                        <span>€{total.toFixed(2)}</span>
+                                        <span>€{total.toFixed(2).replace(".", ",")}</span>
                                     </div>
                                     <div
                                         className="flex justify-between font-bold"
                                         style={{ color: 'var(--menu-text)', fontFamily: 'var(--menu-font-display)', fontSize: '1.5rem' }}
                                     >
                                         <span>Totale</span>
-                                        <span>€{total.toFixed(2)}</span>
+                                        <span>€{total.toFixed(2).replace(".", ",")}</span>
                                     </div>
                                 </div>
 

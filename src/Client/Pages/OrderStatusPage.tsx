@@ -384,7 +384,7 @@ const OrderStatusPage: React.FC = () => {
                             <section className="mt-8" aria-label="Riepilogo ordine">
                                 <div className="flex justify-between items-baseline mb-3">
                                     <h2 className="font-bold text-lg" style={{ color: 'var(--menu-text)' }}>Il tuo ordine</h2>
-                                    <span className="font-bold tabular-nums" style={{ color: 'var(--menu-text)' }}>€{comandTotal(comand).toFixed(2)}</span>
+                                    <span className="font-bold tabular-nums" style={{ color: 'var(--menu-text)' }}>€{comandTotal(comand).toFixed(2).replace(".", ",")}</span>
                                 </div>
                                 <ComandLines comand={comand} />
                                 {delivery && (

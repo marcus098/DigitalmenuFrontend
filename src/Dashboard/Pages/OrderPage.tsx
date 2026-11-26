@@ -1,6 +1,8 @@
 import React, {useContext, useEffect, useRef, useState} from "react";
 import OrderModal from "../../Components/OrderModal";
 import OrderCard from "../../Components/OrderCard";
+import OrderEditModal from "../../Components/Dashboard/OrderEditModal";
+import {IS_ADMIN, IS_WAITER} from "../../types";
 import {useData} from "../../Context/DataContext";
 import {getCompletedApi, getDeletedApi} from "../../Utilities/api";
 import {useNotification} from "../../Context/NotificationContext";
@@ -10,7 +12,7 @@ import {getTakeawayPauseApi, pauseTakeawayApi, resumeTakeawayApi, TakeawayPauseS
 import {localIsoDate} from "../../Utilities/dates";
 import {LoginContext} from "../../Context/LoginContext";
 import {useTabletPrinting} from "../../Hooks/useTabletPrinting";
-import {SelectedVariant} from "../../ComandType";
+import {Comand, SelectedVariant} from "../../ComandType";
 import SelectedVariantChips from "../../Components/Dashboard/SelectedVariantChips";
 import {ComandDelivery} from "../../deliveryTypes";
 
@@ -71,6 +73,8 @@ export interface Orders {
     totalCents?: number
     /** Nome del cameriere/operatore che ha preso l'ordine (assente = ordine del cliente) */
     takenBy?: string
+    /** Comanda originale del server: righe con gli id, versione, storico, chiusura conto */
+    raw?: Comand
 }
 
 /** Totale di un ordine in centesimi (server se presente, altrimenti prodotti + consegna). */
@@ -107,6 +111,9 @@ const OrdersPage: React.FC = () => {
     const [pauseBusy, setPauseBusy] = useState(false)
     const [busyId, setBusyId] = useState<string | null>(null)
     const [singleOrder, setSingleOrder] = useState<Orders | null>(null)
+    // Ordine in modifica (righe): solo staff, ordini aperti
+    const [editOrder, setEditOrder] = useState<Orders | null>(null)
+    const canEdit = !!loginCtx && (loginCtx.checkVariable(IS_ADMIN) || loginCtx.checkVariable(IS_WAITER))
     const [ordersList, setOrdersList] = useState<Orders[]>([]);
     const [filterStatus, setFilterStatus] = useState<StatusFilter>('ALL');
     // '' = tutti i giorni (solo per gli ordini aperti); completati/cancellati si leggono sempre per giorno (default oggi)
@@ -385,14 +392,24 @@ const OrdersPage: React.FC = () => {
                         onAcceptAndPrint={tablet.tabletPrintEnabled ? handleAcceptAndPrint : undefined}
                         pendingPrint={tablet.isPending(order.id)}
                         onPrintPending={tablet.printPending}
+                        onEdit={canEdit ? setEditOrder : undefined}
                     />
                 ))}
             </div>
 
             {singleOrder && (
                 <OrderModal
-                    order={singleOrder}
+                    // Versione aggiornata (modifiche e tempo reale) dell'ordine aperto nei dettagli
+                    order={ordersList.find(o => o.id === singleOrder.id) ?? historicalOrders.find(o => o.id === singleOrder.id) ?? singleOrder}
                     onClose={() => setSingleOrder(null)}
+                    onEdit={canEdit ? setEditOrder : undefined}
+                />
+            )}
+            {editOrder && (
+                <OrderEditModal
+                    key={editOrder.id}
+                    order={ordersList.find(o => o.id === editOrder.id) ?? editOrder}
+                    onClose={() => setEditOrder(null)}
                 />
             )}
         </div>

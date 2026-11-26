@@ -53,9 +53,15 @@ interface ProductCustomizationDrawerProps {
     onClose: () => void;
     dish: ProductDto | null;
     waiter: boolean;
+    /** Riga di partenza (modifica ordine): formato, varianti, ingredienti, nota e quantità già scelti */
+    initial?: Pick<CartLine, 'optionName' | 'variants' | 'ingredientsPlus' | 'ingredientsMinus' | 'note' | 'quantity'>;
+    /** Se presente la riga va qui invece che nel carrello (modifica ordine dalla dashboard) */
+    onConfirm?: (line: CartLine) => void;
+    /** Testo del pulsante di conferma (default "Aggiungi") */
+    confirmLabel?: string;
 }
 
-const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({ isOpen, onClose, dish, waiter }) => {
+const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({ isOpen, onClose, dish, waiter, initial, onConfirm, confirmLabel = 'Aggiungi' }) => {
     // STATI E LOGICA
     const [selectedIngredients, setSelectedIngredients] = useState<number[]>([]);
     const [note, setNote] = useState('');
@@ -75,6 +81,18 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
     useEffect(() => {
         if (dish && isOpen) {
             const defaultOpt = dish.options.find(o => o.isDefault) || dish.options[0];
+            if (initial) {
+                // Modifica di una riga esistente: si riparte dalle scelte salvate (formato sparito → predefinito)
+                const base = dish.ingredients || [];
+                const minus = initial.ingredientsMinus || [];
+                setSelectedIngredients([...base.filter(id => !minus.includes(id)), ...(initial.ingredientsPlus || []).filter(id => !base.includes(id))]);
+                setNote(initial.note || '');
+                setQuantity(Math.max(1, initial.quantity || 1));
+                setSelectedOption(dish.options.some(o => o.name === initial.optionName) ? initial.optionName : defaultOpt?.name || null);
+                setIsExtrasOpen((initial.ingredientsPlus || []).length > 0);
+                setSelection(completeSelection(dish, initial.variants));
+                return;
+            }
             setSelectedIngredients(dish.ingredients || []);
             setNote('');
             setQuantity(1);
@@ -123,6 +141,11 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
             ingredientsMinus: base.filter(id => !selectedIngredients.includes(id)),
             ...(variantGroups.length > 0 ? { variants: selectionToPayload(currentSelection) } : {}),
         };
+        if (onConfirm) {
+            onConfirm(productCart);
+            onClose();
+            return;
+        }
         if (addProductToCart(productCart, waiter ? "waiter" : undefined)) {
             addNotification({ message: "Prodotto aggiunto!", type: "success" });
             onClose();
@@ -268,7 +291,7 @@ const ProductCustomizationDrawer: React.FC<ProductCustomizationDrawerProps> = ({
                             >
                                 {blockedBySoldOut
                                     ? t('choiceSoldOut')
-                                    : <>Aggiungi {quantity > 1 ? `${quantity} pz.` : ''} - €{totalPrice.toFixed(2).replace(".", ",")}</>}
+                                    : <>{confirmLabel} {quantity > 1 ? `${quantity} pz.` : ''} - €{totalPrice.toFixed(2).replace(".", ",")}</>}
                             </button>
                         </div>
                     </motion.div>

@@ -87,6 +87,8 @@ export const apiCall = async <T>(apiCallInterface: ApiCallInterface): Promise<Ap
             success: false,
             status,
             message,
+            // Codice applicativo dell'errore, se il server lo invia ({message, code})
+            ...(typeof body?.code === 'string' ? {code: body.code} : {}),
             reloadToken: false,
             data: null,
         };
@@ -98,6 +100,8 @@ export type ApiCallResult<T> = {
     success: boolean;
     status: number;
     message?: string;
+    /** Codice dell'errore inviato dal server (es. VERSION_CONFLICT) */
+    code?: string;
     reloadToken?: boolean;
     newToken?: string;
     data: T | null;

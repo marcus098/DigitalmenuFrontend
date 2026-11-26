@@ -322,7 +322,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
     // Gli eventi ordine sono stub {id, status, idAgency, paid?}: si aggiorna lo stato
     // delle comande note, si rimuovono quelle chiuse, e per id sconosciuti si
     // ricarica la lista (mai sostituire la lista con gli stub).
-    const mergeOrderEvents = (events: { id?: string, status?: string, paid?: boolean, deliveryStage?: string }[]) => {
+    const mergeOrderEvents = (events: { id?: string, status?: string, paid?: boolean, deliveryStage?: string, edited?: boolean, version?: number }[]) => {
         const known = new Set(comandsRef.current.map(c => c.id));
         const updates = new Map<string, { status: Comand['status'], paid?: boolean, deliveryStage?: string }>();
         let newOrders = 0;
@@ -337,6 +337,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                 updates.set(e.id, { status: e.status as Comand['status'], paid: e.paid, deliveryStage: e.deliveryStage });
                 // Consegna a domicilio: la fase (in consegna / consegnato) non è nello stub, si rilegge la lista
                 if (comandsRef.current.some(c => c.id === e.id && (c as any).delivery)) unknown = true;
+                // Righe modificate (anche da un collega): lo stub non contiene i prodotti, si rilegge la lista.
+                // Non esiste un GET dashboard della singola comanda; una versione già nota (la nostra modifica) non rilegge.
+                if (e.edited === true || typeof e.version === 'number') {
+                    const local = comandsRef.current.find(c => c.id === e.id)?.version ?? 0;
+                    if (typeof e.version !== 'number' || e.version > local) unknown = true;
+                }
             } else if (!isClosedStatus(e.status)) {
                 unknown = true;
                 if (e.status === 'AWAIT' || e.status === 'PENDING') newOrders++;
@@ -538,7 +544,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
                         delivery: (c as any).delivery || undefined,
                         orderType: (c as any).orderType,
                         totalCents: c.totalCents,
-                        takenBy: c.takenBy?.name || undefined
+                        takenBy: c.takenBy?.name || undefined,
+                        // Comanda originale: righe con gli id (modifica ordine), versione e storico
+                        raw: c
                     })
                 }
 
@@ -817,6 +825,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
             addNotification({message: "Errore", type: "error"})
             return false
         }
+    }
+
+    /** Sostituisce una comanda con la versione restituita dal server (es. dopo la modifica delle righe). */
+    const replaceComand = (updated: Comand) => {
+        if (!updated?.id) return
+        setComandList(prev => visibleComands(prev.map(c => c.id === updated.id ? updated : c)))
     }
 
     const checkoutComand = async (idComand: string, req: CheckoutRequest): Promise<CheckoutResult | null> => {
@@ -1345,6 +1359,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode, dashboard: bool
         addCategory,
         addProduct,
         changeComandStatus,
+        replaceComand,
         checkoutComand,
         approveComand,
         rejectComand,

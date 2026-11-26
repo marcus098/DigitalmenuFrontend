@@ -40,6 +40,8 @@ export interface DataContextType{
     ingredientsMap: Map<number, IngredientDto>
     comands: Comand[]
     changeComandStatus: (idComand: string, status: 'PROGRESS' | 'COMPLETED' | 'DELETED' | 'PENDING') => Promise<boolean>
+    /** Sostituisce una comanda in lista con quella restituita dal server (modifica righe) */
+    replaceComand: (comand: Comand) => void
     /** Chiusura conto in cassa (sconto salvato + tessera). null = errore (già notificato). */
     checkoutComand: (idComand: string, req: CheckoutRequest) => Promise<CheckoutResult | null>
     /** Accetta un ordine "su richiesta" (AWAIT_APPROVAL → PENDING) */

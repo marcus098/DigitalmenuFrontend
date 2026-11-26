@@ -83,6 +83,40 @@ export interface Comand {
     totalCents?: number
     /** Operatore dello staff che ha inserito la comanda (impostato dal server); assente per gli ordini dei clienti */
     takenBy?: { id: number, name: string } | null
+    /** Versione della comanda: cresce a ogni modifica delle righe (0 per le comande vecchie) */
+    version?: number
+    /** Storico (dal più vecchio, max 100): creazione, modifiche, cambi di stato, chiusura del conto */
+    history?: ComandHistoryEntry[]
+}
+
+export type ComandHistoryAction = 'CREATED' | 'EDITED' | 'STATUS' | 'CHECKOUT'
+export type ComandItemChangeType = 'ADDED' | 'REMOVED' | 'QTY_CHANGED' | 'VARIANT_CHANGED' | 'NOTE_CHANGED'
+
+/** Differenza di una riga tra prima e dopo una modifica. */
+export interface ComandItemChange {
+    type: ComandItemChangeType
+    idProduct?: number
+    productName?: string
+    idCategory?: number
+    categoryName?: string
+    oldQty?: number | null
+    newQty?: number | null
+    /** Formato + varianti in forma leggibile (es. "Normale, Integrale") */
+    oldDescription?: string | null
+    newDescription?: string | null
+    oldNote?: string | null
+    newNote?: string | null
+}
+
+/** Voce dello storico. by: staff {id,name}; cliente {id:null,name:"Cliente"}; sistema {id:null,name:"Sistema"}. */
+export interface ComandHistoryEntry {
+    at: string
+    by?: { id: number | null, name: string } | null
+    action: ComandHistoryAction
+    /** Solo STATUS: stato precedente e nuovo */
+    from?: ComandStatus | string | null
+    to?: ComandStatus | string | null
+    changes?: ComandItemChange[] | null
 }
 
 

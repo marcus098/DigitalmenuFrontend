@@ -20,7 +20,7 @@ import {deleteCookie, getCookie} from "./Utilities";
 import {apiCall, ApiCallResult, clientApiCall} from "./helper";
 import {endImpersonation, getImpersonationToken, IMPERSONATION_FORBIDDEN_EVENT, isImpersonating} from "./impersonation";
 import {UserProfile} from "../Dashboard/Pages/ProfilePage";
-import {CheckoutRequest, Comand} from "../ComandType";
+import {CheckoutRequest, Comand, ComandItemChange} from "../ComandType";
 import {DeliverySettings, DeliveryStage, GeoResult, DeliveryAddress, DeliveryPaymentChoice, DeliveryOrderResponse} from "../deliveryTypes";
 
 const ADD_INGREDIENT = "/api/ingredients/insert";
@@ -64,6 +64,7 @@ const GET_CLIENT_ORDER_HISTORY = (tableId: number, localname: string) => "/api/p
 const CHANGE_COMAND_STATUS = "/api/orders/changeStatus"
 const APPROVE_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/approve`
 const REJECT_COMAND = (id: string) => `/api/orders/${encodeURIComponent(id)}/reject`
+const EDIT_COMAND_ITEMS = (id: string) => `/api/orders/${encodeURIComponent(id)}/items`
 const GET_ALL = (idOrLocalname: string | number) =>  "/api/public/client/getAll/" + idOrLocalname
 const GET_ALL_DASHBOARD = "/api/dashboard/getAll"
 const CHECK = "/api/user/check"
@@ -262,6 +263,25 @@ export const approveComandApi = async (comandId: string) =>
 /** Rifiuta un ordine "su richiesta"; il motivo è mostrato al cliente. */
 export const rejectComandApi = async (comandId: string, reason?: string) =>
     apiCall<{ message: string }>({ method: POST, url: REJECT_COMAND(comandId), fixed: true, data: reason ? { reason } : {} })
+
+/** Risposta della modifica righe: changed=false se la lista era identica (nulla salvato). */
+export interface EditComandItemsResponse {
+    comand: Comand
+    totalCents: number
+    changes: ComandItemChange[]
+    changed: boolean
+}
+
+/**
+ * Modifica le righe di una comanda aperta: `orders` è la lista COMPLETA (stesso formato di /insertWaiter).
+ * expectedVersion = `version` letta: se nel frattempo è cambiata il server risponde 409 VERSION_CONFLICT.
+ * Errori: `message` già leggibile, `code` (EMPTY, INVALID, NOT_FOUND, NOT_EDITABLE, VERSION_CONFLICT, ...).
+ */
+export const editComandItemsApi = async (comandId: string, orders: AddComandOrder[], expectedVersion?: number) =>
+    apiCall<EditComandItemsResponse>({
+        method: PUT, url: EDIT_COMAND_ITEMS(comandId), fixed: true,
+        data: {orders, ...(expectedVersion != null ? {expectedVersion} : {})},
+    })
 
 export const changeComandStatusApi = async (comandId: string, status: string) => {
     const data = {

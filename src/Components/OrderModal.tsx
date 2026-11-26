@@ -4,13 +4,17 @@ import SelectedVariantChips from "./Dashboard/SelectedVariantChips";
 import DeliveryInfo, {DeliveryBadge} from "./Dashboard/delivery/DeliveryInfo";
 import {formatEurCents} from "./Dashboard/delivery/deliveryUtils";
 import OrderPayments from "./Dashboard/OrderPayments";
+import OrderHistory from "./Dashboard/OrderHistory";
+import {isOrderEditable} from "./Dashboard/orderEditing";
 
 interface OrderModalProps {
     order: Orders;
     onClose: () => void;
+    /** Staff: apre la modifica dell'ordine (mostrato solo se l'ordine è modificabile) */
+    onEdit?: (order: Orders) => void;
 }
 
-const OrderModal: React.FC<OrderModalProps> = ({ order, onClose }) => {
+const OrderModal: React.FC<OrderModalProps> = ({ order, onClose, onEdit }) => {
     return (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center">
             <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto">
@@ -31,8 +35,8 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, onClose }) => {
                     {order.items.map((item, index) => (
                         <li key={index} className="mb-2">
                             <p>
-                                {item.productName} - €
-                                {item.total.toFixed(2)}
+                                <strong>{item.quantity}×</strong> {item.productName} - €
+                                {(item.total * item.quantity).toFixed(2)}
                             </p>
                             <SelectedVariantChips variants={item.variants} />
                             {item.additionalIngredients.length > 0 && (
@@ -65,13 +69,24 @@ const OrderModal: React.FC<OrderModalProps> = ({ order, onClose }) => {
                         </div>
                     </div>
                 )}
+                <OrderHistory history={order.raw?.history}/>
                 {order.id && <OrderPayments comandId={order.id}/>}
-                <button
-                    onClick={onClose}
-                    className="mt-4 bg-gray-300 px-4 py-2 rounded-lg"
-                >
-                    Chiudi
-                </button>
+                <div className="mt-4 flex gap-2">
+                    <button
+                        onClick={onClose}
+                        className="bg-gray-300 px-4 py-2 rounded-lg"
+                    >
+                        Chiudi
+                    </button>
+                    {onEdit && isOrderEditable(order) && (
+                        <button
+                            onClick={() => onEdit(order)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                        >
+                            Modifica
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

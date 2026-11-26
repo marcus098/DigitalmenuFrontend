@@ -5,19 +5,11 @@ import {tableLabel} from "../Dashboard/tableLabel";
 import SelectedVariantChips from "./Dashboard/SelectedVariantChips";
 import DeliveryInfo, {DeliveryBadge} from "./Dashboard/delivery/DeliveryInfo";
 import {slotTimeLabel} from "./Dashboard/delivery/deliveryUtils";
+import {isOrderEditable, STATUS_LABEL} from "./Dashboard/orderEditing";
 
 /** Il formato unico ("default"/"Standard") non va mostrato. */
 const showOption = (name?: string) => !!name && !["default", "standard"].includes(name.trim().toLowerCase());
 
-const STATUS_LABEL: Record<string, string> = {
-    AWAIT: "Nuovo",
-    PENDING: "In attesa",
-    PROGRESS: "In cucina",
-    COMPLETED: "Completato",
-    DELETED: "Cancellato",
-    AWAIT_APPROVAL: "Da approvare",
-    AWAIT_PAYMENT: "In attesa di pagamento",
-};
 
 interface OrderCardProps {
     order: Orders;
@@ -30,6 +22,8 @@ interface OrderCardProps {
     /** Ticket tablet scaricato oltre la finestra del tocco: mostra "Tocca per stampare". */
     pendingPrint?: boolean;
     onPrintPending?: (orderId: string) => void;
+    /** Staff: "Modifica" sugli ordini aperti (righe, quantità, note, varianti, nuovi prodotti) */
+    onEdit?: (order: Orders) => void;
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({
@@ -40,6 +34,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                                                  onAcceptAndPrint,
                                                  pendingPrint,
                                                  onPrintPending,
+                                                 onEdit,
                                              }) => {
     const [expanded, setExpanded] = useState(false);
     const delivery = order.delivery;
@@ -267,14 +262,22 @@ const OrderCard: React.FC<OrderCardProps> = ({
                     )}
                 </div>
 
-                {/* Dettagli */}
-                <div className="mt-3 text-center">
+                {/* Dettagli / Modifica */}
+                <div className="mt-3 flex justify-center gap-4">
                     <button
                         onClick={() => onDetailsClick(order)}
                         className="text-blue-500 text-sm underline"
                     >
                         Dettagli
                     </button>
+                    {onEdit && isOrderEditable(order) && (
+                        <button
+                            onClick={() => onEdit(order)}
+                            className="text-blue-500 text-sm underline font-semibold"
+                        >
+                            Modifica
+                        </button>
+                    )}
                 </div>
             </div>
 

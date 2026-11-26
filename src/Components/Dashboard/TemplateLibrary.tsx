@@ -276,7 +276,12 @@ const TemplateLibrary: React.FC<TemplateLibraryProps> = ({ draftTheme, updateThe
                                 <div key={preset.key} className="p-2 rounded-lg border-2 border-gray-200 bg-white flex flex-col">
                                     {def && <TemplateThumb def={def} />}
                                     <div className="px-1 pt-2.5 pb-1 flex-1">
-                                        <p className="font-bold text-sm text-gray-900">{preset.label}</p>
+                                        <p className="font-bold text-sm text-gray-900">
+                                            {preset.label}
+                                            {preset.isNew && (
+                                                <span className="ml-1.5 align-middle inline-block px-1.5 py-px rounded text-[10px] font-semibold bg-amber-100 text-amber-900">Nuovo</span>
+                                            )}
+                                        </p>
                                         <p className="text-xs text-gray-600 mt-1 leading-relaxed">{preset.description}</p>
                                         <p className="text-[11px] text-gray-400 mt-1.5 leading-snug">{types.join(' · ')}</p>
                                     </div>

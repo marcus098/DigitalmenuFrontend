@@ -167,6 +167,78 @@ export const HeroBoard: React.FC<HeroBase & { categories: CategoryDto[]; onCateg
     );
 };
 
+/** Copertina da rivista: foto panoramica pulita (senza velo), titolo grande a sinistra e testo + pulsanti a destra. */
+export const HeroEditorial: React.FC<HeroBase> = ({ id, title, subtitle, facts, image, ctas, reveal, logo }) => (
+    <section id={`sec-${id}`} className="lp-edhero">
+        <div className="max-w-6xl mx-auto px-5 md:px-8 pt-6 md:pt-10 pb-12 md:pb-20" data-reveal={reveal}>
+            {(facts.length > 0 || logo) && (
+                <div className="lp-edhero-bar">
+                    {logo && <img src={logo} alt="" className="w-8 h-8 object-cover flex-shrink-0" style={{ borderRadius: 'var(--menu-radius)' }} />}
+                    {facts.map((f, i) => (
+                        <span key={i} className={i === facts.length - 1 && facts.length > 1 ? 'md:ml-auto' : ''}>{f}</span>
+                    ))}
+                </div>
+            )}
+            {image && (
+                <figure className="lp-edhero-figure">
+                    <img src={image.url} alt={image.alt} />
+                </figure>
+            )}
+            <div className="lp-edhero-foot">
+                <h1 className="menu-h lp-edhero-title">{title}</h1>
+                <div className="lp-edhero-aside">
+                    {subtitle && <p className="lp-edhero-sub">{subtitle}</p>}
+                    <div className="lp-edhero-ctas">{ctas}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+);
+
+/** 50/50 a tutta altezza: metà schermo tela pulita e ariosa, metà schermo foto piena senza margini. */
+export const HeroSplitFull: React.FC<HeroBase> = ({ id, title, subtitle, facts, image, ctas, reveal, logo }) => (
+    <section id={`sec-${id}`} className={`lp-splitfull ${image ? '' : 'lp-splitfull--noimg'}`}>
+        <div className="lp-splitfull-copy" data-reveal={reveal}>
+            <div className="lp-splitfull-top">
+                {logo && <img src={logo} alt="" className="w-10 h-10 object-cover" style={{ borderRadius: 'var(--menu-radius)' }} />}
+                {facts.length > 0 && <p className="lp-splitfull-facts">{facts.join(' · ')}</p>}
+            </div>
+            <div className="lp-splitfull-mid">
+                <h1 className="menu-h lp-splitfull-title">{title}</h1>
+                <MenuRule className="my-6" style={{ maxWidth: 120 }} />
+                {subtitle && <p className="lp-splitfull-sub">{subtitle}</p>}
+                <div className="lp-splitfull-ctas">{ctas}</div>
+            </div>
+        </div>
+        {image && (
+            <figure className="lp-splitfull-media">
+                <img src={image.url} alt={image.alt} />
+            </figure>
+        )}
+    </section>
+);
+
+/** Arco architettonico: foto ritagliata ad arco al centro con tipografia calma e simmetrica. */
+export const HeroArch: React.FC<HeroBase> = ({ id, title, subtitle, facts, image, ctas, reveal, logo }) => (
+    <section id={`sec-${id}`} className="lp-archhero">
+        <div className="max-w-5xl mx-auto px-5 md:px-8 pt-10 md:pt-16 pb-14 md:pb-24 text-center" data-reveal={reveal}>
+            {logo && <img src={logo} alt="" className="w-12 h-12 object-cover mx-auto mb-4" style={{ borderRadius: '999px' }} />}
+            {facts.length > 0 && <p className="lp-archhero-facts">{facts.join('  ·  ')}</p>}
+            <h1 className="menu-h lp-archhero-title">{title}</h1>
+            {image && (
+                <figure className="lp-archhero-frame">
+                    <div className="lp-archhero-arch">
+                        <img src={image.url} alt={image.alt} />
+                    </div>
+                    {image.alt && <figcaption>{image.alt}</figcaption>}
+                </figure>
+            )}
+            {subtitle && <p className="lp-archhero-sub">{subtitle}</p>}
+            <div className="lp-archhero-ctas">{ctas}</div>
+        </div>
+    </section>
+);
+
 // ─── Chi siamo ───────────────────────────────────────────────────────────────
 
 /** Editoriale: foto larga in apertura, titolo a sinistra, testo in colonna stretta con capolettera. */
@@ -251,6 +323,36 @@ export const GalleryCollage: React.FC<{ items: PrintImage[] }> = ({ items }) => 
                 </ol>
             )}
         </>
+    );
+};
+
+/** Diario fotografico (lookbook): coppie asimmetriche con grande respiro e didascalie discrete. */
+export const GalleryLookbook: React.FC<{ items: PrintImage[] }> = ({ items }) => {
+    const pairs: PrintImage[][] = [];
+    for (let i = 0; i < items.length; i += 2) pairs.push(items.slice(i, i + 2));
+    return (
+        <div className="lp-lookbook">
+            {pairs.map((pair, pi) => (
+                <div key={pi} className={`lp-lookbook-pair ${pi % 2 === 1 ? 'lp-lookbook-pair--flip' : ''}`}>
+                    {pair.map((im, j) => {
+                        const idx = pi * 2 + j;
+                        return (
+                            <figure key={idx} className={`lp-item ${j === 0 ? 'lp-lookbook-lead' : 'lp-lookbook-detail'}`} style={{ ['--i' as any]: idx }}>
+                                <div className="lp-lookbook-frame">
+                                    <img src={im.url} alt={im.alt} loading="lazy" />
+                                </div>
+                                {(im.caption || im.alt) && (
+                                    <figcaption>
+                                        <span className="lp-lookbook-num" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
+                                        <span>{im.caption || im.alt}</span>
+                                    </figcaption>
+                                )}
+                            </figure>
+                        );
+                    })}
+                </div>
+            ))}
+        </div>
     );
 };
 

@@ -123,6 +123,7 @@ const HeroEditor: React.FC<{ s: HeroSection; up: Upd<HeroSection>; draft: StyleD
         <>
             <SelectField label="Tipo di intestazione" value={s.variant} onChange={v => up({ variant: v })} options={[
                 ['template', 'Come da template'], ['image', 'Foto a tutta pagina con velo'], ['split', 'Foto e testo affiancati'], ['slideshow', 'Presentazione (fino a 5 foto)'], ['minimal', 'Solo testo'],
+                ['editorial', 'Editoriale: foto panoramica sopra e titolo sotto'], ['split-full', '50/50 a tutta altezza (senza margini sulla foto)'], ['arch', 'Arco architettonico con foto al centro'],
                 ['poster', 'Manifesto: nome enorme e foto sfalsata'], ['card', "Cartoncino del menu con l'indice delle sezioni"], ['board', 'Lavagna o bacheca con le voci del menù'],
             ]} />
             <TextField
@@ -204,7 +205,7 @@ const AboutEditor: React.FC<{ s: AboutSection; up: Upd<AboutSection> }> = ({ s, 
 const GalleryEditor: React.FC<{ s: GallerySection; up: Upd<GallerySection> }> = ({ s, up }) => (
     <>
         <TitleFields s={s} up={up} />
-        <SelectField label="Disposizione" value={s.layout} onChange={v => up({ layout: v })} options={[['grid', 'Griglia'], ['masonry', 'Mosaico'], ['carousel', 'Carosello'], ['filmstrip', 'Provino a contatto (pellicola)'], ['collage', 'Collage con didascalie numerate']]} />
+        <SelectField label="Disposizione" value={s.layout} onChange={v => up({ layout: v })} options={[['grid', 'Griglia'], ['masonry', 'Mosaico'], ['carousel', 'Carosello'], ['lookbook', 'Diario fotografico (lookbook)'], ['filmstrip', 'Provino a contatto (pellicola)'], ['collage', 'Collage con didascalie numerate']]} />
         <ImageListEditor label="Foto" items={s.items} max={LIMITS.gallery} withCaption update={fn => up(cur => ({ items: fn(cur.items) }))} />
     </>
 );

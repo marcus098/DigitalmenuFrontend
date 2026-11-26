@@ -4,7 +4,8 @@ import { useData } from '../../Context/DataContext';
 import { resolveImageUrl } from '../../Utilities/Utilities';
 import { useMenuLook } from '../../Components/Client/MenuThemeProvider';
 import {
-    AboutEditorial, AboutNote, GalleryCollage, GalleryFilmstrip, HeroBoard, HeroCard, HeroPoster,
+    AboutEditorial, AboutNote, GalleryCollage, GalleryFilmstrip, GalleryLookbook,
+    HeroArch, HeroBoard, HeroCard, HeroEditorial, HeroPoster, HeroSplitFull,
     HighlightsIndex, HighlightsMenu, HighlightsPolaroid,
 } from './PrintSections';
 import { MenuMastheadTitle, MenuPrice, MenuRule } from '../../Components/Client/MenuPrimitives';
@@ -309,12 +310,15 @@ const HeroView: React.FC<{ s: HeroSection; c: Ctx }> = ({ s, c }) => {
         );
     }
 
-    if (variant === 'poster' || variant === 'card' || variant === 'board') {
+    if (variant === 'poster' || variant === 'card' || variant === 'board' || variant === 'editorial' || variant === 'split-full' || variant === 'arch') {
         const im = imgs[0] ? { url: imgs[0].url, alt: imgs[0].alt } : undefined;
         const onCategory = (id: number) => p.navigate(`/${p.localname}/Products/${id}`);
         const base = { id: s.id, t, title, subtitle, facts, image: im, ctas: ctas(false), reveal, logo: p.logoImg };
         if (variant === 'poster') return <HeroPoster {...base} />;
         if (variant === 'card') return <HeroCard {...base} categories={p.categories} onCategory={onCategory} />;
+        if (variant === 'editorial') return <HeroEditorial {...base} />;
+        if (variant === 'split-full') return <HeroSplitFull {...base} />;
+        if (variant === 'arch') return <HeroArch {...base} />;
         return <HeroBoard {...base} categories={p.categories} onCategory={onCategory} hours={s.showFacts ? p.hours : ''} />;
     }
 
@@ -423,6 +427,7 @@ const GalleryView: React.FC<ViewProps<GallerySection>> = ({ s, centered }) => {
 
     if (s.layout === 'filmstrip') return <>{head}<GalleryFilmstrip items={pimgs} label={s.title || 'Galleria'} /></>;
     if (s.layout === 'collage') return <>{head}<GalleryCollage items={pimgs} /></>;
+    if (s.layout === 'lookbook') return <>{head}<GalleryLookbook items={pimgs} /></>;
 
     if (s.layout === 'carousel') {
         const scroll = (dir: 1 | -1) => {

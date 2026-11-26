@@ -1,8 +1,8 @@
 {
   "$comment": "GENERATO da scripts/export-pdf-tokens.mjs a partire da src/Client/menuTemplates.ts. Non modificare a mano: npm run export:pdf-tokens",
   "schemaVersion": 1,
-  "count": 33,
-  "allFontsHref": "https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Gloock&family=Cardo:ital,wght@0,400;0,700;1,400&family=Coustard:wght@400;900&family=Bitter:ital,wght@0,400;0,500;0,700;1,400&family=Caveat+Brush&family=Patrick+Hand&family=Holtwood+One+SC&family=Barlow+Semi+Condensed:wght@400;500;600&family=Limelight&family=Josefin+Sans:ital,wght@0,400;0,600;1,400&family=Chivo:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Alfa+Slab+One&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Bungee&family=Archivo:wght@400;500;700&family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IM+Fell+English+SC&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Young+Serif&family=Red+Hat+Text:wght@400;500;600;700&family=Gilda+Display&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Rokkitt:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Courier+Prime:wght@400;700&family=Corben:wght@400;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Marcellus&family=Karla:ital,wght@0,400;0,500;0,700;1,400&family=Antonio:wght@600;700&family=Libre+Franklin:wght@400;500;700&family=Yellowtail&family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@400;500;700&family=Vollkorn:ital,wght@0,600;0,700;0,800;1,600&family=Kalam:wght@400;700&family=Reem+Kufi:wght@500;600;700&family=Cairo:wght@400;500;600;700&family=Alegreya+SC:wght@500;700;800&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Libre+Bodoni:ital,wght@0,500;0,700;1,500&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Bowlby+One&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Zen+Old+Mincho:wght@600;900&family=Zen+Kaku+Gothic+Antique:wght@400;500;700&family=Ultra&family=Zilla+Slab:ital,wght@0,400;0,500;0,700;1,400&family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Elsie:wght@400;900&family=Sorts+Mill+Goudy:ital@0;1&family=Pinyon+Script&family=Shrikhand&family=Rubik:ital,wght@0,400;0,500;0,700;1,400&family=Albert+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Rakkas&family=Asap:ital,wght@0,400;0,500;0,700;1,400&family=Big+Shoulders+Display:wght@600;700;800&family=Big+Shoulders+Text:wght@400;500;600;700&family=Grenze+Gotisch:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap",
+  "count": 37,
+  "allFontsHref": "https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Gloock&family=Cardo:ital,wght@0,400;0,700;1,400&family=Coustard:wght@400;900&family=Bitter:ital,wght@0,400;0,500;0,700;1,400&family=Caveat+Brush&family=Patrick+Hand&family=Holtwood+One+SC&family=Barlow+Semi+Condensed:wght@400;500;600&family=Limelight&family=Josefin+Sans:ital,wght@0,400;0,600;1,400&family=Chivo:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Alfa+Slab+One&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Bungee&family=Archivo:wght@400;500;700&family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IM+Fell+English+SC&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Young+Serif&family=Red+Hat+Text:wght@400;500;600;700&family=Gilda+Display&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Rokkitt:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Courier+Prime:wght@400;700&family=Corben:wght@400;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Marcellus&family=Karla:ital,wght@0,400;0,500;0,700;1,400&family=Antonio:wght@600;700&family=Libre+Franklin:wght@400;500;700&family=Yellowtail&family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@400;500;700&family=Vollkorn:ital,wght@0,600;0,700;0,800;1,600&family=Kalam:wght@400;700&family=Reem+Kufi:wght@500;600;700&family=Cairo:wght@400;500;600;700&family=Alegreya+SC:wght@500;700;800&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Libre+Bodoni:ital,wght@0,500;0,700;1,500&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Bowlby+One&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Zen+Old+Mincho:wght@600;900&family=Zen+Kaku+Gothic+Antique:wght@400;500;700&family=Ultra&family=Zilla+Slab:ital,wght@0,400;0,500;0,700;1,400&family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Elsie:wght@400;900&family=Sorts+Mill+Goudy:ital@0;1&family=Pinyon+Script&family=Shrikhand&family=Rubik:ital,wght@0,400;0,500;0,700;1,400&family=Albert+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400&family=Rakkas&family=Asap:ital,wght@0,400;0,500;0,700;1,400&family=Big+Shoulders+Display:wght@600;700;800&family=Big+Shoulders+Text:wght@400;500;600;700&family=Grenze+Gotisch:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=Baskervville:ital@0;1&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap",
   "templates": [
     {
       "id": "default",
@@ -5790,6 +5790,706 @@
         "accentText/accent": 6.87,
         "secondaryText/secondary": 9.65,
         "emph(accent)/bg": 5.73
+      }
+    },
+    {
+      "id": "atelier",
+      "name": "Atelier · Editoriale",
+      "description": "Carta alabastro, serif editoriale pulito, filetti sottili e un solo accento terracotta. Semplice, arioso, senza ornamenti superflui.",
+      "inspiration": "Le riviste di cucina indipendenti (Kinfolk, Monocle) e i menu dei bistrot contemporanei.",
+      "isNew": true,
+      "venues": [
+        "ristorante",
+        "fine",
+        "enoteca"
+      ],
+      "dark": false,
+      "palette": {
+        "bg": "#f7f5f0",
+        "card": "#ffffff",
+        "text": "#1a1917",
+        "muted": "#57534d",
+        "accent": "#8e361c",
+        "accentText": "#ffffff",
+        "secondary": "#1a1917",
+        "secondaryText": "#f7f5f0",
+        "heroBg": "#1a1917",
+        "heroOverlay": 0.35
+      },
+      "emph": "#8e361c",
+      "fonts": {
+        "display": "Newsreader, Georgia, serif",
+        "body": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+        "price": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+        "accent": "Newsreader, Georgia, serif",
+        "displayName": "Newsreader",
+        "bodyName": "Hanken Grotesk",
+        "priceName": "Hanken Grotesk",
+        "accentName": "Newsreader",
+        "google": [
+          "Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400",
+          "Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400"
+        ],
+        "googleHref": "https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      },
+      "pairings": [
+        {
+          "id": "atelier",
+          "name": "Del template",
+          "fonts": {
+            "display": "Newsreader, Georgia, serif",
+            "body": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "price": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "accent": "Newsreader, Georgia, serif",
+            "displayName": "Newsreader",
+            "bodyName": "Hanken Grotesk",
+            "priceName": "Hanken Grotesk",
+            "accentName": "Newsreader",
+            "google": [
+              "Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400",
+              "Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+          }
+        },
+        {
+          "id": "galleria",
+          "name": "Galleria · Essenziale",
+          "fonts": {
+            "display": "\"Instrument Serif\", Georgia, serif",
+            "body": "\"Instrument Sans\", \"Segoe UI\", sans-serif",
+            "price": "\"Instrument Sans\", \"Segoe UI\", sans-serif",
+            "accent": "\"Instrument Serif\", Georgia, serif",
+            "displayName": "Instrument Serif",
+            "bodyName": "Instrument Sans",
+            "priceName": "Instrument Sans",
+            "accentName": "Instrument Serif",
+            "google": [
+              "Instrument+Serif:ital@0;1",
+              "Instrument+Sans:wght@400;500;600"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap"
+          }
+        },
+        {
+          "id": "minimal",
+          "name": "Minimal · Stile svizzero",
+          "fonts": {
+            "display": "\"Schibsted Grotesk\", \"Helvetica Neue\", Arial, sans-serif",
+            "body": "\"Schibsted Grotesk\", \"Helvetica Neue\", Arial, sans-serif",
+            "price": "\"Schibsted Grotesk\", \"Helvetica Neue\", Arial, sans-serif",
+            "accent": "\"Schibsted Grotesk\", \"Helvetica Neue\", Arial, sans-serif",
+            "displayName": "Schibsted Grotesk",
+            "bodyName": "Schibsted Grotesk",
+            "priceName": "Schibsted Grotesk",
+            "accentName": "Schibsted Grotesk",
+            "google": [
+              "Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap"
+          }
+        }
+      ],
+      "ornaments": {
+        "divider": "hairline",
+        "texture": "none",
+        "headerStyle": "plain",
+        "sectionHeader": "plain",
+        "ink": "none",
+        "numberStyle": "plain",
+        "leaders": false,
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "airy",
+        "productNumbers": false,
+        "categoryNumbers": "arabic",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "-0.02em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#1a1917",
+        "accentSwatches": [
+          "#8e361c",
+          "#1a1917"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
+      },
+      "look": {
+        "imageShape": "square",
+        "density": "airy",
+        "pricePosition": "right",
+        "sectionHeader": "plain",
+        "categoryNav": "underline",
+        "headerStyle": "plain",
+        "buttonStyle": "underline",
+        "descStyle": "auto",
+        "ink": "none",
+        "numberStyle": "plain",
+        "align": "left",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "-0.02em",
+        "divider": "hairline",
+        "texture": "none",
+        "radius": 0,
+        "leaders": false,
+        "price": "plain",
+        "productLayout": "menu",
+        "categoryLayout": "index",
+        "categoryNumbers": "arabic",
+        "productNumbers": false,
+        "hero": "masthead",
+        "cardBorder": "hairline",
+        "offsetShadow": false,
+        "width": "wide",
+        "ticker": "static"
+      },
+      "contrast": {
+        "text/bg": 16.12,
+        "text/card": 17.57,
+        "muted/bg": 7.01,
+        "muted/card": 7.64,
+        "accentText/accent": 7.79,
+        "secondaryText/secondary": 16.12,
+        "emph(accent)/bg": 7.15
+      }
+    },
+    {
+      "id": "galleria",
+      "name": "Galleria · Essenziale",
+      "description": "Bianco gesso, serif alto e nitido da catalogo d'arte, verde bosco profondo e tanto spazio bianco. Moderno e senza tempo.",
+      "inspiration": "I cataloghi delle gallerie d'arte e i ristoranti nordici e milanesi di nuova generazione.",
+      "isNew": true,
+      "venues": [
+        "ristorante",
+        "fine",
+        "caffe"
+      ],
+      "dark": false,
+      "palette": {
+        "bg": "#fafaf8",
+        "card": "#f2f2ee",
+        "text": "#141517",
+        "muted": "#52565c",
+        "accent": "#244c3c",
+        "accentText": "#fafaf8",
+        "secondary": "#141517",
+        "secondaryText": "#fafaf8",
+        "heroBg": "#141517",
+        "heroOverlay": 0.35
+      },
+      "emph": "#244c3c",
+      "fonts": {
+        "display": "\"Instrument Serif\", Georgia, serif",
+        "body": "\"Instrument Sans\", \"Segoe UI\", sans-serif",
+        "price": "\"Instrument Sans\", \"Segoe UI\", sans-serif",
+        "accent": "\"Instrument Serif\", Georgia, serif",
+        "displayName": "Instrument Serif",
+        "bodyName": "Instrument Sans",
+        "priceName": "Instrument Sans",
+        "accentName": "Instrument Serif",
+        "google": [
+          "Instrument+Serif:ital@0;1",
+          "Instrument+Sans:wght@400;500;600"
+        ],
+        "googleHref": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap"
+      },
+      "pairings": [
+        {
+          "id": "galleria",
+          "name": "Del template",
+          "fonts": {
+            "display": "\"Instrument Serif\", Georgia, serif",
+            "body": "\"Instrument Sans\", \"Segoe UI\", sans-serif",
+            "price": "\"Instrument Sans\", \"Segoe UI\", sans-serif",
+            "accent": "\"Instrument Serif\", Georgia, serif",
+            "displayName": "Instrument Serif",
+            "bodyName": "Instrument Sans",
+            "priceName": "Instrument Sans",
+            "accentName": "Instrument Serif",
+            "google": [
+              "Instrument+Serif:ital@0;1",
+              "Instrument+Sans:wght@400;500;600"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap"
+          }
+        },
+        {
+          "id": "atelier",
+          "name": "Atelier · Editoriale",
+          "fonts": {
+            "display": "Newsreader, Georgia, serif",
+            "body": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "price": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "accent": "Newsreader, Georgia, serif",
+            "displayName": "Newsreader",
+            "bodyName": "Hanken Grotesk",
+            "priceName": "Hanken Grotesk",
+            "accentName": "Newsreader",
+            "google": [
+              "Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400",
+              "Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+          }
+        },
+        {
+          "id": "bageri",
+          "name": "Bageri · Forno nordico",
+          "fonts": {
+            "display": "\"Albert Sans\", \"Helvetica Neue\", Arial, sans-serif",
+            "body": "\"Albert Sans\", \"Helvetica Neue\", Arial, sans-serif",
+            "price": "\"Albert Sans\", \"Helvetica Neue\", Arial, sans-serif",
+            "accent": "\"Albert Sans\", \"Helvetica Neue\", Arial, sans-serif",
+            "displayName": "Albert Sans",
+            "bodyName": "Albert Sans",
+            "priceName": "Albert Sans",
+            "accentName": "Albert Sans",
+            "google": [
+              "Albert+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Albert+Sans:ital,wght@0,400;0,500;0,700;0,800;1,400&display=swap"
+          }
+        }
+      ],
+      "ornaments": {
+        "divider": "hairline",
+        "texture": "none",
+        "headerStyle": "plain",
+        "sectionHeader": "plain",
+        "ink": "none",
+        "numberStyle": "plain",
+        "leaders": false,
+        "price": "plain",
+        "pricePosition": "right",
+        "density": "airy",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "-0.01em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#141517",
+        "accentSwatches": [
+          "#244c3c",
+          "#141517"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
+      },
+      "look": {
+        "imageShape": "square",
+        "density": "airy",
+        "pricePosition": "right",
+        "sectionHeader": "plain",
+        "categoryNav": "underline",
+        "headerStyle": "plain",
+        "buttonStyle": "outline",
+        "descStyle": "auto",
+        "ink": "none",
+        "numberStyle": "plain",
+        "align": "left",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "-0.01em",
+        "divider": "hairline",
+        "texture": "none",
+        "radius": 0,
+        "leaders": false,
+        "price": "plain",
+        "productLayout": "menu",
+        "categoryLayout": "index",
+        "categoryNumbers": "none",
+        "productNumbers": false,
+        "hero": "masthead",
+        "cardBorder": "none",
+        "offsetShadow": false,
+        "width": "wide",
+        "ticker": "static"
+      },
+      "contrast": {
+        "text/bg": 17.48,
+        "text/card": 16.28,
+        "muted/bg": 7.06,
+        "muted/card": 6.58,
+        "accentText/accent": 9.24,
+        "secondaryText/secondary": 17.48,
+        "emph(accent)/bg": 9.24
+      }
+    },
+    {
+      "id": "isola",
+      "name": "Isola · Calce e mare",
+      "description": "Calce chiara, blu inchiostro profondo, serif classico arioso e foto ad arco. Pulito e luminoso per ristoranti di mare e cortili.",
+      "inspiration": "Le carte stampate in blu su carta pesante dei ristoranti di mare del Mediterraneo.",
+      "isNew": true,
+      "venues": [
+        "pesce",
+        "ristorante",
+        "bar"
+      ],
+      "dark": false,
+      "palette": {
+        "bg": "#f9f7f2",
+        "card": "#ffffff",
+        "text": "#13345c",
+        "muted": "#46586e",
+        "accent": "#174d8c",
+        "accentText": "#ffffff",
+        "secondary": "#13345c",
+        "secondaryText": "#f9f7f2",
+        "heroBg": "#13345c",
+        "heroOverlay": 0.35
+      },
+      "emph": "#174d8c",
+      "fonts": {
+        "display": "Baskervville, Georgia, serif",
+        "body": "Karla, \"Segoe UI\", sans-serif",
+        "price": "Karla, \"Segoe UI\", sans-serif",
+        "accent": "Baskervville, Georgia, serif",
+        "displayName": "Baskervville",
+        "bodyName": "Karla",
+        "priceName": "Karla",
+        "accentName": "Baskervville",
+        "google": [
+          "Baskervville:ital@0;1",
+          "Karla:ital,wght@0,400;0,500;0,600;1,400"
+        ],
+        "googleHref": "https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      },
+      "pairings": [
+        {
+          "id": "isola",
+          "name": "Del template",
+          "fonts": {
+            "display": "Baskervville, Georgia, serif",
+            "body": "Karla, \"Segoe UI\", sans-serif",
+            "price": "Karla, \"Segoe UI\", sans-serif",
+            "accent": "Baskervville, Georgia, serif",
+            "displayName": "Baskervville",
+            "bodyName": "Karla",
+            "priceName": "Karla",
+            "accentName": "Baskervville",
+            "google": [
+              "Baskervville:ital@0;1",
+              "Karla:ital,wght@0,400;0,500;0,600;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Karla:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+          }
+        },
+        {
+          "id": "mediterraneo",
+          "name": "Mediterraneo · Pesce",
+          "fonts": {
+            "display": "Marcellus, \"Trajan Pro\", Georgia, serif",
+            "body": "Karla, \"Segoe UI\", sans-serif",
+            "price": "Karla, \"Segoe UI\", sans-serif",
+            "accent": "Marcellus, \"Trajan Pro\", Georgia, serif",
+            "displayName": "Marcellus",
+            "bodyName": "Karla",
+            "priceName": "Karla",
+            "accentName": "Marcellus",
+            "google": [
+              "Marcellus",
+              "Karla:ital,wght@0,400;0,500;0,700;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Marcellus&family=Karla:ital,wght@0,400;0,500;0,700;1,400&display=swap"
+          }
+        },
+        {
+          "id": "atelier",
+          "name": "Atelier · Editoriale",
+          "fonts": {
+            "display": "Newsreader, Georgia, serif",
+            "body": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "price": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "accent": "Newsreader, Georgia, serif",
+            "displayName": "Newsreader",
+            "bodyName": "Hanken Grotesk",
+            "priceName": "Hanken Grotesk",
+            "accentName": "Newsreader",
+            "google": [
+              "Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400",
+              "Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+          }
+        }
+      ],
+      "ornaments": {
+        "divider": "short",
+        "texture": "none",
+        "headerStyle": "plain",
+        "sectionHeader": "ruled",
+        "ink": "none",
+        "numberStyle": "plain",
+        "leaders": false,
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "airy",
+        "productNumbers": false,
+        "categoryNumbers": "none",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.01em",
+        "align": "center",
+        "descStyle": "auto",
+        "imageShape": "arch",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#174d8c",
+        "accentSwatches": [
+          "#174d8c",
+          "#13345c"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
+      },
+      "look": {
+        "imageShape": "arch",
+        "density": "airy",
+        "pricePosition": "right",
+        "sectionHeader": "ruled",
+        "categoryNav": "underline",
+        "headerStyle": "plain",
+        "buttonStyle": "outline",
+        "descStyle": "auto",
+        "ink": "none",
+        "numberStyle": "plain",
+        "align": "center",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.01em",
+        "divider": "short",
+        "texture": "none",
+        "radius": 0,
+        "leaders": false,
+        "price": "accent",
+        "productLayout": "menu",
+        "categoryLayout": "index",
+        "categoryNumbers": "none",
+        "productNumbers": false,
+        "hero": "masthead",
+        "cardBorder": "hairline",
+        "offsetShadow": false,
+        "width": "narrow",
+        "ticker": "static"
+      },
+      "contrast": {
+        "text/bg": 11.72,
+        "text/card": 12.55,
+        "muted/bg": 6.81,
+        "muted/card": 7.29,
+        "accentText/accent": 8.48,
+        "secondaryText/secondary": 11.72,
+        "emph(accent)/bg": 7.92
+      }
+    },
+    {
+      "id": "notturno",
+      "name": "Notturno · Sala intima",
+      "description": "Carbone caldo, carta osso e un filo d'ottone satinato. Atmosfera serale pulita e misurata, senza neon né effetti artificiali.",
+      "inspiration": "I wine bar serali e le sale intime illuminate solo da candele e lampade in ottone.",
+      "isNew": true,
+      "venues": [
+        "cocktail",
+        "enoteca",
+        "fine",
+        "ristorante"
+      ],
+      "dark": true,
+      "palette": {
+        "bg": "#131210",
+        "card": "#1c1a17",
+        "text": "#f2ece1",
+        "muted": "#b7afa2",
+        "accent": "#d4ad64",
+        "accentText": "#131210",
+        "secondary": "#e8dfd0",
+        "secondaryText": "#131210",
+        "heroBg": "#131210",
+        "heroOverlay": 0.5
+      },
+      "emph": "#d4ad64",
+      "fonts": {
+        "display": "\"Instrument Serif\", Georgia, serif",
+        "body": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+        "price": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+        "accent": "\"Instrument Serif\", Georgia, serif",
+        "displayName": "Instrument Serif",
+        "bodyName": "Hanken Grotesk",
+        "priceName": "Hanken Grotesk",
+        "accentName": "Instrument Serif",
+        "google": [
+          "Instrument+Serif:ital@0;1",
+          "Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400"
+        ],
+        "googleHref": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      },
+      "pairings": [
+        {
+          "id": "notturno",
+          "name": "Del template",
+          "fonts": {
+            "display": "\"Instrument Serif\", Georgia, serif",
+            "body": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "price": "\"Hanken Grotesk\", \"Segoe UI\", sans-serif",
+            "accent": "\"Instrument Serif\", Georgia, serif",
+            "displayName": "Instrument Serif",
+            "bodyName": "Hanken Grotesk",
+            "priceName": "Hanken Grotesk",
+            "accentName": "Instrument Serif",
+            "google": [
+              "Instrument+Serif:ital@0;1",
+              "Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+          }
+        },
+        {
+          "id": "cocktail",
+          "name": "Cocktail bar",
+          "fonts": {
+            "display": "Limelight, \"Bodoni 72\", Georgia, serif",
+            "body": "\"Josefin Sans\", \"Futura\", sans-serif",
+            "price": "\"Josefin Sans\", \"Futura\", sans-serif",
+            "accent": "Limelight, \"Bodoni 72\", Georgia, serif",
+            "displayName": "Limelight",
+            "bodyName": "Josefin Sans",
+            "priceName": "Josefin Sans",
+            "accentName": "Limelight",
+            "google": [
+              "Limelight",
+              "Josefin+Sans:ital,wght@0,400;0,600;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Limelight&family=Josefin+Sans:ital,wght@0,400;0,600;1,400&display=swap"
+          }
+        },
+        {
+          "id": "luxury",
+          "name": "Fine dining · Degustazione",
+          "fonts": {
+            "display": "Gloock, \"Bodoni 72\", Georgia, serif",
+            "body": "Cardo, Georgia, serif",
+            "price": "Cardo, Georgia, serif",
+            "accent": "Gloock, \"Bodoni 72\", Georgia, serif",
+            "displayName": "Gloock",
+            "bodyName": "Cardo",
+            "priceName": "Cardo",
+            "accentName": "Gloock",
+            "google": [
+              "Gloock",
+              "Cardo:ital,wght@0,400;0,700;1,400"
+            ],
+            "googleHref": "https://fonts.googleapis.com/css2?family=Gloock&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap"
+          }
+        }
+      ],
+      "ornaments": {
+        "divider": "hairline",
+        "texture": "none",
+        "headerStyle": "plain",
+        "sectionHeader": "plain",
+        "ink": "none",
+        "numberStyle": "plain",
+        "leaders": true,
+        "price": "accent",
+        "pricePosition": "right",
+        "density": "airy",
+        "productNumbers": false,
+        "categoryNumbers": "roman",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.005em",
+        "align": "left",
+        "descStyle": "auto",
+        "imageShape": "square",
+        "radius": 0
+      },
+      "print": {
+        "productLayout": "menu",
+        "columns": 1,
+        "priceColor": "#d4ad64",
+        "accentSwatches": [
+          "#d4ad64",
+          "#e8dfd0",
+          "#f2ece1"
+        ],
+        "densities": [
+          "airy",
+          "compact"
+        ]
+      },
+      "look": {
+        "imageShape": "square",
+        "density": "airy",
+        "pricePosition": "right",
+        "sectionHeader": "plain",
+        "categoryNav": "underline",
+        "headerStyle": "plain",
+        "buttonStyle": "outline",
+        "descStyle": "auto",
+        "ink": "none",
+        "numberStyle": "plain",
+        "align": "left",
+        "headingCase": "none",
+        "headingStyle": "normal",
+        "headingWeight": 400,
+        "headingTracking": "0.005em",
+        "divider": "hairline",
+        "texture": "none",
+        "radius": 0,
+        "leaders": true,
+        "price": "accent",
+        "productLayout": "menu",
+        "categoryLayout": "index",
+        "categoryNumbers": "roman",
+        "productNumbers": false,
+        "hero": "masthead",
+        "cardBorder": "hairline",
+        "offsetShadow": false,
+        "width": "wide",
+        "ticker": "static"
+      },
+      "contrast": {
+        "text/bg": 15.92,
+        "text/card": 14.77,
+        "muted/bg": 8.62,
+        "muted/card": 7.99,
+        "accentText/accent": 8.88,
+        "secondaryText/secondary": 14.17,
+        "emph(accent)/bg": 8.88
       }
     }
   ]

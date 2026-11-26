@@ -60,7 +60,12 @@ export type MenuTemplateKey =
     | 'bageri'
     | 'taqueria'
     | 'bacheca'
-    | 'birreria';
+    | 'birreria'
+    // editoriali / essenziali
+    | 'atelier'
+    | 'galleria'
+    | 'isola'
+    | 'notturno';
 
 export type VenueTag =
     | 'ristorante'
@@ -1119,6 +1124,111 @@ const SPECS: TemplateSpec[] = [
             productLayout: 'menu', categoryLayout: 'rows', categoryNumbers: 'none', productNumbers: false,
             hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
             headerStyle: 'banner', sectionHeader: 'label', categoryNav: 'underline',
+        },
+    },
+    // ── Template editoriali / essenziali ─────────────────────────────────────
+    {
+        key: 'atelier',
+        label: 'Atelier · Editoriale',
+        description: 'Carta alabastro, serif editoriale pulito, filetti sottili e un solo accento terracotta. Semplice, arioso, senza ornamenti superflui.',
+        inspiration: 'Le riviste di cucina indipendenti (Kinfolk, Monocle) e i menu dei bistrot contemporanei.',
+        isNew: true,
+        pairsWith: ['galleria', 'minimal'],
+        venues: ['ristorante', 'fine', 'enoteca'],
+        palette: {
+            bg: '#f7f5f0', card: '#ffffff', text: '#1a1917', muted: '#57534d',
+            accent: '#8e361c', accentText: '#ffffff', secondary: '#1a1917', secondaryText: '#f7f5f0',
+            heroBg: '#1a1917', heroOverlay: 0.35,
+        },
+        fonts: {
+            display: 'Newsreader, Georgia, serif',
+            body: '"Hanken Grotesk", "Segoe UI", sans-serif',
+            google: ['Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400', 'Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '-0.02em',
+            divider: 'hairline', texture: 'none', radius: 0, leaders: false, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'arabic', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            density: 'airy', buttonStyle: 'underline', sectionHeader: 'plain', categoryNav: 'underline',
+        },
+    },
+    {
+        key: 'galleria',
+        label: 'Galleria · Essenziale',
+        description: 'Bianco gesso, serif alto e nitido da catalogo d\'arte, verde bosco profondo e tanto spazio bianco. Moderno e senza tempo.',
+        inspiration: 'I cataloghi delle gallerie d\'arte e i ristoranti nordici e milanesi di nuova generazione.',
+        isNew: true,
+        pairsWith: ['atelier', 'bageri'],
+        venues: ['ristorante', 'fine', 'caffe'],
+        palette: {
+            bg: '#fafaf8', card: '#f2f2ee', text: '#141517', muted: '#52565c',
+            accent: '#244c3c', accentText: '#fafaf8', secondary: '#141517', secondaryText: '#fafaf8',
+            heroBg: '#141517', heroOverlay: 0.35,
+        },
+        fonts: {
+            display: '"Instrument Serif", Georgia, serif',
+            body: '"Instrument Sans", "Segoe UI", sans-serif',
+            google: ['Instrument+Serif:ital@0;1', 'Instrument+Sans:wght@400;500;600'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '-0.01em',
+            divider: 'hairline', texture: 'none', radius: 0, leaders: false, price: 'plain',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'none', offsetShadow: false, width: 'wide', ticker: 'static',
+            density: 'airy', buttonStyle: 'outline', sectionHeader: 'plain', categoryNav: 'underline',
+        },
+    },
+    {
+        key: 'isola',
+        label: 'Isola · Calce e mare',
+        description: 'Calce chiara, blu inchiostro profondo, serif classico arioso e foto ad arco. Pulito e luminoso per ristoranti di mare e cortili.',
+        inspiration: 'Le carte stampate in blu su carta pesante dei ristoranti di mare del Mediterraneo.',
+        isNew: true,
+        pairsWith: ['mediterraneo', 'atelier'],
+        venues: ['pesce', 'ristorante', 'bar'],
+        palette: {
+            bg: '#f9f7f2', card: '#ffffff', text: '#13345c', muted: '#46586e',
+            accent: '#174d8c', accentText: '#ffffff', secondary: '#13345c', secondaryText: '#f9f7f2',
+            heroBg: '#13345c', heroOverlay: 0.35,
+        },
+        fonts: {
+            display: 'Baskervville, Georgia, serif',
+            body: 'Karla, "Segoe UI", sans-serif',
+            google: ['Baskervville:ital@0;1', 'Karla:ital,wght@0,400;0,500;0,600;1,400'],
+        },
+        look: {
+            align: 'center', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.01em',
+            divider: 'short', texture: 'none', radius: 0, leaders: false, price: 'accent',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'none', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'narrow', ticker: 'static',
+            density: 'airy', imageShape: 'arch', buttonStyle: 'outline', sectionHeader: 'ruled', categoryNav: 'underline',
+        },
+    },
+    {
+        key: 'notturno',
+        label: 'Notturno · Sala intima',
+        description: 'Carbone caldo, carta osso e un filo d\'ottone satinato. Atmosfera serale pulita e misurata, senza neon né effetti artificiali.',
+        inspiration: 'I wine bar serali e le sale intime illuminate solo da candele e lampade in ottone.',
+        isNew: true,
+        pairsWith: ['cocktail', 'luxury'],
+        venues: ['cocktail', 'enoteca', 'fine', 'ristorante'],
+        palette: {
+            bg: '#131210', card: '#1c1a17', text: '#f2ece1', muted: '#b7afa2',
+            accent: '#d4ad64', accentText: '#131210', secondary: '#e8dfd0', secondaryText: '#131210',
+            heroBg: '#131210', heroOverlay: 0.5,
+        },
+        fonts: {
+            display: '"Instrument Serif", Georgia, serif',
+            body: '"Hanken Grotesk", "Segoe UI", sans-serif',
+            google: ['Instrument+Serif:ital@0;1', 'Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,400'],
+        },
+        look: {
+            align: 'left', headingCase: 'none', headingStyle: 'normal', headingWeight: 400, headingTracking: '0.005em',
+            divider: 'hairline', texture: 'none', radius: 0, leaders: true, price: 'accent',
+            productLayout: 'menu', categoryLayout: 'index', categoryNumbers: 'roman', productNumbers: false,
+            hero: 'masthead', cardBorder: 'hairline', offsetShadow: false, width: 'wide', ticker: 'static',
+            density: 'airy', buttonStyle: 'outline', sectionHeader: 'plain', categoryNav: 'underline',
         },
     },
 ];

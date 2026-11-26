@@ -808,3 +808,79 @@ code {
 .lp-timetable dd { white-space: nowrap; text-align: right; }
 .lp-timetable .is-today dt, .lp-timetable .is-today dd { font-weight: 700; color: var(--menu-emph); }
 .lp-today { font-weight: 400; font-style: italic; }
+
+/* ─── Impaginazioni editoriali e architettoniche (HeroEditorial, HeroSplitFull, HeroArch, GalleryLookbook) ── */
+
+/* Copertina da rivista (editorial) */
+.lp-edhero-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px;
+  padding-bottom: 12px; margin-bottom: 18px;
+  border-bottom: 1px solid var(--menu-rule);
+  font-family: var(--menu-font-body); font-size: 0.85rem; letter-spacing: 0.03em; color: var(--menu-muted);
+}
+.lp-edhero-figure { margin: 0 0 28px; overflow: hidden; background: var(--menu-surface); }
+.lp-edhero-figure img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.lp-edhero-foot { display: grid; gap: 20px; align-items: end; padding-top: 4px; }
+.lp-edhero-title { font-size: clamp(2.8rem, 9vw, 6.4rem); line-height: 0.92; letter-spacing: var(--menu-h-tracking, -0.02em); overflow-wrap: break-word; }
+.lp-edhero-sub { font-size: clamp(1rem, 3.2vw, 1.18rem); line-height: 1.55; color: var(--menu-muted); max-width: 30rem; }
+.lp-edhero-ctas > div { margin-top: 22px; }
+@media (min-width: 768px) {
+  .lp-edhero-figure { margin-bottom: 36px; }
+  .lp-edhero-figure img { aspect-ratio: 21 / 9; }
+  .lp-edhero-foot { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 32px; padding-top: 8px; }
+  .lp-edhero-title { grid-column: 1 / span 7; }
+  .lp-edhero-aside { grid-column: 8 / span 5; }
+}
+
+/* 50/50 a tutta altezza (split-full) */
+.lp-splitfull { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--menu-border); }
+.lp-splitfull-copy { display: flex; flex-direction: column; justify-content: space-between; gap: 36px; padding: clamp(2rem, 6vw, 4.75rem) clamp(1.25rem, 5vw, 4.5rem); }
+.lp-splitfull--noimg .lp-splitfull-copy { max-width: 56rem; margin: 0 auto; width: 100%; }
+.lp-splitfull-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.lp-splitfull-facts { font-family: var(--menu-font-body); font-size: 0.84rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--menu-muted); }
+.lp-splitfull-title { font-size: clamp(2.8rem, 8vw, 5.4rem); line-height: 0.94; letter-spacing: var(--menu-h-tracking, -0.015em); }
+.lp-splitfull-sub { font-size: clamp(1rem, 3vw, 1.18rem); line-height: 1.6; color: var(--menu-muted); max-width: 28rem; }
+.lp-splitfull-ctas > div { margin-top: 26px; }
+.lp-splitfull-media { position: relative; margin: 0; min-height: 360px; aspect-ratio: 4 / 3; overflow: hidden; background: var(--menu-surface); }
+.lp-splitfull-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (min-width: 900px) {
+  .lp-splitfull:not(.lp-splitfull--noimg) { grid-template-columns: 1fr 1fr; min-height: min(86vh, 760px); }
+  .lp-splitfull-media { aspect-ratio: auto; min-height: 100%; }
+}
+
+/* Arco architettonico (arch) */
+.lp-archhero-facts { font-family: var(--menu-font-body); font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--menu-muted); }
+.lp-archhero-title { margin-top: 12px; font-size: clamp(2.8rem, 9.5vw, 5.8rem); line-height: 0.96; letter-spacing: var(--menu-h-tracking, 0); }
+.lp-archhero-frame { margin: 28px auto 0; max-width: 440px; }
+.lp-archhero-arch {
+  position: relative; aspect-ratio: 4 / 5; overflow: hidden;
+  border-radius: 999px 999px 0 0;
+  background: var(--menu-surface);
+  border: 1px solid var(--menu-rule);
+  padding: 6px 6px 0;
+}
+.lp-archhero-arch img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 999px 999px 0 0; }
+.lp-archhero-frame figcaption { margin-top: 10px; font-size: 0.85rem; font-style: italic; color: var(--menu-muted); }
+.lp-archhero-sub { margin: 26px auto 0; max-width: 32rem; font-size: clamp(1rem, 3.2vw, 1.2rem); line-height: 1.6; color: var(--menu-muted); }
+.lp-archhero-ctas > div { justify-content: center; margin-top: 24px; }
+
+/* Galleria: diario fotografico (lookbook) */
+.lp-lookbook { display: grid; gap: 36px; }
+.lp-lookbook-pair { display: grid; gap: 28px; align-items: start; }
+.lp-lookbook-frame { overflow: hidden; background: var(--menu-surface); border-radius: var(--menu-radius); }
+.lp-lookbook-lead .lp-lookbook-frame { aspect-ratio: 4 / 5; }
+.lp-lookbook-detail .lp-lookbook-frame { aspect-ratio: 4 / 3; }
+.lp-lookbook-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lp-lookbook figure figcaption {
+  margin-top: 10px; display: flex; gap: 10px; align-items: baseline;
+  font-size: 0.88rem; line-height: 1.45; color: var(--menu-muted);
+}
+.lp-lookbook-num { font-family: var(--menu-font-display); font-size: 0.82rem; color: var(--menu-emph); flex-shrink: 0; }
+@media (min-width: 768px) {
+  .lp-lookbook { gap: 64px; }
+  .lp-lookbook-pair { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 32px; }
+  .lp-lookbook-lead { grid-column: 1 / span 7; }
+  .lp-lookbook-detail { grid-column: 9 / span 4; margin-top: 96px; }
+  .lp-lookbook-pair--flip .lp-lookbook-lead { grid-column: 6 / span 7; grid-row: 1; }
+  .lp-lookbook-pair--flip .lp-lookbook-detail { grid-column: 1 / span 4; grid-row: 1; margin-top: 112px; }
+}

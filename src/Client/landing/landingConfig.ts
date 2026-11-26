@@ -81,17 +81,20 @@ interface Base<T extends SectionType> {
 }
 
 /**
- * Intestazioni. Le ultime tre (dicembre 2026) sono impaginazioni "da stampa":
- *  - 'poster': manifesto tipografico, nome enorme a bandiera e foto ritagliata a lato (svizzero, fanzine);
- *  - 'card':   il cartoncino del menu appoggiato sulla pagina, con le sezioni del menù dentro (tipografia, pasticceria);
- *  - 'board':  la lavagna / bacheca all'ingresso con le voci del menù scritte sopra (osteria, tavola calda).
+ * Intestazioni:
+ *  - 'poster':     manifesto tipografico, nome enorme a bandiera e foto ritagliata a lato (svizzero, fanzine);
+ *  - 'card':       il cartoncino del menu appoggiato sulla pagina, con le sezioni del menù dentro (tipografia, pasticceria);
+ *  - 'board':      la lavagna / bacheca all'ingresso con le voci del menù scritte sopra (osteria, tavola calda);
+ *  - 'editorial':  copertina da rivista: foto panoramica pulita sopra (senza velo), titolo grande e testo affiancati sotto;
+ *  - 'split-full': 50/50 a tutta altezza senza margini sulla foto, metà tela pulita e respiro;
+ *  - 'arch':       foto ritagliata ad arco architettonico con tipografia calma e simmetrica (mare, cortile, gelateria).
  */
-export type HeroVariant = 'template' | 'image' | 'split' | 'slideshow' | 'minimal' | 'poster' | 'card' | 'board';
-export const HERO_VARIANTS: HeroVariant[] = ['template', 'image', 'split', 'slideshow', 'minimal', 'poster', 'card', 'board'];
+export type HeroVariant = 'template' | 'image' | 'split' | 'slideshow' | 'minimal' | 'poster' | 'card' | 'board' | 'editorial' | 'split-full' | 'arch';
+export const HERO_VARIANTS: HeroVariant[] = ['template', 'image', 'split', 'slideshow', 'minimal', 'poster', 'card', 'board', 'editorial', 'split-full', 'arch'];
 /** Chi siamo: foto a lato (storico), editoriale con capolettera, biglietto scritto a mano. */
 export type AboutVariant = 'side' | 'editorial' | 'note';
-/** Galleria: le tre storiche + provino a contatto (striscia di pellicola) e collage asimmetrico. */
-export type GalleryLayout = 'grid' | 'masonry' | 'carousel' | 'filmstrip' | 'collage';
+/** Galleria: le tre storiche + provino a contatto, collage asimmetrico e diario fotografico (lookbook). */
+export type GalleryLayout = 'grid' | 'masonry' | 'carousel' | 'filmstrip' | 'collage' | 'lookbook';
 /** Piatti in evidenza: schede, elenco, menù stampato su due colonne, polaroid, indice numerato. */
 export type HighlightsLayout = 'cards' | 'list' | 'menu' | 'polaroid' | 'index';
 
@@ -362,7 +365,7 @@ function normalizeSection(v: unknown): LandingSection | null {
         };
         case 'gallery': return {
             ...common, type, items: images(v.items, LIMITS.gallery),
-            layout: oneOf(v.layout, ['grid', 'masonry', 'carousel', 'filmstrip', 'collage'] as const, 'grid'),
+            layout: oneOf(v.layout, ['grid', 'masonry', 'carousel', 'filmstrip', 'collage', 'lookbook'] as const, 'grid'),
         };
         case 'features': return {
             ...common, type,
